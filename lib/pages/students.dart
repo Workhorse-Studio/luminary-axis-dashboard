@@ -8,79 +8,222 @@ class StudentsPage extends StatefulWidget {
 }
 
 class StudentsPageState extends State<StudentsPage> {
-  final Map<String, ClassData> classesData = {};
-  final List<TermReport> termReports = [];
+  // Admin View State
+  (String, TeacherData) currentValue = (
+    '',
+    TeacherData(
+      name: 'name',
+      role: 'role',
+      classIds: const [],
+    ),
+  );
+  List<QueryDocumentSnapshot<JSON>> teachersData = [];
+  String currentTeacherUid = '';
+  String currentTeacherName = '';
+
   @override
   Widget build(BuildContext context) {
-    return Navbar(
-      pageTitle: 'Students',
-      body: (context) => FutureBuilderTemplate(
-        future: () async {
-          final List<String> classIds = TeacherData.fromJson(
-            (await firestore
-                    .collection('users')
-                    .doc(auth.currentUser!.uid)
-                    .get())
-                .data()!,
-          ).classIds;
-          for (final classId in classIds) {
-            final tr = TermReport();
-            await tr.generateTermReport(classId);
-            classesData[classId] = tr.classData;
-            termReports.add(tr);
-          }
-          return termReports;
-        }(),
-        builder: (context, snapshot) {
-          final List<Widget> widgets = [];
+    return switch (role) {
+      'teacher' => Navbar(
+        pageTitle: 'Students',
+        body: (context) => TermReportWidget(teacherId: auth.currentUser!.uid),
+      ),
+      'admin' => buildAdminView(context),
+      String _ => const SizedBox(),
+    };
+  }
 
-          for (int i = 0; i < classesData.length; i++) {
-            final List<DataRow> rows = [];
-            final currentReport = termReports[i].data.skip(1).toList();
-            for (int j = 0; j < currentReport.length; j++) {
-              rows.add(
-                DataRow(
-                  cells: [
-                    DataCell(
-                      Row(
-                        children: [
-                          Text(currentReport[j][0]),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: LinearProgressIndicator(
-                              value: termReports[i].progresses[j],
-                            ),
-                          ),
-                        ],
-                      ),
+  Widget buildAdminView(BuildContext context) => FutureBuilderTemplate(
+    future: () async {
+      final query = firestore
+          .collection('users')
+          .where('role', isEqualTo: 'teacher');
+      teachersData = (await query.get()).docs;
+
+      return teachersData;
+    }(),
+    builder: (context, snapshot) {
+      return Navbar(
+        pageTitle: 'Students',
+        actions: [
+          DropdownMenu(
+            dropdownMenuEntries: [
+              DropdownMenuEntry(
+                label: 'All',
+                value: (
+                  '',
+                  TeacherData(
+                    name: 'name',
+                    role: 'role',
+                    classIds: const [],
+                  ),
+                ),
+              ),
+              for (final tData in teachersData)
+                DropdownMenuEntry(
+                  value: (tData.id, TeacherData.fromJson(tData.data())),
+                  label: TeacherData.fromJson(tData.data()).name,
+                ),
+            ],
+            onSelected: (newTData) => setState(() {
+              if (newTData != null) {
+                if (newTData.$1 != '') {
+                  currentValue = newTData;
+                  currentTeacherUid = newTData.$1;
+                  currentTeacherName = newTData.$2.name;
+                } else {
+                  currentValue = (
+                    '',
+                    TeacherData(
+                      name: 'name',
+                      role: 'role',
+                      classIds: const [],
                     ),
-                    for (final e in currentReport[j].skip(1))
-                      DataCell(Text(e.toString())),
-                  ],
-                ),
-              );
-            }
-            widgets.addAll(
-              [
-                ListTile(
-                  title: Text(classesData.values.elementAt(i).name),
-                  tileColor: Colors.deepPurple,
-                ),
-                DataTable(
-                  columns: [
-                    for (final c in termReports[i].data.first)
-                      DataColumn(label: Text(c.toString())),
-                  ],
-                  rows: rows,
-                ),
-              ],
+                  );
+
+                  currentTeacherUid = '';
+                  currentTeacherName = '';
+                }
+              }
+            }),
+          ),
+        ],
+        body: (context) => SingleChildScrollView(
+          child: Column(
+            children: [
+              for (final tData in snapshot.data!)
+                if ((currentTeacherUid != '' &&
+                        tData.id == currentTeacherUid) ||
+                    currentTeacherUid == '')
+                  TermReportWidget(
+                    teacherId: tData.id,
+                    teacherData: tData,
+                  ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class TermReportWidget extends StatefulWidget {
+  final String teacherId;
+  final QueryDocumentSnapshot<JSON>? teacherData;
+
+  const TermReportWidget({
+    required this.teacherId,
+    this.teacherData,
+    super.key,
+  });
+
+  @override
+  State<StatefulWidget> createState() => TermReportWidgetState();
+}
+
+class TermReportWidgetState extends State<TermReportWidget> {
+  final Map<String, ClassData> classesData = {};
+  final List<TermReport> termReports = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilderTemplate(
+      future: () async {
+        final List<String> classIds = TeacherData.fromJson(
+          (await firestore.collection('users').doc(widget.teacherId).get())
+              .data()!,
+        ).classIds;
+        for (final classId in classIds) {
+          final tr = TermReport();
+          await tr.generateTermReport(classId);
+          classesData[classId] = tr.classData;
+          termReports.add(tr);
+        }
+        return termReports;
+      }(),
+      builder: (context, snapshot) {
+        final List<Widget> widgets = [];
+
+        for (int i = 0; i < classesData.length; i++) {
+          final List<DataRow> rows = [];
+          final currentReport = termReports[i].data.skip(1).toList();
+          for (int j = 0; j < currentReport.length; j++) {
+            rows.add(
+              DataRow(
+                cells: [
+                  DataCell(
+                    Row(
+                      children: [
+                        Text(currentReport[j][0]),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: LinearProgressIndicator(
+                            value: termReports[i].progresses[j],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (final e in currentReport[j].skip(1))
+                    DataCell(Text(e.toString())),
+                ],
+              ),
             );
           }
-          return ListView(
-            children: widgets,
+          widgets.addAll(
+            [
+              ListTile(
+                title: Text(classesData.values.elementAt(i).name),
+                tileColor: Colors.deepPurple,
+              ),
+              DataTable(
+                columns: [
+                  for (final c in termReports[i].data.first)
+                    DataColumn(label: Text(c.toString())),
+                ],
+                rows: rows,
+              ),
+            ],
           );
-        },
-      ),
+        }
+        return widget.teacherData == null
+            ? SingleChildScrollView(
+                child: Column(
+                  children: [
+                    if (widget.teacherData != null)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 80,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            TeacherData.fromJson(
+                              widget.teacherData!.data(),
+                            ).name,
+                          ),
+                        ),
+                      ),
+                    ...widgets,
+                  ],
+                ),
+              )
+            : Column(
+                children: [
+                  if (widget.teacherData != null)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 80,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          TeacherData.fromJson(widget.teacherData!.data()).name,
+                        ),
+                      ),
+                    ),
+                  ...widgets,
+                ],
+              );
+      },
     );
   }
 }

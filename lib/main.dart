@@ -29,7 +29,7 @@ part './operations/generate_term_report.dart';
 part './firebase/firestore.dart';
 part './firebase/auth.dart';
 
-late String role = 'teacher';
+late String role = 'admin';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: options);
@@ -64,8 +64,16 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
       debugShowCheckedModeBanner: false,
       routes: {
         Routes.dashboard.slug: (_) => DashboardPage(),
-        Routes.students.slug: (_) => ProtectedPage(child: StudentsPage()),
-        Routes.syllabus.slug: (_) => ProtectedPage(child: SyllabusPage()),
+        Routes.students.slug: (_) => ProtectedPage(
+          requiredRoles: ['teacher', 'admin'],
+          redirectOnIncorrectRole: Routes.dashboard,
+          child: StudentsPage(),
+        ),
+        Routes.syllabus.slug: (_) => ProtectedPage(
+          requiredRoles: ['teacher', 'admin'],
+          redirectOnIncorrectRole: Routes.dashboard,
+          child: SyllabusPage(),
+        ),
         Routes.login.slug: (_) => LoginPage(),
       },
     );

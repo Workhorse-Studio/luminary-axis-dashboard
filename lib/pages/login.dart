@@ -30,9 +30,8 @@ class LoginPage extends StatelessWidget {
                           .doc(auth.currentUser!.uid)
                           .get())
                       .data();
-              if (!(await isUserAdmin())) {
-                role = userData!['role'];
-              }
+              role = userData!['role'];
+
               if (context.mounted) {
                 if (!await Navigator.of(context).maybePop()) {
                   Navigator.of(context).pushNamed(Routes.dashboard.slug);

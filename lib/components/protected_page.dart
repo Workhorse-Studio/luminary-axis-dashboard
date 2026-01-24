@@ -1,8 +1,15 @@
 part of axis_dashboard;
 
 class ProtectedPage extends StatefulWidget {
+  final List<String> requiredRoles;
+  final Routes redirectOnIncorrectRole;
   final Widget child;
-  const ProtectedPage({required this.child, super.key});
+  const ProtectedPage({
+    required this.child,
+    required this.requiredRoles,
+    required this.redirectOnIncorrectRole,
+    super.key,
+  });
 
   @override
   State<StatefulWidget> createState() => ProtectedPageState();
@@ -24,6 +31,10 @@ class ProtectedPageState extends State<ProtectedPage> {
     if (auth.currentUser == null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushNamed(Routes.login.slug);
+      });
+    } else if (!widget.requiredRoles.contains(role)) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushNamed(widget.redirectOnIncorrectRole.slug);
       });
     }
   }
