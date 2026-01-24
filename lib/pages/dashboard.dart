@@ -1,4 +1,4 @@
-part of digistore;
+part of axis_dashboard;
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});

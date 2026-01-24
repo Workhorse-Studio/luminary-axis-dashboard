@@ -1,4 +1,4 @@
-part of digistore;
+part of axis_dashboard;
 
 class ProtectedPage extends StatefulWidget {
   final Widget child;

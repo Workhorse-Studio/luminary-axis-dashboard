@@ -1,4 +1,4 @@
-part of digistore;
+part of axis_dashboard;
 
 class Navbar extends StatefulWidget {
   final WidgetBuilder body;
@@ -37,10 +37,7 @@ class NavbarState extends State<Navbar> {
             for (final r in Routes.values)
               TextButton(
                 onPressed: () => Navigator.of(context).pushNamed(r.slug),
-                child: Text(
-                  r.name,
-                  style: TextStyle(fontSize: 16),
-                ),
+                child: Text(r.name, style: TextStyle(fontSize: 16)),
               ),
           ],
         ),

@@ -1,7 +1,7 @@
-part of digistore;
+part of axis_dashboard;
 
 final auth = kDebugMode
-    ? (FirebaseAuth.instance..useAuthEmulator('127.0.0.1', 8081))
+    ? (FirebaseAuth.instance..useAuthEmulator('127.0.0.1', 9099))
     : FirebaseAuth.instance;
 
 Future<bool> isUserAdmin() async {

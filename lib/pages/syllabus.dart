@@ -1,4 +1,4 @@
-part of digistore;
+part of axis_dashboard;
 
 class SyllabusPage extends StatefulWidget {
   const SyllabusPage({super.key});
@@ -31,49 +31,55 @@ class SyllabusPageState extends State<SyllabusPage> {
             ],
           ),
         ),
-        TextButton(
-          onPressed: () async {
-            final Map<String, dynamic>? res = await showDialog(
-              context: context,
-              builder: (_) => AddStoreEntryDialog(),
-            );
-
-            String msg;
-
-            if (res != null) {
-              try {
-                await firestore.collection('store').add(res);
-                msg = 'Entry created successfully';
-              } catch (e, st) {
-                print(e);
-                print(st);
-                msg = 'Something went wrong. See logs for details';
-              }
-            } else {
-              msg = 'Entry discarded';
-            }
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(msg)));
-              setState(() {
-                hasLoaded = false;
-              });
-            }
-          },
-          child: Text('Add Entry'),
-        ),
       ],
       body: (ctx) => Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsetsGeometry.all(20),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: const SizedBox(),
-            ),
-          ),
+        child: FutureBuilderTemplate(
+          future: () async {
+            final teacherData =
+                (await firestore
+                        .collection('users')
+                        .doc(auth.currentUser!.uid)
+                        .get())
+                    .data();
+
+            final classIds = TeacherData.fromJson(teacherData!).classIds;
+            return (await firestore
+                    .collection('classes')
+                    .where(
+                      FieldPath.documentId,
+                      whereIn: classIds,
+                    )
+                    .get())
+                .docs
+                .map((doc) => (doc.id, ClassData.fromJson(doc.data())))
+                .toList();
+          }(),
+          builder: (ctx, snapshot) {
+            return ListView(
+              children: [
+                for (final cl in snapshot.data!)
+                  ListTile(
+                    title: Text(cl.$2.name),
+                    trailing: TextButton(
+                      onPressed: () async {
+                        final Map<String, ({String name, bool present})>
+                        result = await showDialog(
+                          context: context,
+                          builder: (_) => AttendanceDialog(classId: cl.$1),
+                        );
+                        print(
+                          result.values
+                              .map((e) => (e.name, e.present))
+                              .toList()
+                              .join('\n'),
+                        );
+                      },
+                      child: Icon(Icons.ballot),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

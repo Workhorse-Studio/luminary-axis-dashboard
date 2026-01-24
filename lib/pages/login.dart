@@ -1,4 +1,4 @@
-part of digistore;
+part of axis_dashboard;
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -31,7 +31,7 @@ class LoginPage extends StatelessWidget {
                           .get())
                       .data();
               if (!(await isUserAdmin())) {
-                wing = userData!['wing'];
+                role = userData!['role'];
               }
               if (context.mounted) {
                 if (!await Navigator.of(context).maybePop()) {

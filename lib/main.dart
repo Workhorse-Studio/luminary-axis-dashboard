@@ -1,4 +1,4 @@
-library digistore;
+library axis_dashboard;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,16 +15,23 @@ part 'pages/login.dart';
 
 part './components/navbar.dart';
 part './components/protected_page.dart';
+part './components/attendance_dialog.dart';
+part './components/future_builder_template.dart';
+
+part './schemas/schemas.dart';
+part './schemas/teacher_data.dart';
+part './schemas/student_data.dart';
+part './schemas/class_data.dart';
 
 part './firebase/firestore.dart';
 part './firebase/auth.dart';
 
-String? wing;
+late String role = 'teacher';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: options);
 
-  runApp(const DigistoreApp());
+  runApp(const AxisDashboardApp());
 }
 
 enum Routes {
@@ -32,24 +39,26 @@ enum Routes {
   login('/login'),
   syllabus('/syllabus'),
   students('/students'),
-  teachers('/teachers');
+  teachers('/teachers')
+  ;
 
   final String slug;
   const Routes(this.slug);
 }
 
-class DigistoreApp extends StatefulWidget {
-  const DigistoreApp({super.key});
+class AxisDashboardApp extends StatefulWidget {
+  const AxisDashboardApp({super.key});
 
   @override
-  State<StatefulWidget> createState() => DigistoreAppState();
+  State<StatefulWidget> createState() => AxisDashboardAppState();
 }
 
-class DigistoreAppState extends State<DigistoreApp> {
+class AxisDashboardAppState extends State<AxisDashboardApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       initialRoute: Routes.dashboard.slug,
+      debugShowCheckedModeBanner: false,
       routes: {
         Routes.dashboard.slug: (_) => DashboardPage(),
         Routes.syllabus.slug: (_) => ProtectedPage(child: SyllabusPage()),
