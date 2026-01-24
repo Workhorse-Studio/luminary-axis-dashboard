@@ -124,6 +124,7 @@ class TermReportWidget extends StatefulWidget {
 class TermReportWidgetState extends State<TermReportWidget> {
   final Map<String, ClassData> classesData = {};
   final List<TermReport> termReports = [];
+  final TermReportCache reportCache = TermReportCache();
 
   @override
   Widget build(BuildContext context) {
@@ -134,8 +135,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
               .data()!,
         ).classIds;
         for (final classId in classIds) {
-          final tr = TermReport();
-          await tr.generateTermReport(classId);
+          final tr = await reportCache.get(classId);
           classesData[classId] = tr.classData;
           termReports.add(tr);
         }
