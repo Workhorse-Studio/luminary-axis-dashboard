@@ -67,11 +67,18 @@ class SyllabusPageState extends State<SyllabusPage> {
                           context: context,
                           builder: (_) => AttendanceDialog(classId: cl.$1),
                         );
-                        print(
-                          result.values
-                              .map((e) => (e.name, e.present))
-                              .toList()
-                              .join('\n'),
+                        final now = DateTime.now();
+                        final String todayId =
+                            '${now.day}-${now.month}-${now.year}';
+                        final List<String> presentIds = [];
+                        for (final r in result.entries) {
+                          if (r.value.present) presentIds.add(r.key);
+                        }
+
+                        final newAttendance = cl.$2.attendance;
+                        newAttendance[todayId] = presentIds;
+                        await firestore.collection('classes').doc(cl.$1).update(
+                          {'attendance': newAttendance},
                         );
                       },
                       child: Icon(Icons.ballot),
@@ -80,104 +87,6 @@ class SyllabusPageState extends State<SyllabusPage> {
               ],
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class AddStoreEntryDialog extends StatelessWidget {
-  final TextEditingController idController = TextEditingController(),
-      nameController = TextEditingController(),
-      typeController = TextEditingController(),
-      categoryController = TextEditingController(),
-      qtyController = TextEditingController(),
-      statusController = TextEditingController(),
-      descController = TextEditingController(),
-      remarksController = TextEditingController();
-
-  AddStoreEntryDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final double padSides = MediaQuery.of(context).size.width * 0.1;
-    return Dialog.fullscreen(
-      child: Form(
-        child: Padding(
-          padding: EdgeInsetsGeometry.only(left: padSides, right: padSides),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
-                TextField(
-                  controller: idController,
-                  decoration: InputDecoration(label: Text('ID')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(label: Text('Item Name')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: typeController,
-                  decoration: InputDecoration(label: Text('Item Type')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: categoryController,
-                  decoration: InputDecoration(label: Text('Category')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: qtyController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(label: Text('Quantity')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: statusController,
-                  decoration: InputDecoration(label: Text('Status')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: descController,
-                  decoration: InputDecoration(label: Text('Description')),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: remarksController,
-                  decoration: InputDecoration(label: Text('Remarks')),
-                ),
-
-                const SizedBox(height: 40),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(null),
-                      child: Text('Cancel'),
-                    ),
-                    const SizedBox(width: 30),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop({
-                        'id': idController.text,
-                        'name': nameController.text,
-                        'category': categoryController.text,
-                        'itemtype': typeController.text,
-                        'quantity': int.parse(qtyController.text),
-                        'description': descController.text,
-                        'remarks': remarksController.text,
-                        'status': statusController.text,
-                      }),
-                      child: Text('Submit'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
         ),
       ),
     );

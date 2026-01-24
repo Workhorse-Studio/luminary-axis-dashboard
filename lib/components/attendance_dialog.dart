@@ -29,7 +29,9 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                 .doc(widget.classId)
                 .get();
             final classData = ClassData.fromJson(classDoc.data()!);
+
             className = classData.name;
+
             final studentsData =
                 (await firestore
                         .collection('users')
@@ -43,11 +45,15 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                       (doc) =>
                           (data: StudentData.fromJson(doc.data()), id: doc.id),
                     );
+            final now = DateTime.now();
+            final String todayId = '${now.day}-${now.month}-${now.year}';
             for (final ({StudentData data, String id}) studentDoc
                 in studentsData) {
               records[studentDoc.id] = (
                 name: studentDoc.data.name,
-                present: false,
+                present: classData.attendance.containsKey(todayId)
+                    ? classData.attendance[todayId]!.contains(studentDoc.id)
+                    : false,
               );
             }
             return records;
@@ -67,7 +73,6 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                           title: Text(record.value.name),
                           value: record.value.present,
                           onChanged: (isChecked) => setState(() {
-                            print(isChecked);
                             records[record.key] = (
                               name: record.value.name,
                               present: isChecked!,
