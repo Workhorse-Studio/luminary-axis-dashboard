@@ -11,6 +11,7 @@ import 'options.dart';
 
 part 'pages/dashboard.dart';
 part 'pages/syllabus.dart';
+part './pages/students.dart';
 part 'pages/login.dart';
 
 part './components/navbar.dart';
@@ -22,6 +23,8 @@ part './schemas/schemas.dart';
 part './schemas/teacher_data.dart';
 part './schemas/student_data.dart';
 part './schemas/class_data.dart';
+
+part './operations/generate_term_report.dart';
 
 part './firebase/firestore.dart';
 part './firebase/auth.dart';
@@ -61,6 +64,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
       debugShowCheckedModeBanner: false,
       routes: {
         Routes.dashboard.slug: (_) => DashboardPage(),
+        Routes.students.slug: (_) => ProtectedPage(child: StudentsPage()),
         Routes.syllabus.slug: (_) => ProtectedPage(child: SyllabusPage()),
         Routes.login.slug: (_) => LoginPage(),
       },

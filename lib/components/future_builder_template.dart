@@ -26,6 +26,9 @@ class FutureBuilderTemplate<T> extends StatelessWidget {
             child: CircularProgressIndicator(),
           );
         } else {
+          print(errorMsg?.call(snapshot.error) ?? 'An error occurred.');
+          print(snapshot.error);
+          print(snapshot.stackTrace);
           return Text(errorMsg?.call(snapshot.error) ?? 'An error occurred.');
         }
       },
