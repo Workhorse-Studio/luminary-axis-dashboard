@@ -1,5 +1,7 @@
 library axis_dashboard;
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,6 +28,9 @@ part './schemas/student_data.dart';
 part './schemas/class_data.dart';
 
 part './operations/generate_term_report.dart';
+part './operations/calculate_teacher_payout.dart';
+
+part './utils/utils.dart';
 
 part './firebase/firestore.dart';
 part './firebase/auth.dart';

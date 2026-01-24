@@ -8,6 +8,12 @@ class StudentsPage extends StatefulWidget {
 }
 
 class StudentsPageState extends State<StudentsPage> {
+  final GenericCache<TermReport> reportCache = GenericCache((classId) async {
+    final TermReport tr = TermReport();
+    await tr.generateTermReport(classId);
+    return tr;
+  });
+
   // Admin View State
   (String, TeacherData) currentValue = (
     '',
@@ -26,7 +32,10 @@ class StudentsPageState extends State<StudentsPage> {
     return switch (role) {
       'teacher' => Navbar(
         pageTitle: 'Students',
-        body: (context) => TermReportWidget(teacherId: auth.currentUser!.uid),
+        body: (context) => TermReportWidget(
+          teacherId: auth.currentUser!.uid,
+          reportCache: reportCache,
+        ),
       ),
       'admin' => buildAdminView(context),
       String _ => const SizedBox(),
@@ -97,6 +106,7 @@ class StudentsPageState extends State<StudentsPage> {
                     currentTeacherUid == '')
                   TermReportWidget(
                     teacherId: tData.id,
+                    reportCache: reportCache,
                     teacherData: tData,
                   ),
             ],
@@ -110,9 +120,11 @@ class StudentsPageState extends State<StudentsPage> {
 class TermReportWidget extends StatefulWidget {
   final String teacherId;
   final QueryDocumentSnapshot<JSON>? teacherData;
+  final GenericCache reportCache;
 
   const TermReportWidget({
     required this.teacherId,
+    required this.reportCache,
     this.teacherData,
     super.key,
   });
@@ -124,7 +136,6 @@ class TermReportWidget extends StatefulWidget {
 class TermReportWidgetState extends State<TermReportWidget> {
   final Map<String, ClassData> classesData = {};
   final List<TermReport> termReports = [];
-  final TermReportCache reportCache = TermReportCache();
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +146,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
               .data()!,
         ).classIds;
         for (final classId in classIds) {
-          final tr = await reportCache.get(classId);
+          final tr = await widget.reportCache.get(classId);
           classesData[classId] = tr.classData;
           termReports.add(tr);
         }

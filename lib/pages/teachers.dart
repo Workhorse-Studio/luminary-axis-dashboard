@@ -10,7 +10,34 @@ class TeachersPage extends StatefulWidget {
 class TeachersPageState extends State<TeachersPage> {
   (String, QueryDocumentSnapshot<JSON>)? currentTeacher;
   List<QueryDocumentSnapshot<JSON>> teachersData = [];
+  final Map<String, int> teachersSessionsCounts = {};
   bool showTermReport = false;
+
+  final GenericCache<TermReport> reportCache = GenericCache((classId) async {
+    final TermReport tr = TermReport();
+    await tr.generateTermReport(classId);
+    return tr;
+  });
+
+  late final GenericCache<int> teacherNumSessionsCache = GenericCache((
+    teacherId,
+  ) async {
+    int numSessions = 0;
+    for (final clId in TeacherData.fromJson(
+      currentTeacher!.$2.data(),
+    ).classIds) {
+      final tr = await reportCache.get(clId);
+      for (final row in tr.data.skip(1)) {
+        numSessions += row
+            .sublist(
+              tr.attendanceDatesIndices.$1,
+              tr.attendanceDatesIndices.$2 + 1,
+            )
+            .fold(0, (a, b) => a + (b ? 1 : 0));
+      }
+    }
+    return numSessions;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +75,16 @@ class TeachersPageState extends State<TeachersPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                
+                FutureBuilderTemplate(
+                  future: () async {
+                    return await teacherNumSessionsCache.get(
+                      currentTeacher!.$1,
+                    );
+                  }(),
+                  builder: (context, snapshot) => Text(
+                    'Total Sessions: ${snapshot.data}\nTotal Billable Amount: ${calculatePayout(snapshot.data!)}',
+                  ),
+                ),
                 const SizedBox(height: 40),
                 FutureBuilderTemplate(
                   future: () async {
@@ -81,6 +117,7 @@ class TeachersPageState extends State<TeachersPage> {
                   TermReportWidget(
                     teacherId: currentTeacher!.$1,
                     teacherData: currentTeacher!.$2,
+                    reportCache: reportCache,
                   ),
               ],
             ),

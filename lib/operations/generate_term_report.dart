@@ -1,23 +1,9 @@
 part of axis_dashboard;
 
-class TermReportCache {
-  final Map<String, TermReport> registry = {};
-
-  Future<TermReport> get(String classId) async {
-    if (registry.containsKey(classId)) {
-      return registry[classId]!;
-    } else {
-      final TermReport tr = TermReport();
-      await tr.generateTermReport(classId);
-      registry[classId] = tr;
-      return tr;
-    }
-  }
-}
-
 class TermReport {
   List<List> data = [];
   List<double> progresses = [];
+  late (int, int) attendanceDatesIndices;
 
   late ClassData classData;
   Future<List<List>> generateTermReport(String classId) async {
@@ -47,6 +33,8 @@ class TermReport {
         'Final Count',
       ],
     ];
+
+    attendanceDatesIndices = (2, classData.attendance.keys.length + 1);
 
     for (final studentId in classData.studentIds) {
       data.add([
