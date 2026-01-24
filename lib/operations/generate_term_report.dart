@@ -1,5 +1,20 @@
 part of axis_dashboard;
 
+class TermReportCache {
+  final Map<String, TermReport> registry = {};
+
+  Future<TermReport> get(String classId) async {
+    if (registry.containsKey(classId)) {
+      return registry[classId]!;
+    } else {
+      final TermReport tr = TermReport();
+      await tr.generateTermReport(classId);
+      registry[classId] = tr;
+      return tr;
+    }
+  }
+}
+
 class TermReport {
   List<List> data = [];
   List<double> progresses = [];

@@ -12,6 +12,7 @@ import 'options.dart';
 part 'pages/dashboard.dart';
 part 'pages/syllabus.dart';
 part './pages/students.dart';
+part './pages/teachers.dart';
 part 'pages/login.dart';
 
 part './components/navbar.dart';
@@ -73,6 +74,11 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           requiredRoles: ['teacher', 'admin'],
           redirectOnIncorrectRole: Routes.dashboard,
           child: SyllabusPage(),
+        ),
+        Routes.teachers.slug: (_) => ProtectedPage(
+          requiredRoles: ['admin'],
+          redirectOnIncorrectRole: Routes.dashboard,
+          child: const TeachersPage(),
         ),
         Routes.login.slug: (_) => LoginPage(),
       },
