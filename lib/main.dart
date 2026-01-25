@@ -16,6 +16,7 @@ part 'pages/syllabus.dart';
 part './pages/students.dart';
 part './pages/teachers.dart';
 part 'pages/login.dart';
+part './pages/student_details.dart';
 
 part './components/navbar.dart';
 part './components/protected_page.dart';
@@ -48,7 +49,8 @@ enum Routes {
   login('/login'),
   syllabus('/syllabus'),
   students('/students'),
-  teachers('/teachers')
+  teachers('/teachers'),
+  studentDetails('/studentDetails')
   ;
 
   final String slug;
@@ -84,6 +86,11 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           requiredRoles: ['admin'],
           redirectOnIncorrectRole: Routes.dashboard,
           child: const TeachersPage(),
+        ),
+        Routes.studentDetails.slug: (_) => ProtectedPage(
+          requiredRoles: ['admin'],
+          redirectOnIncorrectRole: Routes.dashboard,
+          child: const StudentDetailsPage(),
         ),
         Routes.login.slug: (_) => LoginPage(),
       },
