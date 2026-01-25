@@ -22,7 +22,9 @@ class TeachersPageState extends State<TeachersPage> {
   late final GenericCache<int> teacherNumSessionsCache = GenericCache((
     teacherId,
   ) async {
-    int numSessions = 0;
+    int numSessions = TeacherData.fromJson(
+      currentTeacher!.$2.data(),
+    ).priorSessionCount;
     for (final clId in TeacherData.fromJson(
       currentTeacher!.$2.data(),
     ).classIds) {

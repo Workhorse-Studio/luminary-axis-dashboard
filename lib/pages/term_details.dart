@@ -8,6 +8,7 @@ class TermDetailsPage extends StatefulWidget {
 }
 
 class TermDetailsPageState extends State<TermDetailsPage> {
+  String termName = '';
   GlobalState? globalState;
   bool showSessionAllocation = false;
   final shadowColl = firestore
@@ -37,16 +38,17 @@ class TermDetailsPageState extends State<TermDetailsPage> {
   Widget build(BuildContext context) {
     return FutureBuilderTemplate(
       future: () async {
-        return (globalState == null)
+        final gs = (globalState == null)
             ? globalState = GlobalState.fromJson(
                 (await firestore.collection('global').doc('state').get())
                     .data()!,
               )
             : globalState;
+        termName = "${DateTime.now().year} T${gs!.currentTermNum}";
+        return gs;
       }(),
       builder: (context, snapshot) => Navbar(
-        pageTitle:
-            'Term Details (${DateTime.now().year} T${globalState!.currentTermNum})',
+        pageTitle: 'Term Details $termName',
         actions: [
           if (globalState!.hasEndDateSet &&
               DateTime.now().isAfter(
@@ -56,11 +58,45 @@ class TermDetailsPageState extends State<TermDetailsPage> {
               ))
             Padding(
               padding: const EdgeInsets.only(right: 20),
-              child: Text(
-                "${DateTime.fromMillisecondsSinceEpoch(
-                  globalState!.currentTermEndDate,
-                ).difference(DateTime.now()).inDays} days to term end",
-              ),
+              child:
+                  globalState!.hasEndDateSet &&
+                      DateTime.now().isSameDayAs(
+                        DateTime.fromMillisecondsSinceEpoch(
+                          globalState!.currentTermEndDate,
+                        ),
+                      )
+                  ? TextButton(
+                      onPressed: () async {
+                        final bool confirm = await showDialog(
+                          context: context,
+                          builder: (_) => ConfirmationDialog(
+                            confirmationMsg:
+                                'Are you sure you would like to end the current term?\nThis will take a snapshot of all attendance sheets and then reset them.',
+                          ),
+                        );
+                        final String msg;
+                        if (confirm) {
+                          await ResetTermReportsOperation().executeInSequence(
+                            termName,
+                          );
+                          msg = 'Current term has been ended!';
+                        } else {
+                          msg = 'Action cancelled';
+                        }
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(msg)),
+                          );
+                        }
+                        setState(() {});
+                      },
+                      child: Text('End Current Term'),
+                    )
+                  : Text(
+                      "${DateTime.fromMillisecondsSinceEpoch(
+                        globalState!.currentTermEndDate,
+                      ).difference(DateTime.now()).inDays} days to term end",
+                    ),
             ),
         ],
         body: (context) => SingleChildScrollView(

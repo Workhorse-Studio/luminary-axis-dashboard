@@ -20,6 +20,7 @@ class StudentsPageState extends State<StudentsPage> {
     TeacherData(
       name: 'name',
       role: 'role',
+      priorSessionCount: 0,
       classIds: const [],
     ),
   );
@@ -64,6 +65,7 @@ class StudentsPageState extends State<StudentsPage> {
                   TeacherData(
                     name: 'name',
                     role: 'role',
+                    priorSessionCount: 0,
                     classIds: const [],
                   ),
                 ),
@@ -86,6 +88,7 @@ class StudentsPageState extends State<StudentsPage> {
                     TeacherData(
                       name: 'name',
                       role: 'role',
+                      priorSessionCount: 0,
                       classIds: const [],
                     ),
                   );
