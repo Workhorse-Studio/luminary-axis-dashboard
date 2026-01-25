@@ -17,6 +17,7 @@ part './pages/students.dart';
 part './pages/teachers.dart';
 part 'pages/login.dart';
 part './pages/student_details.dart';
+part './pages/term_details.dart';
 
 part './components/navbar.dart';
 part './components/protected_page.dart';
@@ -29,12 +30,15 @@ part './schemas/schemas.dart';
 part './schemas/teacher_data.dart';
 part './schemas/student_data.dart';
 part './schemas/class_data.dart';
+part './schemas/archived_attendance_sheet.dart';
+part './schemas/global_state.dart';
 
 part './operations/generate_term_report.dart';
 part './operations/calculate_teacher_payout.dart';
 part './operations/onboard_student.dart';
 part './operations/register_class.dart';
 part './operations/withdraw_class.dart';
+part './operations/reset_term_reports.dart';
 
 part './utils/utils.dart';
 
@@ -55,6 +59,7 @@ enum Routes {
   syllabus('/syllabus'),
   students('/students'),
   teachers('/teachers'),
+  termDetails('/termDetails'),
   studentDetails('/studentDetails')
   ;
 
@@ -96,6 +101,11 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           requiredRoles: ['admin'],
           redirectOnIncorrectRole: Routes.dashboard,
           child: const StudentDetailsPage(),
+        ),
+        Routes.termDetails.slug: (_) => ProtectedPage(
+          requiredRoles: ['admin'],
+          redirectOnIncorrectRole: Routes.dashboard,
+          child: const TermDetailsPage(),
         ),
         Routes.login.slug: (_) => LoginPage(),
       },
