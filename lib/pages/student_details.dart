@@ -10,12 +10,10 @@ class StudentDetailsPage extends StatefulWidget {
 class StudentDetailsPageState extends State<StudentDetailsPage> {
   List<QueryDocumentSnapshot<JSON>> studentsData = [];
   QueryDocumentSnapshot<JSON>? currentStudent;
-  final GenericCache<ClassData> classesDataCache = GenericCache((
+  final GenericCache<DocumentSnapshot<JSON>> classesDataCache = GenericCache((
     classId,
   ) async {
-    return ClassData.fromJson(
-      (await firestore.collection('classes').doc(classId).get()).data()!,
-    );
+    return (await firestore.collection('classes').doc(classId).get());
   });
 
   @override
@@ -62,7 +60,9 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                     for (final entry in StudentData.fromJson(
                       currentStudent!.data(),
                     ).initialSessionCount.entries) {
-                      final cd = await classesDataCache.get(entry.key);
+                      final cd = ClassData.fromJson(
+                        (await classesDataCache.get(entry.key)).data()!,
+                      );
                       final numSessionsAttended = cd.attendance.entries
                           .where(
                             (entry) => entry.value.contains(currentStudent!.id),
@@ -78,7 +78,35 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                             ),
                             DataCell(
                               TextButton(
-                                onPressed: () async {},
+                                onPressed: () async {
+                                  final bool confirm = await showDialog(
+                                    context: context,
+                                    builder: (_) => ConfirmationDialog(
+                                      confirmationMsg:
+                                          'Are you sure you would like to withdraw from class "${cd.name}"?',
+                                    ),
+                                  );
+                                  final String msg;
+                                  if (confirm) {
+                                    await withdrawStudentFromClass(
+                                      studentId: currentStudent!.id,
+                                      classId: (await classesDataCache.get(
+                                        entry.key,
+                                      )).id,
+                                    );
+                                    await refreshStudentData();
+                                    msg =
+                                        'Withdrawn student from class successfully!';
+                                  } else {
+                                    msg = 'Action cancelled';
+                                  }
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(msg)),
+                                    );
+                                  }
+                                  setState(() {});
+                                },
                                 child: Text('Withdraw'),
                               ),
                             ),
@@ -91,7 +119,41 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                         cells: [
                           DataCell(
                             TextButton(
-                              onPressed: () async {},
+                              onPressed: () async {
+                                final RegisterForClassData data =
+                                    await showDialog(
+                                      context: context,
+                                      builder: (_) => RegisterForClassDialog(
+                                        classesDataCache: classesDataCache,
+                                      ),
+                                    );
+                                final msg;
+                                if (data.classId == '' ||
+                                    data.sessionsCount == -1) {
+                                  msg = 'Class registration cancelled';
+                                } else {
+                                  await registerStudentForClass(
+                                    studentId: currentStudent!.id,
+                                    classId: data.classId,
+                                    initialSessionsCount: data.sessionsCount,
+                                  );
+
+                                  await refreshStudentData();
+
+                                  msg = 'Class registered successfully!';
+                                }
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        msg,
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                setState(() {});
+                              },
                               child: Text('Add Class'),
                             ),
                           ),
@@ -117,5 +179,21 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> refreshStudentData() async {
+    final int staleDocIndex = studentsData.indexWhere(
+      (doc) => doc.id == currentStudent!.id,
+    );
+    studentsData[staleDocIndex] =
+        (await firestore
+                .collection('users')
+                .where(
+                  FieldPath.documentId,
+                  isEqualTo: currentStudent!.id,
+                )
+                .get())
+            .docs
+            .first;
   }
 }

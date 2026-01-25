@@ -21,6 +21,8 @@ part './pages/student_details.dart';
 part './components/navbar.dart';
 part './components/protected_page.dart';
 part './components/attendance_dialog.dart';
+part './components/register_for_class_dialog.dart';
+part './components/withdraw_from_class_dialog.dart';
 part './components/future_builder_template.dart';
 
 part './schemas/schemas.dart';
@@ -30,6 +32,9 @@ part './schemas/class_data.dart';
 
 part './operations/generate_term_report.dart';
 part './operations/calculate_teacher_payout.dart';
+part './operations/onboard_student.dart';
+part './operations/register_class.dart';
+part './operations/withdraw_class.dart';
 
 part './utils/utils.dart';
 
