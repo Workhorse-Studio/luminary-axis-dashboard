@@ -30,6 +30,20 @@ class ResetTermReportsOperation {
     for (final cl in classes) {
       batch.update(cl.reference, {'attendance': {}});
     }
+
     await batch.commit();
+    final shadowDocs =
+        (await firestore
+                .collection('global')
+                .doc('state')
+                .collection('nextTermSessionAllocations')
+                .get())
+            .docs;
+
+    final batchDelete = firestore.batch();
+    for (final sd in shadowDocs) {
+      batchDelete.delete(sd.reference);
+    }
+    await batchDelete.commit();
   }
 }

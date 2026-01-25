@@ -6,10 +6,12 @@ typedef RegisterForClassData = ({
 });
 
 class RegisterForClassDialog extends StatefulWidget {
+  final String? fixedClassId;
   final GenericCache<DocumentSnapshot<JSON>> classesDataCache;
 
   const RegisterForClassDialog({
     required this.classesDataCache,
+    this.fixedClassId,
     super.key,
   });
 
@@ -20,7 +22,13 @@ class RegisterForClassDialog extends StatefulWidget {
 class RegisterForClassDialogState extends State<RegisterForClassDialog> {
   final TextEditingController sessionCountController = TextEditingController();
   bool hasFetchedAllClasses = false;
-  String currentClassId = '';
+  late String currentClassId;
+
+  @override
+  void initState() {
+    currentClassId = widget.fixedClassId ?? '';
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +45,17 @@ class RegisterForClassDialogState extends State<RegisterForClassDialog> {
                   IconButton(
                     onPressed: () {
                       Navigator.of(context).pop<RegisterForClassData>((
+                        classId: '',
+                        sessionsCount: -1,
+                      ));
+                    },
+                    icon: Icon(Icons.cancel),
+                  ),
+                  const Spacer(),
+
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pop<RegisterForClassData>((
                         classId: currentClassId,
                         sessionsCount:
                             int.tryParse(sessionCountController.text) ?? -1,
@@ -47,41 +66,43 @@ class RegisterForClassDialogState extends State<RegisterForClassDialog> {
                 ],
               ),
               const SizedBox(height: 30),
-              FutureBuilderTemplate(
-                future: () async {
-                  if (!hasFetchedAllClasses) {
-                    final newDocs =
-                        (await firestore
-                                .collection('classes')
-                                .where(
-                                  FieldPath.documentId,
-                                  whereNotIn:
-                                      widget.classesDataCache.registry.keys,
-                                )
-                                .get())
-                            .docs;
-                    for (final doc in newDocs) {
-                      widget.classesDataCache.registry[doc.id] = doc;
+              if (widget.fixedClassId == null)
+                FutureBuilderTemplate(
+                  future: () async {
+                    if (widget.fixedClassId != null) return const [];
+                    if (!hasFetchedAllClasses) {
+                      final newDocs =
+                          (await firestore
+                                  .collection('classes')
+                                  .where(
+                                    FieldPath.documentId,
+                                    whereNotIn:
+                                        widget.classesDataCache.registry.keys,
+                                  )
+                                  .get())
+                              .docs;
+                      for (final doc in newDocs) {
+                        widget.classesDataCache.registry[doc.id] = doc;
+                      }
+                      hasFetchedAllClasses = true;
                     }
-                    hasFetchedAllClasses = true;
-                  }
-                  return const [];
-                }(),
-                builder: (_, context) => DropdownMenu(
-                  onSelected: (value) =>
-                      value != null ? currentClassId = value.key : null,
-                  dropdownMenuEntries: [
-                    for (final classEntry
-                        in widget.classesDataCache.registry.entries)
-                      DropdownMenuEntry(
-                        value: classEntry,
-                        label: ClassData.fromJson(
-                          classEntry.value.data()!,
-                        ).name,
-                      ),
-                  ],
+                    return const [];
+                  }(),
+                  builder: (_, context) => DropdownMenu(
+                    onSelected: (value) =>
+                        value != null ? currentClassId = value.key : null,
+                    dropdownMenuEntries: [
+                      for (final classEntry
+                          in widget.classesDataCache.registry.entries)
+                        DropdownMenuEntry(
+                          value: classEntry,
+                          label: ClassData.fromJson(
+                            classEntry.value.data()!,
+                          ).name,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
               const SizedBox(height: 20),
               TextField(
                 controller: sessionCountController,
