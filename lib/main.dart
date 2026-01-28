@@ -21,6 +21,7 @@ part './pages/term_details.dart';
 part './pages/onboarding_page.dart';
 
 part './components/navbar.dart';
+part './components/editable_row.dart';
 part './components/protected_page.dart';
 part './components/attendance_dialog.dart';
 part './components/register_for_class_dialog.dart';

@@ -17,7 +17,6 @@ class TermDetailsPageState extends State<TermDetailsPage> {
       .collection('nextTermSessionAllocations');
 
   // Session Alloc State
-  DocumentSnapshot<JSON>? currentStudent;
   final GenericCache<DocumentSnapshot<JSON>> classesDataCache = GenericCache((
     classId,
   ) async {
@@ -217,39 +216,41 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   builder: (context, snapshot) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DropdownMenu(
-                        initialSelection: currentStudent ??=
-                            shadowDocsCache.registry.values.first,
-                        onSelected: (value) => setState(() {
-                          if (value != null) currentStudent = value;
-                        }),
-                        dropdownMenuEntries: [
-                          for (final student in shadowDocsCache.registry.values)
-                            DropdownMenuEntry(
-                              value: student,
-                              label: StudentData.fromJson(student.data()!).name,
-                            ),
-                        ],
-                      ),
                       const SizedBox(height: 30),
                       const Text('Session Allocations'),
                       const SizedBox(height: 10),
-                      if (currentStudent != null)
-                        FutureBuilderTemplate(
-                          key: ValueKey(currentStudent!.id),
-                          future: () async {
-                            final List<DataRow> rows = [];
-                            for (final entry in StudentData.fromJson(
-                              currentStudent!.data()!,
-                            ).initialSessionCount.entries) {
-                              final cd = ClassData.fromJson(
+                      FutureBuilderTemplate(
+                        future: () async {
+                          final List<DataRow> rows = [];
+                          for (final student
+                              in shadowDocsCache.registry.entries) {
+                            final studentData = StudentData.fromJson(
+                              student.value.data()!,
+                            );
+                            rows.add(
+                              DataRow(
+                                cells: [
+                                  DataCell(Text(studentData.name)),
+                                  DataCell.empty,
+                                  DataCell.empty,
+                                  DataCell.empty,
+                                ],
+                              ),
+                            );
+
+                            for (final entry
+                                in studentData.initialSessionCount.entries) {
+                              final classData = ClassData.fromJson(
                                 (await classesDataCache.get(entry.key)).data()!,
                               );
-
                               rows.add(
                                 DataRow(
+                                  color: entry.value != -1
+                                      ? null
+                                      : WidgetStatePropertyAll(Colors.yellow),
                                   cells: [
-                                    DataCell(Text(cd.name)),
+                                    DataCell.empty,
+                                    DataCell(Text(classData.name)),
                                     DataCell(
                                       Text(
                                         entry.value != -1
@@ -276,12 +277,12 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                                 'Session allocation cancelled';
                                           } else {
                                             await shadowColl
-                                                .doc(currentStudent!.id)
+                                                .doc(student.key)
                                                 .update({
                                                   'initialSessionCount.${entry.key}':
                                                       data.sessionsCount,
                                                 });
-                                            await refreshStudentData();
+                                            await removeAndRefresh(student.key);
 
                                             msg =
                                                 'Session allocations updated successfully!';
@@ -309,17 +310,20 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                 ),
                               );
                             }
-                            return rows;
-                          }(),
-                          builder: (context, snapshot) => DataTable(
-                            columns: [
-                              DataColumn(label: Text('Class')),
-                              DataColumn(label: Text('Initial Session Count')),
-                              DataColumn(label: const SizedBox()),
-                            ],
-                            rows: snapshot.data ?? const [],
-                          ),
+                          }
+
+                          return rows;
+                        }(),
+                        builder: (context, snapshot) => DataTable(
+                          columns: [
+                            DataColumn(label: Text('Name')),
+                            DataColumn(label: Text('Class')),
+                            DataColumn(label: Text('Initial Session Count')),
+                            DataColumn(label: const SizedBox()),
+                          ],
+                          rows: snapshot.data ?? const [],
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -330,8 +334,8 @@ class TermDetailsPageState extends State<TermDetailsPage> {
     );
   }
 
-  Future<void> refreshStudentData() async {
-    shadowDocsCache.registry.remove(currentStudent!.id);
-    await shadowDocsCache.get(currentStudent!.id);
+  Future<void> removeAndRefresh(String studentId) async {
+    shadowDocsCache.registry.remove(studentId);
+    await shadowDocsCache.get(studentId);
   }
 }
