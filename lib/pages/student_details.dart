@@ -65,7 +65,9 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                       );
                       final numSessionsAttended = cd.attendance.entries
                           .where(
-                            (entry) => entry.value.contains(currentStudent!.id),
+                            (entry) =>
+                                entry.value.containsKey(currentStudent!.id) &&
+                                entry.value[currentStudent!.id]!.isPresent,
                           )
                           .length;
                       rows.add(

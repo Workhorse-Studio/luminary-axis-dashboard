@@ -18,6 +18,7 @@ part './pages/teachers.dart';
 part 'pages/login.dart';
 part './pages/student_details.dart';
 part './pages/term_details.dart';
+part './pages/onboarding_page.dart';
 
 part './components/navbar.dart';
 part './components/protected_page.dart';
@@ -60,6 +61,7 @@ enum Routes {
   students('/students'),
   teachers('/teachers'),
   termDetails('/termDetails'),
+  onboarding('/onboarding'),
   studentDetails('/studentDetails')
   ;
 
@@ -81,30 +83,35 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
       initialRoute: Routes.dashboard.slug,
       debugShowCheckedModeBanner: false,
       routes: {
-        Routes.dashboard.slug: (_) => DashboardPage(),
+        Routes.onboarding.slug: (_) => const OnboardingPage(),
+        Routes.dashboard.slug: (_) => ProtectedPage(
+          requiredRoles: ['student', 'teacher', 'admin'],
+          redirectOnIncorrectRole: Routes.login,
+          child: const DashboardPage(),
+        ),
         Routes.students.slug: (_) => ProtectedPage(
           requiredRoles: ['teacher', 'admin'],
-          redirectOnIncorrectRole: Routes.dashboard,
+          redirectOnIncorrectRole: Routes.login,
           child: StudentsPage(),
         ),
         Routes.syllabus.slug: (_) => ProtectedPage(
           requiredRoles: ['teacher', 'admin'],
-          redirectOnIncorrectRole: Routes.dashboard,
+          redirectOnIncorrectRole: Routes.login,
           child: SyllabusPage(),
         ),
         Routes.teachers.slug: (_) => ProtectedPage(
           requiredRoles: ['admin'],
-          redirectOnIncorrectRole: Routes.dashboard,
+          redirectOnIncorrectRole: Routes.login,
           child: const TeachersPage(),
         ),
         Routes.studentDetails.slug: (_) => ProtectedPage(
           requiredRoles: ['admin'],
-          redirectOnIncorrectRole: Routes.dashboard,
+          redirectOnIncorrectRole: Routes.login,
           child: const StudentDetailsPage(),
         ),
         Routes.termDetails.slug: (_) => ProtectedPage(
           requiredRoles: ['admin'],
-          redirectOnIncorrectRole: Routes.dashboard,
+          redirectOnIncorrectRole: Routes.login,
           child: const TermDetailsPage(),
         ),
         Routes.login.slug: (_) => LoginPage(),

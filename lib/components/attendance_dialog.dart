@@ -14,7 +14,7 @@ class AttendanceDialog extends StatefulWidget {
 
 class AttendanceDialogState extends State<AttendanceDialog> {
   String className = '';
-  final Map<String, ({String name, bool present})> records = {};
+  final Map<String, AttendanceType> records = {};
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -24,14 +24,14 @@ class AttendanceDialogState extends State<AttendanceDialog> {
         child: FutureBuilderTemplate(
           future: () async {
             if (records.isNotEmpty) return records;
+            final now = DateTime.now();
+            final String todayId = '${now.day}-${now.month}-${now.year}';
+
             final classDoc = await firestore
                 .collection('classes')
                 .doc(widget.classId)
                 .get();
-            final classData = ClassData.fromJson(classDoc.data()!);
-
-            className = classData.name;
-
+            ClassData classData = ClassData.fromJson(classDoc.data()!);
             final studentsData =
                 (await firestore
                         .collection('users')
@@ -45,16 +45,28 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                       (doc) =>
                           (data: StudentData.fromJson(doc.data()), id: doc.id),
                     );
-            final now = DateTime.now();
-            final String todayId = '${now.day}-${now.month}-${now.year}';
+
+            if (!classData.attendance.containsKey(todayId)) {
+              await firestore.collection('classes').doc(widget.classId).update({
+                'attendance.$todayId': {
+                  for (final entry in studentsData)
+                    entry.id: AttendanceType.absent.toString(),
+                },
+              });
+              classData = ClassData.fromJson(
+                (await firestore
+                        .collection('classes')
+                        .doc(widget.classId)
+                        .get())
+                    .data()!,
+              );
+            }
+            className = classData.name;
+
             for (final ({StudentData data, String id}) studentDoc
                 in studentsData) {
-              records[studentDoc.id] = (
-                name: studentDoc.data.name,
-                present: classData.attendance.containsKey(todayId)
-                    ? classData.attendance[todayId]!.contains(studentDoc.id)
-                    : false,
-              );
+              records[studentDoc.id] =
+                  classData.attendance[todayId]![studentDoc.id]!;
             }
             return records;
           }(),
@@ -69,15 +81,28 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   child: ListView(
                     children: [
                       for (final record in records.entries)
-                        CheckboxListTile(
+                        ListTile(
                           title: Text(record.value.name),
-                          value: record.value.present,
-                          onChanged: (isChecked) => setState(() {
-                            records[record.key] = (
-                              name: record.value.name,
-                              present: isChecked!,
-                            );
-                          }),
+                          trailing: DropdownMenu<AttendanceType>(
+                            initialSelection: record.value,
+                            dropdownMenuEntries: [
+                              for (final label in const [
+                                'Present Online',
+                                'Present Physical',
+                                'Present Recording',
+                                'Absent',
+                              ])
+                                DropdownMenuEntry(
+                                  value: AttendanceType.fromLabel(label),
+                                  label: label,
+                                ),
+                            ],
+                            onSelected: (value) => setState(() {
+                              (value != null)
+                                  ? records[record.key] = value
+                                  : null;
+                            }),
+                          ),
                         ),
                     ],
                   ),

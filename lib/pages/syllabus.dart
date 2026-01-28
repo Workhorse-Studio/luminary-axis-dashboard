@@ -62,23 +62,22 @@ class SyllabusPageState extends State<SyllabusPage> {
                     title: Text(cl.$2.name),
                     trailing: TextButton(
                       onPressed: () async {
-                        final Map<String, ({String name, bool present})>
-                        result = await showDialog(
-                          context: context,
-                          builder: (_) => AttendanceDialog(classId: cl.$1),
-                        );
+                        final Map<String, AttendanceType> result =
+                            await showDialog(
+                              context: context,
+                              builder: (_) => AttendanceDialog(classId: cl.$1),
+                            );
                         final now = DateTime.now();
                         final String todayId =
                             '${now.day}-${now.month}-${now.year}';
-                        final List<String> presentIds = [];
-                        for (final r in result.entries) {
-                          if (r.value.present) presentIds.add(r.key);
-                        }
 
                         final newAttendance = cl.$2.attendance;
-                        newAttendance[todayId] = presentIds;
+                        for (final r in result.entries) {
+                          newAttendance[todayId]![r.key] = r.value;
+                        }
+
                         await firestore.collection('classes').doc(cl.$1).update(
-                          {'attendance': newAttendance},
+                          {'attendance': newAttendance.toJson()},
                         );
                       },
                       child: Icon(Icons.ballot),
