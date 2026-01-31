@@ -30,20 +30,47 @@ class NavbarState extends State<Navbar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AxisColors.blackPurple50,
       body: Builder(builder: widget.body),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            for (final r in Routes.values)
-              TextButton(
-                onPressed: () => Navigator.of(context).pushNamed(r.slug),
-                child: Text(r.name, style: TextStyle(fontSize: 16)),
-              ),
-          ],
+      drawer: Align(
+        alignment: Alignment.topLeft,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.22,
+          decoration: BoxDecoration(
+            color: AxisColors.blackPurple50,
+            border: Border(
+              right: BorderSide(color: AxisColors.blackPurple30Blur),
+            ),
+          ),
+          child: Column(
+            children: [
+              for (final r in Routes.values)
+                Padding(
+                  padding: EdgeInsetsGeometry.only(
+                    left: 16,
+                    right: 16,
+                    bottom: 5,
+                    top: 5,
+                  ),
+                  child: AxisButton.text(
+                    label: r.label,
+                    isHighlighted:
+                        r.slug == ModalRoute.of(context)?.settings.name,
+                    width: double.infinity,
+                    icon: Icons.browser_updated_outlined,
+                    onPressed: () => Navigator.of(context).pushNamed(r.slug),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
       appBar: AppBar(
-        title: Text(widget.pageTitle),
+        centerTitle: false,
+        title: Text(
+          widget.pageTitle,
+          style: appBarTitle,
+        ),
         actions: [
           ...widget.actions,
           auth.currentUser == null

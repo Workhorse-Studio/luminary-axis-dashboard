@@ -11,14 +11,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'options.dart';
 
-part 'pages/dashboard.dart';
-part 'pages/syllabus.dart';
+part './pages/dashboard.dart';
+part './pages/syllabus.dart';
 part './pages/students.dart';
 part './pages/teachers.dart';
-part 'pages/login.dart';
+part './pages/login.dart';
 part './pages/student_details.dart';
 part './pages/term_details.dart';
 part './pages/onboarding_page.dart';
+part './pages/dev_screen.dart';
 
 part './components/navbar.dart';
 part './components/editable_row.dart';
@@ -27,6 +28,10 @@ part './components/attendance_dialog.dart';
 part './components/register_for_class_dialog.dart';
 part './components/withdraw_from_class_dialog.dart';
 part './components/future_builder_template.dart';
+
+part './design_system/colors.dart';
+part './design_system/text_styles.dart';
+part './design_system/components/button.dart';
 
 part './schemas/schemas.dart';
 part './schemas/teacher_data.dart';
@@ -56,18 +61,20 @@ void main() async {
 }
 
 enum Routes {
-  dashboard('/'),
-  login('/login'),
-  syllabus('/syllabus'),
-  students('/students'),
-  teachers('/teachers'),
-  termDetails('/termDetails'),
-  onboarding('/onboarding'),
-  studentDetails('/studentDetails')
+  dashboard('/', 'Dashboard'),
+  login('/login', 'Login'),
+  syllabus('/syllabus', 'Syllabus'),
+  students('/students', 'Students'),
+  teachers('/teachers', 'Teachers'),
+  termDetails('/termDetails', 'Term Details'),
+  onboarding('/onboarding', 'Onboarding'),
+  dev('/dev', 'Dev'),
+  studentDetails('/studentDetails', 'Student Details')
   ;
 
   final String slug;
-  const Routes(this.slug);
+  final String label;
+  const Routes(this.slug, this.label);
 }
 
 class AxisDashboardApp extends StatefulWidget {
@@ -81,9 +88,10 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      initialRoute: Routes.dashboard.slug,
+      initialRoute: kDebugMode ? Routes.dev.slug : Routes.dashboard.slug,
       debugShowCheckedModeBanner: false,
       routes: {
+        if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
         Routes.onboarding.slug: (_) => const OnboardingPage(),
         Routes.dashboard.slug: (_) => ProtectedPage(
           requiredRoles: ['student', 'teacher', 'admin'],
@@ -115,8 +123,16 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           redirectOnIncorrectRole: Routes.login,
           child: const TermDetailsPage(),
         ),
-        Routes.login.slug: (_) => LoginPage(),
+        Routes.login.slug: (_) => kDebugMode ? const DevScreen() : LoginPage(),
       },
+      theme: ThemeData(
+        appBarTheme: AppBarTheme(
+          backgroundColor: AxisColors.blackPurple50,
+          shape: Border(
+            bottom: BorderSide(color: AxisColors.blackPurple30Blur),
+          ),
+        ),
+      ),
     );
   }
 }
