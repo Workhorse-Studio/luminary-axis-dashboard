@@ -94,49 +94,68 @@ class AxisDashboardApp extends StatefulWidget {
 class AxisDashboardAppState extends State<AxisDashboardApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      initialRoute: Routes.login.slug,
-      debugShowCheckedModeBanner: false,
-      routes: {
-        if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
-        Routes.onboarding.slug: (_) => const OnboardingPage(),
-        Routes.dashboard.slug: (_) => ProtectedPage(
-          requiredRoles: ['student', 'teacher', 'admin'],
-          redirectOnIncorrectRole: Routes.login,
-          child: const DashboardPage(),
-        ),
-        Routes.students.slug: (_) => ProtectedPage(
-          requiredRoles: ['teacher', 'admin'],
-          redirectOnIncorrectRole: Routes.login,
-          child: StudentsPage(),
-        ),
-        Routes.syllabus.slug: (_) => ProtectedPage(
-          requiredRoles: ['teacher', 'admin'],
-          redirectOnIncorrectRole: Routes.login,
-          child: SyllabusPage(),
-        ),
-        Routes.teachers.slug: (_) => ProtectedPage(
-          requiredRoles: ['admin'],
-          redirectOnIncorrectRole: Routes.login,
-          child: const TeachersPage(),
-        ),
-        Routes.studentDetails.slug: (_) => ProtectedPage(
-          requiredRoles: ['admin'],
-          redirectOnIncorrectRole: Routes.login,
-          child: const StudentDetailsPage(),
-        ),
-        Routes.termDetails.slug: (_) => ProtectedPage(
-          requiredRoles: ['admin'],
-          redirectOnIncorrectRole: Routes.login,
-          child: const TermDetailsPage(),
-        ),
-        Routes.login.slug: (_) => LoginPage(),
-      },
-      theme: ThemeData(
-        appBarTheme: AppBarTheme(
-          backgroundColor: AxisColors.blackPurple50,
-          shape: Border(
-            bottom: BorderSide(color: AxisColors.blackPurple30Blur),
+    return TooltipVisibility(
+      visible: false,
+      child: MaterialApp(
+        initialRoute: Routes.login.slug,
+        debugShowCheckedModeBanner: false,
+        routes: {
+          if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
+          Routes.onboarding.slug: (_) => const OnboardingPage(),
+          Routes.dashboard.slug: (_) => ProtectedPage(
+            requiredRoles: ['student', 'teacher', 'admin'],
+            redirectOnIncorrectRole: Routes.login,
+            child: const DashboardPage(),
+          ),
+          Routes.students.slug: (_) => ProtectedPage(
+            requiredRoles: ['teacher', 'admin'],
+            redirectOnIncorrectRole: Routes.login,
+            child: StudentsPage(),
+          ),
+          Routes.syllabus.slug: (_) => ProtectedPage(
+            requiredRoles: ['teacher', 'admin'],
+            redirectOnIncorrectRole: Routes.login,
+            child: SyllabusPage(),
+          ),
+          Routes.teachers.slug: (_) => ProtectedPage(
+            requiredRoles: ['admin'],
+            redirectOnIncorrectRole: Routes.login,
+            child: const TeachersPage(),
+          ),
+          Routes.studentDetails.slug: (_) => ProtectedPage(
+            requiredRoles: ['admin'],
+            redirectOnIncorrectRole: Routes.login,
+            child: const StudentDetailsPage(),
+          ),
+          Routes.termDetails.slug: (_) => ProtectedPage(
+            requiredRoles: ['admin'],
+            redirectOnIncorrectRole: Routes.login,
+            child: const TermDetailsPage(),
+          ),
+          Routes.login.slug: (_) => LoginPage(),
+        },
+        theme: ThemeData(
+          iconButtonTheme: IconButtonThemeData(
+            style: ButtonStyle(
+              backgroundColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return AxisColors.blackPurple30.withValues(alpha: 0.35);
+                } else if (states.contains(WidgetState.hovered)) {
+                  return AxisColors.blackPurple30.withValues(alpha: 0.4);
+                } else {
+                  return Colors.transparent;
+                }
+              }),
+              iconColor: WidgetStatePropertyAll(
+                AxisColors.blackPurple20,
+              ),
+            ),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: AxisColors.blackPurple50,
+            shape: Border(
+              bottom: BorderSide(color: AxisColors.blackPurple30Blur),
+            ),
           ),
         ),
       ),
