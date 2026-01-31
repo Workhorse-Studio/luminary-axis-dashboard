@@ -55,13 +55,20 @@ part './firebase/auth.dart';
 late String role = 'admin';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: options);
 
+  await Firebase.initializeApp(options: options);
+  try {
+    firestore;
+    auth;
+  } catch (e, st) {
+    print(e);
+    print(st);
+  }
   runApp(const AxisDashboardApp());
 }
 
 enum Routes {
-  dashboard('/', 'Dashboard'),
+  dashboard('/dashboard', 'Dashboard'),
   login('/login', 'Login'),
   syllabus('/syllabus', 'Syllabus'),
   students('/students', 'Students'),
@@ -88,7 +95,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      initialRoute: kDebugMode ? Routes.dev.slug : Routes.dashboard.slug,
+      initialRoute: Routes.login.slug,
       debugShowCheckedModeBanner: false,
       routes: {
         if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
@@ -123,7 +130,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           redirectOnIncorrectRole: Routes.login,
           child: const TermDetailsPage(),
         ),
-        Routes.login.slug: (_) => kDebugMode ? const DevScreen() : LoginPage(),
+        Routes.login.slug: (_) => LoginPage(),
       },
       theme: ThemeData(
         appBarTheme: AppBarTheme(

@@ -16,10 +16,6 @@ class ProtectedPage extends StatefulWidget {
 }
 
 class ProtectedPageState extends State<ProtectedPage> {
-  late final sub = auth.authStateChanges().listen((state) {
-    checkAuthValidity();
-  });
-
   @override
   void didChangeDependencies() {
     checkAuthValidity();
@@ -30,11 +26,16 @@ class ProtectedPageState extends State<ProtectedPage> {
   void checkAuthValidity() {
     if (auth.currentUser == null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushNamed(Routes.login.slug);
+        if (ModalRoute.of(context)?.settings.name != Routes.login.slug) {
+          Navigator.of(context).pushNamed(Routes.login.slug);
+        }
       });
     } else if (!widget.requiredRoles.contains(role)) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushNamed(widget.redirectOnIncorrectRole.slug);
+        if (ModalRoute.of(context)?.settings.name !=
+            widget.redirectOnIncorrectRole.slug) {
+          Navigator.of(context).pushNamed(widget.redirectOnIncorrectRole.slug);
+        }
       });
     }
   }
@@ -47,7 +48,6 @@ class ProtectedPageState extends State<ProtectedPage> {
 
   @override
   void dispose() async {
-    await sub.cancel();
     super.dispose();
   }
 }

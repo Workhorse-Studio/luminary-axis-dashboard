@@ -7,7 +7,7 @@ class LoginPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Builder(
-        builder: (ctx) => auth_ui.SignInScreen(
+        builder: (context) => auth_ui.SignInScreen(
           providers: [auth_ui.EmailAuthProvider()],
           actions: [
             auth_ui.AuthStateChangeAction<auth_ui.UserCreated>((
