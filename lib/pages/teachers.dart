@@ -56,16 +56,18 @@ class TeachersPageState extends State<TeachersPage> {
         return Navbar(
           pageTitle: 'Teachers',
           actions: [
-            DropdownMenu<(String, QueryDocumentSnapshot<JSON>)>(
+            AxisDropdownButton(
+              width: 140,
+              initalLabel: TeacherData.fromJson(teachersData.first.data()).name,
               initialSelection: currentTeacher ??= (
                 teachersData.first.id,
                 teachersData.first,
               ),
-              dropdownMenuEntries: [
+              entries: [
                 for (final tData in teachersData)
-                  DropdownMenuEntry(
-                    value: (tData.id, tData),
-                    label: TeacherData.fromJson(tData.data()).name,
+                  (
+                    TeacherData.fromJson(tData.data()).name,
+                    (tData.id, tData),
                   ),
               ],
               onSelected: (newTData) => setState(() {
@@ -74,54 +76,62 @@ class TeachersPageState extends State<TeachersPage> {
             ),
           ],
           body: (context) => SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FutureBuilderTemplate(
-                  future: () async {
-                    return await teacherNumSessionsCache.get(
-                      currentTeacher!.$1,
-                    );
-                  }(),
-                  builder: (context, snapshot) => Text(
-                    'Total Sessions: ${snapshot.data}\nTotal Billable Amount: ${calculatePayout(snapshot.data!)}',
-                  ),
-                ),
-                const SizedBox(height: 40),
-                FutureBuilderTemplate(
-                  future: () async {
-                    return (await firestore
-                                .collection('global')
-                                .doc('state')
-                                .get())
-                            .data()!['currentTermNum']
-                        as int;
-                  }(),
-                  builder: (context, snapshot) => Text(
-                    '${TeacherData.fromJson(currentTeacher!.$2.data()).name} ${snapshot.data} Attendance Sheet',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Checkbox(
-                      value: showTermReport,
-                      onChanged: (newVal) => setState(() {
-                        if (newVal != null) showTermReport = newVal;
-                      }),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FutureBuilderTemplate(
+                    future: () async {
+                      return await teacherNumSessionsCache.get(
+                        currentTeacher!.$1,
+                      );
+                    }(),
+                    builder: (context, snapshot) => Text(
+                      'Total Sessions: ${snapshot.data}\nTotal Billable Amount: ${calculatePayout(snapshot.data!)}',
+                      style: body2,
                     ),
-                    const SizedBox(width: 5),
-                    const Text('Show Term Report'),
-                  ],
-                ),
-                if (showTermReport)
-                  TermReportWidget(
-                    teacherId: currentTeacher!.$1,
-                    teacherData: currentTeacher!.$2,
-                    reportCache: reportCache,
                   ),
-              ],
+                  const SizedBox(height: 40),
+                  FutureBuilderTemplate(
+                    future: () async {
+                      return (await firestore
+                                  .collection('global')
+                                  .doc('state')
+                                  .get())
+                              .data()!['currentTermNum']
+                          as int;
+                    }(),
+                    builder: (context, snapshot) => Text(
+                      '${TeacherData.fromJson(currentTeacher!.$2.data()).name} ${snapshot.data} Attendance Sheet',
+                      style: body2,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Checkbox(
+                        value: showTermReport,
+                        onChanged: (newVal) => setState(() {
+                          if (newVal != null) showTermReport = newVal;
+                        }),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Show Term Report',
+                        style: body2,
+                      ),
+                    ],
+                  ),
+                  if (showTermReport)
+                    TermReportWidget(
+                      teacherId: currentTeacher!.$1,
+                      teacherData: currentTeacher!.$2,
+                      reportCache: reportCache,
+                    ),
+                ],
+              ),
             ),
           ),
         );

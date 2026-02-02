@@ -22,8 +22,6 @@ class StudentsPageState extends State<StudentsPage> {
       classIds: const [],
     ),
   );
-  bool isOpen = false;
-  final MenuController menuController = MenuController();
 
   // Admin View State
   (String, TeacherData) currentValue = (
@@ -67,74 +65,39 @@ class StudentsPageState extends State<StudentsPage> {
       return Navbar(
         pageTitle: 'Students',
         actions: [
-          NeumorphicButton(
-            style: NeumorphicStyle(
-              boxShape: NeumorphicBoxShape.stadium(),
-              border: NeumorphicBorder(color: AxisColors.blackPurple20),
-              color: AxisColors.blackPurple30.withValues(alpha: 0.3),
-              shadowLightColor: AxisColors.blackPurple20.withValues(alpha: 0.7),
-            ),
-            padding: const EdgeInsets.all(0),
-            onPressed: () {
-              isOpen ? menuController.close() : menuController.open();
-              isOpen = !isOpen;
-            },
-            child: IgnorePointer(
-              ignoring: true,
-              child: DropdownMenu(
-                width: 140,
-                menuController: menuController,
-                inputDecorationTheme: InputDecorationTheme(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.only(left: 20),
+          AxisDropdownButton(
+            width: 140,
+            initalLabel: 'All',
+            initialSelection: allOption,
+            entries: [
+              for (final tData in teachersData)
+                (
+                  TeacherData.fromJson(tData.data()).name,
+                  (tData.id, TeacherData.fromJson(tData.data())),
                 ),
-                menuStyle: MenuStyle(
-                  side: WidgetStatePropertyAll(
-                    BorderSide(color: AxisColors.blackPurple20),
-                  ),
-                  backgroundColor: WidgetStatePropertyAll(
-                    AxisColors.blackPurple30,
-                  ),
-                ),
-                textStyle: buttonLabel,
-                initialSelection: allOption,
-                dropdownMenuEntries: [
-                  DropdownMenuEntry(
-                    value: allOption,
-                    style: menuEntryStyle,
-                    label: 'All',
-                  ),
-                  for (final tData in teachersData)
-                    DropdownMenuEntry(
-                      value: (tData.id, TeacherData.fromJson(tData.data())),
-                      style: menuEntryStyle,
-                      label: TeacherData.fromJson(tData.data()).name,
+            ],
+            onSelected: (newTData) => setState(() {
+              if (newTData != null) {
+                if (newTData.$1 != '') {
+                  currentValue = newTData;
+                  currentTeacherUid = newTData.$1;
+                  currentTeacherName = newTData.$2.name;
+                } else {
+                  currentValue = (
+                    '',
+                    TeacherData(
+                      name: 'name',
+                      role: 'role',
+                      priorSessionCount: 0,
+                      classIds: const [],
                     ),
-                ],
-                onSelected: (newTData) => setState(() {
-                  if (newTData != null) {
-                    if (newTData.$1 != '') {
-                      currentValue = newTData;
-                      currentTeacherUid = newTData.$1;
-                      currentTeacherName = newTData.$2.name;
-                    } else {
-                      currentValue = (
-                        '',
-                        TeacherData(
-                          name: 'name',
-                          role: 'role',
-                          priorSessionCount: 0,
-                          classIds: const [],
-                        ),
-                      );
+                  );
 
-                      currentTeacherUid = '';
-                      currentTeacherName = '';
-                    }
-                  }
-                }),
-              ),
-            ),
+                  currentTeacherUid = '';
+                  currentTeacherName = '';
+                }
+              }
+            }),
           ),
         ],
         body: (context) => SingleChildScrollView(
@@ -205,7 +168,10 @@ class TermReportWidgetState extends State<TermReportWidget> {
                   DataCell(
                     Row(
                       children: [
-                        Text(currentReport[j][0]),
+                        Text(
+                          currentReport[j][0],
+                          style: body2,
+                        ),
                         const SizedBox(width: 10),
                         Flexible(
                           child: LinearProgressIndicator(

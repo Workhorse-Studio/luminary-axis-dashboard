@@ -133,3 +133,35 @@ class AxisButtonState extends State<AxisButton> {
     );
   }
 }
+
+class AxisNMButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+
+  const AxisNMButton({
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return NeumorphicButton(
+      style: NeumorphicStyle(
+        boxShape: NeumorphicBoxShape.stadium(),
+        border: NeumorphicBorder(color: AxisColors.blackPurple20),
+        color: AxisColors.blackPurple30.withValues(alpha: 0.3),
+        shadowLightColor: AxisColors.blackPurple20.withValues(alpha: 0.7),
+      ),
+      padding: const EdgeInsets.all(0),
+      onPressed: onPressed,
+      child: Padding(
+        padding: const EdgeInsetsGeometry.all(12),
+        child: Text(
+          label,
+          style: buttonLabel,
+        ),
+      ),
+    );
+  }
+}

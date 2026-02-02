@@ -89,245 +89,326 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         }
                         setState(() {});
                       },
-                      child: Text('End Current Term'),
+                      child: Text(
+                        'End Current Term',
+                        style: buttonLabel,
+                      ),
                     )
                   : Text(
                       "${DateTime.fromMillisecondsSinceEpoch(
                         globalState!.currentTermEndDate,
                       ).difference(DateTime.now()).inDays} days to term end",
+                      style: body2,
                     ),
             ),
         ],
         body: (context) => SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            key: ValueKey(globalState!.currentTermEndDate),
+          child: Padding(
+            padding: const EdgeInsetsGeometry.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              key: ValueKey(globalState!.currentTermEndDate),
 
-            children: [
-              const SizedBox(height: 30),
-              if (globalState!.hasEndDateSet &&
-                  DateTime.now().isSameDayAs(
-                    DateTime.fromMillisecondsSinceEpoch(
-                      globalState!.currentTermEndDate,
-                    ),
-                  )) ...[
-                const Text(
-                  'New Term Setup Required\nPlease update initial session allocations for students before logging attendance for the new term.',
-                ),
+              children: [
                 const SizedBox(height: 30),
-              ],
-              Text(
-                'Current Term Start Date:\n${DateTime.fromMillisecondsSinceEpoch(globalState!.currentTermStartDate).toTimestampStringShort()}',
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Current Term End Date: ${globalState!.hasEndDateSet ? DateTime.fromMillisecondsSinceEpoch(globalState!.currentTermEndDate).toTimestampStringShort() : 'No date set.'}',
-              ),
-              TextButton(
-                onPressed: () async {
-                  final endDate = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime.now().subtract(
-                      const Duration(days: 30),
-                    ),
-                    lastDate: DateTime.now().add(const Duration(days: 60)),
-                  );
-                  if (endDate != null) {
-                    await firestore.collection('global').doc('state').update({
-                      'currentTermEndDate': endDate.millisecondsSinceEpoch,
-                    });
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(
-                        SnackBar(
-                          content: Text('Term end date set successfully!'),
-                        ),
-                      );
-                      globalState = globalState = GlobalState.fromJson(
-                        (await firestore
-                                .collection('global')
-                                .doc('state')
-                                .get())
-                            .data()!,
-                      );
-                    }
-
-                    setState(() {});
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(
-                        SnackBar(
-                          content: Text('No date set'),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: Text(
-                  globalState!.currentTermEndDate == 0
+                if (globalState!.hasEndDateSet &&
+                    DateTime.now().isSameDayAs(
+                      DateTime.fromMillisecondsSinceEpoch(
+                        globalState!.currentTermEndDate,
+                      ),
+                    )) ...[
+                  Text(
+                    'New Term Setup Required\nPlease update initial session allocations for students before logging attendance for the new term.',
+                    style: body2,
+                  ),
+                  const SizedBox(height: 30),
+                ],
+                Text(
+                  'Current Term Start Date',
+                  style: heading3,
+                ),
+                Text(
+                  DateTime.fromMillisecondsSinceEpoch(
+                    globalState!.currentTermStartDate,
+                  ).toTimestampStringShort(),
+                  style: body2,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Current Term End Date',
+                  style: heading3,
+                ),
+                Text(
+                  globalState!.hasEndDateSet
+                      ? DateTime.fromMillisecondsSinceEpoch(
+                          globalState!.currentTermEndDate,
+                        ).toTimestampStringShort()
+                      : 'No date set.',
+                  style: body2,
+                ),
+                const SizedBox(height: 10),
+                AxisNMButton(
+                  label: globalState!.currentTermEndDate == 0
                       ? 'Set Date'
                       : 'Modify Date',
-                ),
-              ),
-              const SizedBox(height: 50),
-              const Text('Show Session Allocations For Next Term'),
-              const SizedBox(height: 10),
-              Switch(
-                value: showSessionAllocation,
-                onChanged: (newVal) => setState(() {
-                  showSessionAllocation = newVal;
-                }),
-              ),
-              const SizedBox(height: 30),
-              if (showSessionAllocation)
-                FutureBuilderTemplate(
-                  future: () async {
-                    if (shadowDocsCache.registry.isEmpty) {
-                      final shadowDocs = (await shadowColl.get()).docs;
-                      if (shadowDocs.isEmpty) {
-                        final query = (await firestore
-                            .collection('users')
-                            .where('role', isEqualTo: 'student')
-                            .get());
-                        for (final doc in query.docs) {
-                          final shadowDoc = shadowColl.doc(doc.id);
-                          final newData = StudentData.fromJson(doc.data());
-                          for (final classEntry
-                              in newData.initialSessionCount.entries) {
-                            newData.initialSessionCount[classEntry.key] = -1;
-                          }
-                          await shadowDoc.set(newData.toJson());
-                          shadowDocsCache.registry[shadowDoc.id] =
-                              await shadowDoc.get();
-                        }
+                  onPressed: () async {
+                    final endDate = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime.now().subtract(
+                        const Duration(days: 30),
+                      ),
+                      lastDate: DateTime.now().add(const Duration(days: 60)),
+                    );
+                    if (endDate != null) {
+                      await firestore.collection('global').doc('state').update({
+                        'currentTermEndDate': endDate.millisecondsSinceEpoch,
+                      });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Term end date set successfully!',
+                              style: body2,
+                            ),
+                          ),
+                        );
+                        globalState = globalState = GlobalState.fromJson(
+                          (await firestore
+                                  .collection('global')
+                                  .doc('state')
+                                  .get())
+                              .data()!,
+                        );
+                      }
 
-                        setState(() {});
-                      } else {
-                        for (final doc in shadowDocs) {
-                          shadowDocsCache.registry[doc.id] = doc;
-                        }
+                      setState(() {});
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'No date set',
+                              style: body2,
+                            ),
+                          ),
+                        );
                       }
                     }
-                    return shadowDocsCache.registry;
-                  }(),
-                  builder: (context, snapshot) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 30),
-                      const Text('Session Allocations'),
-                      const SizedBox(height: 10),
-                      FutureBuilderTemplate(
-                        future: () async {
-                          final List<DataRow> rows = [];
-                          for (final student
-                              in shadowDocsCache.registry.entries) {
-                            final studentData = StudentData.fromJson(
-                              student.value.data()!,
-                            );
-                            rows.add(
-                              DataRow(
-                                cells: [
-                                  DataCell(Text(studentData.name)),
-                                  DataCell.empty,
-                                  DataCell.empty,
-                                  DataCell.empty,
-                                ],
-                              ),
-                            );
-
-                            for (final entry
-                                in studentData.initialSessionCount.entries) {
-                              final classData = ClassData.fromJson(
-                                (await classesDataCache.get(entry.key)).data()!,
-                              );
-                              rows.add(
-                                DataRow(
-                                  color: entry.value != -1
-                                      ? null
-                                      : WidgetStatePropertyAll(Colors.yellow),
-                                  cells: [
-                                    DataCell.empty,
-                                    DataCell(Text(classData.name)),
-                                    DataCell(
-                                      Text(
-                                        entry.value != -1
-                                            ? '${entry.value}'
-                                            : 'Not set',
-                                      ),
-                                    ),
-                                    DataCell(
-                                      TextButton(
-                                        onPressed: () async {
-                                          final RegisterForClassData data =
-                                              await showDialog(
-                                                context: context,
-                                                builder: (_) =>
-                                                    RegisterForClassDialog(
-                                                      classesDataCache:
-                                                          classesDataCache,
-                                                      fixedClassId: entry.key,
-                                                    ),
-                                              );
-                                          final msg;
-                                          if (data.sessionsCount == -1) {
-                                            msg =
-                                                'Session allocation cancelled';
-                                          } else {
-                                            await shadowColl
-                                                .doc(student.key)
-                                                .update({
-                                                  'initialSessionCount.${entry.key}':
-                                                      data.sessionsCount,
-                                                });
-                                            await removeAndRefresh(student.key);
-
-                                            msg =
-                                                'Session allocations updated successfully!';
-                                          }
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(msg),
-                                              ),
-                                            );
-                                          }
-
-                                          setState(() {});
-                                        },
-                                        child: Text(
-                                          entry.value == -1
-                                              ? 'Allocate sessions'
-                                              : 'Update allocation',
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
+                  },
+                ),
+                const SizedBox(height: 50),
+                Text(
+                  'Show Session Allocations For Next Term',
+                  style: body2,
+                ),
+                const SizedBox(height: 10),
+                Switch(
+                  value: showSessionAllocation,
+                  onChanged: (newVal) => setState(() {
+                    showSessionAllocation = newVal;
+                  }),
+                ),
+                const SizedBox(height: 30),
+                if (showSessionAllocation)
+                  FutureBuilderTemplate(
+                    future: () async {
+                      if (shadowDocsCache.registry.isEmpty) {
+                        final shadowDocs = (await shadowColl.get()).docs;
+                        if (shadowDocs.isEmpty) {
+                          final query = (await firestore
+                              .collection('users')
+                              .where('role', isEqualTo: 'student')
+                              .get());
+                          for (final doc in query.docs) {
+                            final shadowDoc = shadowColl.doc(doc.id);
+                            final newData = StudentData.fromJson(doc.data());
+                            for (final classEntry
+                                in newData.initialSessionCount.entries) {
+                              newData.initialSessionCount[classEntry.key] = -1;
                             }
+                            await shadowDoc.set(newData.toJson());
+                            shadowDocsCache.registry[shadowDoc.id] =
+                                await shadowDoc.get();
                           }
 
-                          return rows;
-                        }(),
-                        builder: (context, snapshot) => DataTable(
-                          columns: [
-                            DataColumn(label: Text('Name')),
-                            DataColumn(label: Text('Class')),
-                            DataColumn(label: Text('Initial Session Count')),
-                            DataColumn(label: const SizedBox()),
-                          ],
-                          rows: snapshot.data ?? const [],
+                          setState(() {});
+                        } else {
+                          for (final doc in shadowDocs) {
+                            shadowDocsCache.registry[doc.id] = doc;
+                          }
+                        }
+                      }
+                      return shadowDocsCache.registry;
+                    }(),
+                    builder: (context, snapshot) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 30),
+                        AxisCard(
+                          header: 'Session Allocations',
+                          width: MediaQuery.of(context).size.width * 0.8,
+                          height: null,
+                          child: FutureBuilderTemplate(
+                            future: () async {
+                              final List<DataRow> rows = [];
+                              for (final student
+                                  in shadowDocsCache.registry.entries) {
+                                final studentData = StudentData.fromJson(
+                                  student.value.data()!,
+                                );
+                                rows.add(
+                                  DataRow(
+                                    cells: [
+                                      DataCell(
+                                        Text(
+                                          studentData.name,
+                                          style: body2,
+                                        ),
+                                      ),
+                                      DataCell.empty,
+                                      DataCell.empty,
+                                      DataCell.empty,
+                                    ],
+                                  ),
+                                );
+
+                                for (final entry
+                                    in studentData
+                                        .initialSessionCount
+                                        .entries) {
+                                  final classData = ClassData.fromJson(
+                                    (await classesDataCache.get(
+                                      entry.key,
+                                    )).data()!,
+                                  );
+                                  rows.add(
+                                    DataRow(
+                                      color: entry.value != -1
+                                          ? null
+                                          : WidgetStatePropertyAll(
+                                              Colors.yellow.withValues(
+                                                alpha: 0.1,
+                                              ),
+                                            ),
+                                      cells: [
+                                        DataCell.empty,
+                                        DataCell(
+                                          Text(
+                                            classData.name,
+                                            style: body2,
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            entry.value != -1
+                                                ? '${entry.value}'
+                                                : 'Not set',
+                                            style: body2,
+                                          ),
+                                        ),
+                                        DataCell(
+                                          AxisNMButton(
+                                            label: entry.value == -1
+                                                ? 'Allocate sessions'
+                                                : 'Update allocation',
+
+                                            onPressed: () async {
+                                              final RegisterForClassData data =
+                                                  await showDialog(
+                                                    context: context,
+                                                    builder: (_) =>
+                                                        RegisterForClassDialog(
+                                                          classesDataCache:
+                                                              classesDataCache,
+                                                          fixedClassId:
+                                                              entry.key,
+                                                        ),
+                                                  );
+                                              final msg;
+                                              if (data.sessionsCount == -1) {
+                                                msg =
+                                                    'Session allocation cancelled';
+                                              } else {
+                                                await shadowColl
+                                                    .doc(student.key)
+                                                    .update({
+                                                      'initialSessionCount.${entry.key}':
+                                                          data.sessionsCount,
+                                                    });
+                                                await removeAndRefresh(
+                                                  student.key,
+                                                );
+
+                                                msg =
+                                                    'Session allocations updated successfully!';
+                                              }
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(msg),
+                                                  ),
+                                                );
+                                              }
+
+                                              setState(() {});
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              }
+
+                              return rows;
+                            }(),
+                            builder: (context, snapshot) => DataTable(
+                              dataRowMinHeight: 60,
+                              dataRowMaxHeight: 80,
+                              columns: [
+                                DataColumn(
+                                  label: Text(
+                                    'Name',
+                                    style: body2.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Class',
+                                    style: body2.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    'Initial Session Count',
+                                    style: body2.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(label: const SizedBox()),
+                              ],
+                              rows: snapshot.data ?? const [],
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

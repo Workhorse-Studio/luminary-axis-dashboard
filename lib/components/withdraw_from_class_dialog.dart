@@ -20,18 +20,21 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
         height: 140,
         child: Column(
           children: [
-            Text(widget.confirmationMsg),
+            Text(
+              widget.confirmationMsg,
+              style: body2,
+            ),
             const SizedBox(height: 50),
             Row(
               children: [
-                TextButton(
+                AxisNMButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: Text('Cancel'),
+                  label: 'Cancel',
                 ),
                 const Spacer(),
-                TextButton(
+                AxisNMButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: Text('Continue'),
+                  label: 'Continue',
                 ),
               ],
             ),

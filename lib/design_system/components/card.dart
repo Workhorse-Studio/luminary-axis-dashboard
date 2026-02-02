@@ -26,20 +26,21 @@ class AxisCard extends StatelessWidget {
         height: height,
         child: Column(
           children: [
-            SizedBox(
-              width: width,
-              height: 60,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsetsGeometry.only(left: 20),
-                  child: Text(
-                    header,
-                    style: heading2,
+            if (header != '')
+              SizedBox(
+                width: width,
+                height: 60,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsetsGeometry.only(left: 20),
+                    child: Text(
+                      header,
+                      style: heading2,
+                    ),
                   ),
                 ),
               ),
-            ),
             child,
             const SizedBox(height: 20),
           ],
