@@ -7,8 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart' as auth_ui;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'options.dart';
 
 part './pages/dashboard.dart';
@@ -32,6 +32,8 @@ part './components/future_builder_template.dart';
 part './design_system/colors.dart';
 part './design_system/text_styles.dart';
 part './design_system/components/button.dart';
+part './design_system/components/card.dart';
+part './design_system/styles.dart';
 
 part './schemas/schemas.dart';
 part './schemas/teacher_data.dart';
@@ -148,6 +150,22 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
               }),
               iconColor: WidgetStatePropertyAll(
                 AxisColors.blackPurple20,
+              ),
+            ),
+          ),
+          dropdownMenuTheme: DropdownMenuThemeData(
+            inputDecorationTheme: InputDecorationTheme(
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: AxisColors.blackPurple20),
+              ),
+
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: AxisColors.blackPurple20),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
             ),
           ),

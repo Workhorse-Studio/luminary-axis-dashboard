@@ -13,6 +13,17 @@ class StudentsPageState extends State<StudentsPage> {
     await tr.generateTermReport(classId);
     return tr;
   });
+  final (String, TeacherData) allOption = (
+    '',
+    TeacherData(
+      name: 'name',
+      role: 'role',
+      priorSessionCount: 0,
+      classIds: const [],
+    ),
+  );
+  bool isOpen = false;
+  final MenuController menuController = MenuController();
 
   // Admin View State
   (String, TeacherData) currentValue = (
@@ -56,48 +67,74 @@ class StudentsPageState extends State<StudentsPage> {
       return Navbar(
         pageTitle: 'Students',
         actions: [
-          DropdownMenu(
-            dropdownMenuEntries: [
-              DropdownMenuEntry(
-                label: 'All',
-                value: (
-                  '',
-                  TeacherData(
-                    name: 'name',
-                    role: 'role',
-                    priorSessionCount: 0,
-                    classIds: const [],
+          NeumorphicButton(
+            style: NeumorphicStyle(
+              boxShape: NeumorphicBoxShape.stadium(),
+              border: NeumorphicBorder(color: AxisColors.blackPurple20),
+              color: AxisColors.blackPurple30.withValues(alpha: 0.3),
+              shadowLightColor: AxisColors.blackPurple20.withValues(alpha: 0.7),
+            ),
+            padding: const EdgeInsets.all(0),
+            onPressed: () {
+              isOpen ? menuController.close() : menuController.open();
+              isOpen = !isOpen;
+            },
+            child: IgnorePointer(
+              ignoring: true,
+              child: DropdownMenu(
+                width: 140,
+                menuController: menuController,
+                inputDecorationTheme: InputDecorationTheme(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.only(left: 20),
+                ),
+                menuStyle: MenuStyle(
+                  side: WidgetStatePropertyAll(
+                    BorderSide(color: AxisColors.blackPurple20),
+                  ),
+                  backgroundColor: WidgetStatePropertyAll(
+                    AxisColors.blackPurple30,
                   ),
                 ),
-              ),
-              for (final tData in teachersData)
-                DropdownMenuEntry(
-                  value: (tData.id, TeacherData.fromJson(tData.data())),
-                  label: TeacherData.fromJson(tData.data()).name,
-                ),
-            ],
-            onSelected: (newTData) => setState(() {
-              if (newTData != null) {
-                if (newTData.$1 != '') {
-                  currentValue = newTData;
-                  currentTeacherUid = newTData.$1;
-                  currentTeacherName = newTData.$2.name;
-                } else {
-                  currentValue = (
-                    '',
-                    TeacherData(
-                      name: 'name',
-                      role: 'role',
-                      priorSessionCount: 0,
-                      classIds: const [],
+                textStyle: buttonLabel,
+                initialSelection: allOption,
+                dropdownMenuEntries: [
+                  DropdownMenuEntry(
+                    value: allOption,
+                    style: menuEntryStyle,
+                    label: 'All',
+                  ),
+                  for (final tData in teachersData)
+                    DropdownMenuEntry(
+                      value: (tData.id, TeacherData.fromJson(tData.data())),
+                      style: menuEntryStyle,
+                      label: TeacherData.fromJson(tData.data()).name,
                     ),
-                  );
+                ],
+                onSelected: (newTData) => setState(() {
+                  if (newTData != null) {
+                    if (newTData.$1 != '') {
+                      currentValue = newTData;
+                      currentTeacherUid = newTData.$1;
+                      currentTeacherName = newTData.$2.name;
+                    } else {
+                      currentValue = (
+                        '',
+                        TeacherData(
+                          name: 'name',
+                          role: 'role',
+                          priorSessionCount: 0,
+                          classIds: const [],
+                        ),
+                      );
 
-                  currentTeacherUid = '';
-                  currentTeacherName = '';
-                }
-              }
-            }),
+                      currentTeacherUid = '';
+                      currentTeacherName = '';
+                    }
+                  }
+                }),
+              ),
+            ),
           ),
         ],
         body: (context) => SingleChildScrollView(
@@ -179,26 +216,36 @@ class TermReportWidgetState extends State<TermReportWidget> {
                     ),
                   ),
                   for (final e in currentReport[j].skip(1))
-                    DataCell(Text(e.toString())),
+                    DataCell(
+                      Text(
+                        e.toString(),
+                        style: body2,
+                      ),
+                    ),
                 ],
               ),
             );
           }
-          widgets.addAll(
-            [
-              ListTile(
-                title: Text(classesData.values.elementAt(i).name),
-                tileColor: Colors.deepPurple,
-              ),
-              DataTable(
+          widgets.addAll([
+            AxisCard(
+              header: classesData.values.elementAt(i).name,
+              width: MediaQuery.of(context).size.width * 0.7,
+              height: null,
+              child: DataTable(
                 columns: [
                   for (final c in termReports[i].data.first)
-                    DataColumn(label: Text(c.toString())),
+                    DataColumn(
+                      label: Text(
+                        c.toString(),
+                        style: body2.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                 ],
                 rows: rows,
               ),
-            ],
-          );
+            ),
+            const SizedBox(height: 40),
+          ]);
         }
         return widget.teacherData == null
             ? SingleChildScrollView(
@@ -214,10 +261,12 @@ class TermReportWidgetState extends State<TermReportWidget> {
                             TeacherData.fromJson(
                               widget.teacherData!.data(),
                             ).name,
+                            style: heading1,
                           ),
                         ),
                       ),
                     ...widgets,
+                    const SizedBox(height: 80),
                   ],
                 ),
               )
@@ -229,12 +278,19 @@ class TermReportWidgetState extends State<TermReportWidget> {
                       height: 80,
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          TeacherData.fromJson(widget.teacherData!.data()).name,
+                        child: Padding(
+                          padding: const EdgeInsetsGeometry.only(left: 40),
+                          child: Text(
+                            TeacherData.fromJson(
+                              widget.teacherData!.data(),
+                            ).name,
+                            style: heading1,
+                          ),
                         ),
                       ),
                     ),
                   ...widgets,
+                  const SizedBox(height: 80),
                 ],
               );
       },

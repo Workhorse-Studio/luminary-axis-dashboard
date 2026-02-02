@@ -67,17 +67,23 @@ class NavbarState extends State<Navbar> {
       ),
       appBar: AppBar(
         centerTitle: false,
+        toolbarHeight: 80,
+        actionsPadding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+        ),
         title: Text(
           widget.pageTitle,
           style: appBarTitle,
         ),
         actions: [
           ...widget.actions,
-          auth.currentUser == null
+          /* auth.currentUser == null
               ? Text('Not signed in')
               : Text(
                   'Signed in as ${auth.currentUser!.email!.substring(0, 5)}${'*' * (auth.currentUser!.email!.length - 5)}',
                 ),
+        */
         ],
         leading: Builder(
           builder: (ctx) => DrawerButton(
