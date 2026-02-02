@@ -35,7 +35,7 @@ class TeachersPageState extends State<TeachersPage> {
               tr.attendanceDatesIndices.$1,
               tr.attendanceDatesIndices.$2 + 1,
             )
-            .fold(0, (a, b) => a + (b ? 1 : 0));
+            .fold(0, (a, b) => a + ((b as AttendanceType).isPresent ? 1 : 0));
       }
     }
     return numSessions;

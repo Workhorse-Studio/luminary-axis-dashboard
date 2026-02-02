@@ -116,7 +116,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
             child: StudentsPage(),
           ),
           Routes.syllabus.slug: (_) => ProtectedPage(
-            requiredRoles: ['teacher', 'admin'],
+            requiredRoles: ['teacher'],
             redirectOnIncorrectRole: Routes.login,
             child: SyllabusPage(),
           ),
