@@ -1,12 +1,10 @@
 part of axis_dashboard;
 
 class ProtectedPage extends StatefulWidget {
-  final List<String> requiredRoles;
   final Routes redirectOnIncorrectRole;
   final Widget child;
   const ProtectedPage({
     required this.child,
-    required this.requiredRoles,
     required this.redirectOnIncorrectRole,
     super.key,
   });
@@ -23,17 +21,20 @@ class ProtectedPageState extends State<ProtectedPage> {
     super.didChangeDependencies();
   }
 
+
   void checkAuthValidity() {
+    final String routeName = ModalRoute.of(context)!.settings.name!;
     if (auth.currentUser == null) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (ModalRoute.of(context)?.settings.name != Routes.login.slug) {
           Navigator.of(context).pushNamed(Routes.login.slug);
         }
       });
-    } else if (!widget.requiredRoles.contains(role)) {
+    } else if (!hasRolesForRoute(
+      Routes.values.where((route) => route.slug == routeName).first,
+    )) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (ModalRoute.of(context)?.settings.name !=
-            widget.redirectOnIncorrectRole.slug) {
+        if (routeName != widget.redirectOnIncorrectRole.slug) {
           Navigator.of(context).pushNamed(widget.redirectOnIncorrectRole.slug);
         }
       });

@@ -15,6 +15,9 @@ class GenericCache<T> {
   }
 }
 
+bool hasRolesForRoute(Routes route) =>
+    route.requiredRoles.isEmpty || route.requiredRoles.contains(role);
+
 extension DateUtils on DateTime {
   String toTimestampString() =>
       "${day.toString().padLeft(2, '0')}-${month.toString().padLeft(2, '0')}-${year.toString()} ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}";

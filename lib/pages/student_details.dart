@@ -205,37 +205,40 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                           ),
                         );
                       }(),
-                      builder: (context, snapshot) => DataTable(
-                        dataRowMinHeight: 60,
-                        dataRowMaxHeight: 80,
-                        columns: [
-                          DataColumn(
-                            label: Text(
-                              'Class',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                      builder: (context, snapshot) => SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          dataRowMinHeight: 60,
+                          dataRowMaxHeight: 80,
+                          columns: [
+                            DataColumn(
+                              label: Text(
+                                'Class',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Initial Session Count',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                            DataColumn(
+                              label: Text(
+                                'Initial Session Count',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Final Session Count',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                            DataColumn(
+                              label: Text(
+                                'Final Session Count',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(label: Text('')),
-                        ],
-                        rows: snapshot.data ?? const [],
+                            DataColumn(label: Text('')),
+                          ],
+                          rows: snapshot.data ?? const [],
+                        ),
                       ),
                     ),
                   ),

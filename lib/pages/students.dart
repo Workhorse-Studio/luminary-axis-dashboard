@@ -197,17 +197,22 @@ class TermReportWidgetState extends State<TermReportWidget> {
               header: classesData.values.elementAt(i).name,
               width: MediaQuery.of(context).size.width * 0.7,
               height: null,
-              child: DataTable(
-                columns: [
-                  for (final c in termReports[i].data.first)
-                    DataColumn(
-                      label: Text(
-                        c.toString(),
-                        style: body2.copyWith(fontWeight: FontWeight.bold),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: [
+                    for (final c in termReports[i].data.first)
+                      DataColumn(
+                        label: Text(
+                          c.toString(),
+                          style: body2.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
-                ],
-                rows: rows,
+                  ],
+                  rows: rows,
+                ),
               ),
             ),
             const SizedBox(height: 40),

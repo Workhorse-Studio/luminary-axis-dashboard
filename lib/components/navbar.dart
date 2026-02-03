@@ -45,22 +45,23 @@ class NavbarState extends State<Navbar> {
           child: Column(
             children: [
               for (final r in Routes.values)
-                Padding(
-                  padding: EdgeInsetsGeometry.only(
-                    left: 16,
-                    right: 16,
-                    bottom: 5,
-                    top: 5,
+                if (hasRolesForRoute(r))
+                  Padding(
+                    padding: EdgeInsetsGeometry.only(
+                      left: 16,
+                      right: 16,
+                      bottom: 5,
+                      top: 5,
+                    ),
+                    child: AxisButton.text(
+                      label: r.label,
+                      isHighlighted:
+                          r.slug == ModalRoute.of(context)?.settings.name,
+                      width: double.infinity,
+                      icon: Icons.browser_updated_outlined,
+                      onPressed: () => Navigator.of(context).pushNamed(r.slug),
+                    ),
                   ),
-                  child: AxisButton.text(
-                    label: r.label,
-                    isHighlighted:
-                        r.slug == ModalRoute.of(context)?.settings.name,
-                    width: double.infinity,
-                    icon: Icons.browser_updated_outlined,
-                    onPressed: () => Navigator.of(context).pushNamed(r.slug),
-                  ),
-                ),
             ],
           ),
         ),

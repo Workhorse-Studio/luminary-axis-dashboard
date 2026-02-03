@@ -71,20 +71,34 @@ void main() async {
 }
 
 enum Routes {
-  dashboard('/dashboard', 'Dashboard'),
-  login('/login', 'Login'),
-  syllabus('/syllabus', 'Syllabus'),
-  students('/students', 'Students'),
-  teachers('/teachers', 'Teachers'),
-  termDetails('/termDetails', 'Term Details'),
-  onboarding('/onboarding', 'Onboarding'),
-  dev('/dev', 'Dev'),
-  studentDetails('/studentDetails', 'Student Details')
+  dashboard(
+    '/dashboard',
+    'Dashboard',
+    ['student', 'teacher', 'admin'],
+  ),
+  login('/login', 'Login', []),
+  syllabus(
+    '/syllabus',
+    'Syllabus',
+    ['teacher'],
+  ),
+  students(
+    '/students',
+    'Students',
+    ['teacher', 'admin'],
+  ),
+  teachers('/teachers', 'Teachers', ['admin']),
+  termDetails('/termDetails', 'Term Details', ['admin']),
+  onboarding('/onboarding', 'Onboarding', []),
+  dev('/dev', 'Dev', []),
+  studentDetails('/studentDetails', 'Student Details', ['admin'])
   ;
 
   final String slug;
   final String label;
-  const Routes(this.slug, this.label);
+  final List<String> requiredRoles;
+
+  const Routes(this.slug, this.label, this.requiredRoles);
 }
 
 class AxisDashboardApp extends StatefulWidget {
@@ -106,32 +120,26 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
           Routes.onboarding.slug: (_) => const OnboardingPage(),
           Routes.dashboard.slug: (_) => ProtectedPage(
-            requiredRoles: ['student', 'teacher', 'admin'],
             redirectOnIncorrectRole: Routes.login,
             child: const DashboardPage(),
           ),
           Routes.students.slug: (_) => ProtectedPage(
-            requiredRoles: ['teacher', 'admin'],
             redirectOnIncorrectRole: Routes.login,
             child: StudentsPage(),
           ),
           Routes.syllabus.slug: (_) => ProtectedPage(
-            requiredRoles: ['teacher'],
             redirectOnIncorrectRole: Routes.login,
             child: SyllabusPage(),
           ),
           Routes.teachers.slug: (_) => ProtectedPage(
-            requiredRoles: ['admin'],
             redirectOnIncorrectRole: Routes.login,
             child: const TeachersPage(),
           ),
           Routes.studentDetails.slug: (_) => ProtectedPage(
-            requiredRoles: ['admin'],
             redirectOnIncorrectRole: Routes.login,
             child: const StudentDetailsPage(),
           ),
           Routes.termDetails.slug: (_) => ProtectedPage(
-            requiredRoles: ['admin'],
             redirectOnIncorrectRole: Routes.login,
             child: const TermDetailsPage(),
           ),
