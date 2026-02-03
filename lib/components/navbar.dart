@@ -58,7 +58,7 @@ class NavbarState extends State<Navbar> {
                       isHighlighted:
                           r.slug == ModalRoute.of(context)?.settings.name,
                       width: double.infinity,
-                      icon: Icons.browser_updated_outlined,
+                      icon: r.icon,
                       onPressed: () => Navigator.of(context).pushNamed(r.slug),
                     ),
                   ),

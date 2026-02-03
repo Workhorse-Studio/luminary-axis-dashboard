@@ -75,30 +75,59 @@ enum Routes {
     '/dashboard',
     'Dashboard',
     ['student', 'teacher', 'admin'],
+    Icons.dashboard,
   ),
-  login('/login', 'Login', []),
+  login('/login', 'Login', [], Icons.account_circle),
   syllabus(
     '/syllabus',
     'Syllabus',
     ['teacher'],
+    Icons.checklist,
   ),
   students(
     '/students',
     'Students',
     ['teacher', 'admin'],
+    Icons.school,
   ),
-  teachers('/teachers', 'Teachers', ['admin']),
-  termDetails('/termDetails', 'Term Details', ['admin']),
-  onboarding('/onboarding', 'Onboarding', []),
-  dev('/dev', 'Dev', []),
-  studentDetails('/studentDetails', 'Student Details', ['admin'])
+  teachers(
+    '/teachers',
+    'Teachers',
+    ['admin'],
+    Icons.groups,
+  ),
+  termDetails(
+    '/termDetails',
+    'Term Details',
+    ['admin'],
+    Icons.table_chart,
+  ),
+  onboarding(
+    '/onboarding',
+    'Onboarding',
+    [],
+    Icons.verified_user,
+  ),
+  dev(
+    '/dev',
+    'Dev',
+    [],
+    Icons.code,
+  ),
+  studentDetails(
+    '/studentDetails',
+    'Student Details',
+    ['admin'],
+    Icons.person_pin,
+  )
   ;
 
   final String slug;
   final String label;
   final List<String> requiredRoles;
+  final IconData icon;
 
-  const Routes(this.slug, this.label, this.requiredRoles);
+  const Routes(this.slug, this.label, this.requiredRoles, this.icon);
 }
 
 class AxisDashboardApp extends StatefulWidget {
