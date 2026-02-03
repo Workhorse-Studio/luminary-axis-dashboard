@@ -15,12 +15,14 @@ class AttendanceDialog extends StatefulWidget {
 class AttendanceDialogState extends State<AttendanceDialog> {
   String className = '';
   final Map<String, AttendanceType> records = {};
+  final Map<String, StudentData> studentsDataMap = {};
   @override
   Widget build(BuildContext context) {
     return Material(
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.2,
+        width: MediaQuery.of(context).size.width * 0.4,
         height: MediaQuery.of(context).size.height * 0.8,
+        color: AxisColors.blackPurple50,
         child: FutureBuilderTemplate(
           future: () async {
             if (records.isNotEmpty) return records;
@@ -65,6 +67,7 @@ class AttendanceDialogState extends State<AttendanceDialog> {
 
             for (final ({StudentData data, String id}) studentDoc
                 in studentsData) {
+              studentsDataMap[studentDoc.id] = studentDoc.data;
               records[studentDoc.id] =
                   classData.attendance[todayId]![studentDoc.id]!;
             }
@@ -80,30 +83,41 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   bottom: 0,
                   child: ListView(
                     children: [
-                      for (final record in records.entries)
-                        ListTile(
-                          title: Text(record.value.name),
-                          trailing: DropdownMenu<AttendanceType>(
-                            initialSelection: record.value,
-                            dropdownMenuEntries: [
-                              for (final label in const [
-                                'Present Online',
-                                'Present Physical',
-                                'Present Recording',
-                                'Absent',
-                              ])
-                                DropdownMenuEntry(
-                                  value: AttendanceType.fromLabel(label),
-                                  label: label,
-                                ),
-                            ],
-                            onSelected: (value) => setState(() {
-                              (value != null)
-                                  ? records[record.key] = value
-                                  : null;
-                            }),
+                      for (final record in records.entries) ...[
+                        Center(
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.4,
+                            child: ListTile(
+                              title: Text(
+                                studentsDataMap[record.key]!.name,
+                                style: heading3,
+                              ),
+                              trailing: AxisDropdownButton<AttendanceType>(
+                                initialSelection: record.value,
+                                width: MediaQuery.of(context).size.width * 0.25,
+                                entries: [
+                                  for (final label in const [
+                                    'Present Online',
+                                    'Present Physical',
+                                    'Present Recording',
+                                    'Absent',
+                                  ])
+                                    (
+                                      label,
+                                      AttendanceType.fromLabel(label),
+                                    ),
+                                ],
+                                onSelected: (value) => setState(() {
+                                  (value != null)
+                                      ? records[record.key] = value
+                                      : null;
+                                }),
+                              ),
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 10),
+                      ],
                     ],
                   ),
                 ),
@@ -114,13 +128,21 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   height: 30,
                   child: Row(
                     children: [
-                      Text(className),
+                      Text(
+                        className,
+                        style: heading1,
+                      ),
                       const Spacer(),
-                      TextButton(
+                      AxisButton(
+                        width: 100,
                         onPressed: () {
                           Navigator.of(ctx).pop(records);
                         },
-                        child: Icon(Icons.check),
+                        child: Icon(
+                          Icons.check,
+                          size: 30,
+                          color: AxisColors.blackPurple20,
+                        ),
                       ),
                     ],
                   ),
