@@ -17,3 +17,13 @@
 ## Demo Links
 - [Teacher's Demo](https://drive.google.com/file/d/1KibHgnBAs1E1Hx07N69-yQ9iLgHSIzTI/view?usp=share_link)
 - [Admin Demo](https://drive.google.com/file/d/1qpHvz8N24wzE7pcAEwhOXsrGfLd_3SmG/view?usp=share_link)
+
+## Live App
+[https://luminary-axis-dashboard.web.app](https://luminary-axis-dashboard.web.app)
+- Teacher
+    - t.teacher1@gmail.com
+    - teacher1
+
+- Admin
+    - t.admin1@gmail.com
+    - admin1
