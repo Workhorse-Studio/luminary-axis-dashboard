@@ -143,7 +143,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
     return TooltipVisibility(
       visible: false,
       child: MaterialApp(
-        initialRoute: Routes.login.slug,
+        initialRoute: Routes.onboarding.slug,
         debugShowCheckedModeBanner: false,
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
