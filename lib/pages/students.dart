@@ -39,83 +39,14 @@ class StudentsPageState extends State<StudentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return (!isAdmin)
-        ? Navbar(
-            pageTitle: 'Students',
-            body: (context) => TermReportWidget(
-              teacherId: auth.currentUser!.uid,
-              reportCache: reportCache,
-            ),
-          )
-        : buildAdminView(context);
+    return Navbar(
+      pageTitle: 'Students',
+      body: (context) => TermReportWidget(
+        teacherId: auth.currentUser!.uid,
+        reportCache: reportCache,
+      ),
+    );
   }
-
-  Widget buildAdminView(BuildContext context) => FutureBuilderTemplate(
-    future: () async {
-      final query = firestore
-          .collection('users')
-          .where('role', whereIn: const ['teacher', 'admin']);
-      teachersData = (await query.get()).docs;
-
-      return teachersData;
-    }(),
-    builder: (context, snapshot) {
-      return Navbar(
-        pageTitle: 'Students',
-        actions: [
-          AxisDropdownButton(
-            width: 140,
-            initalLabel: 'All',
-            initialSelection: allOption,
-            entries: [
-              for (final tData in teachersData)
-                (
-                  TeacherData.fromJson(tData.data()).name,
-                  (tData.id, TeacherData.fromJson(tData.data())),
-                ),
-            ],
-            onSelected: (newTData) => setState(() {
-              if (newTData != null) {
-                if (newTData.$1 != '') {
-                  currentValue = newTData;
-                  currentTeacherUid = newTData.$1;
-                  currentTeacherName = newTData.$2.name;
-                } else {
-                  currentValue = (
-                    '',
-                    TeacherData(
-                      name: 'name',
-                      role: 'role',
-                      priorSessionCount: 0,
-                      classIds: const [],
-                    ),
-                  );
-
-                  currentTeacherUid = '';
-                  currentTeacherName = '';
-                }
-              }
-            }),
-          ),
-        ],
-        body: (context) => SingleChildScrollView(
-          child: Column(
-            children: [
-              for (final tData in snapshot.data!)
-                if ((currentTeacherUid != '' &&
-                        tData.id == currentTeacherUid) ||
-                    currentTeacherUid == '')
-                  TermReportWidget(
-                    teacherId: tData.id,
-                    reportCache: reportCache,
-                    teacherData: tData,
-                  ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
 }
 
 class TermReportWidget extends StatefulWidget {
@@ -215,6 +146,14 @@ class TermReportWidgetState extends State<TermReportWidget> {
             ),
             const SizedBox(height: 40),
           ]);
+        }
+        if (classesData.isEmpty) {
+          return Center(
+            child: Text(
+              'No term reports to show.',
+              style: heading3,
+            ),
+          );
         }
         return widget.teacherData == null
             ? SingleChildScrollView(
