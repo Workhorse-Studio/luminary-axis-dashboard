@@ -47,7 +47,7 @@ class TeachersPageState extends State<TeachersPage> {
       future: () async {
         final query = firestore
             .collection('users')
-            .where('role', isEqualTo: 'teacher');
+            .where('role', whereIn: const ['teacher', 'admin']);
         teachersData = (await query.get()).docs;
 
         return teachersData;

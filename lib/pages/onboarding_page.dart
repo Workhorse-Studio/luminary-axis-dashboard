@@ -39,7 +39,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                 teachersDocs =
                     (await firestore
                             .collection('users')
-                            .where('role', whereIn: ['teacher', 'admin'])
+                            .where('role', whereIn: const ['teacher', 'admin'])
                             .get())
                         .docs;
               }

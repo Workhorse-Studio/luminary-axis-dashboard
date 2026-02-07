@@ -31,7 +31,8 @@ class LoginPage extends StatelessWidget {
                           .get())
                       .data();
               role = userData!['role'];
-
+              isAdmin = role == 'admin';
+              if (isAdmin) role = 'teacher';
               if (context.mounted) {
                 if (!await Navigator.of(context).maybePop()) {
                   Navigator.of(context).pushNamed(Routes.dashboard.slug);

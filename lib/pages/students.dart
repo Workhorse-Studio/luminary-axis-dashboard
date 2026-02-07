@@ -39,24 +39,22 @@ class StudentsPageState extends State<StudentsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return switch (role) {
-      'teacher' => Navbar(
-        pageTitle: 'Students',
-        body: (context) => TermReportWidget(
-          teacherId: auth.currentUser!.uid,
-          reportCache: reportCache,
-        ),
-      ),
-      'admin' => buildAdminView(context),
-      String _ => const SizedBox(),
-    };
+    return (!isAdmin)
+        ? Navbar(
+            pageTitle: 'Students',
+            body: (context) => TermReportWidget(
+              teacherId: auth.currentUser!.uid,
+              reportCache: reportCache,
+            ),
+          )
+        : buildAdminView(context);
   }
 
   Widget buildAdminView(BuildContext context) => FutureBuilderTemplate(
     future: () async {
       final query = firestore
           .collection('users')
-          .where('role', isEqualTo: 'teacher');
+          .where('role', whereIn: const ['teacher', 'admin']);
       teachersData = (await query.get()).docs;
 
       return teachersData;

@@ -61,7 +61,7 @@ class ClassData extends JSONSerialisable {
 
   @override
   JSON toJson() => {
-    'name': role,
+    'name': name,
     'students': studentIds,
     'attendance': {
       for (final entry in attendance.entries)

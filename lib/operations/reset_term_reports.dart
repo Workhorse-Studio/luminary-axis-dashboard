@@ -74,7 +74,7 @@ class ResetTermReportsOperation {
     final teachersDocs =
         (await firestore
                 .collection('users')
-                .where('role', isEqualTo: 'teacher')
+                .where('role', whereIn: const ['teacher', 'admin'])
                 .get())
             .docs;
     for (final tDoc in teachersDocs) {

@@ -21,7 +21,6 @@ class ProtectedPageState extends State<ProtectedPage> {
     super.didChangeDependencies();
   }
 
-
   void checkAuthValidity() {
     final String routeName = ModalRoute.of(context)!.settings.name!;
     if (auth.currentUser == null) {

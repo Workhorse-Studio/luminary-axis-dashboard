@@ -57,6 +57,7 @@ part './firebase/firestore.dart';
 part './firebase/auth.dart';
 
 late String role = 'admin';
+bool isAdmin = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -144,7 +145,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
     return TooltipVisibility(
       visible: false,
       child: MaterialApp(
-        initialRoute: Routes.onboarding.slug,
+        initialRoute: Routes.login.slug,
         debugShowCheckedModeBanner: false,
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),

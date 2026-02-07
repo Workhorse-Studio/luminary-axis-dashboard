@@ -16,7 +16,9 @@ class GenericCache<T> {
 }
 
 bool hasRolesForRoute(Routes route) =>
-    route.requiredRoles.isEmpty || route.requiredRoles.contains(role);
+    route.requiredRoles.isEmpty ||
+    route.requiredRoles.contains(role) ||
+    route.requiredRoles.contains('admin') && isAdmin;
 
 extension DateUtils on DateTime {
   String toTimestampString() =>
