@@ -11,7 +11,8 @@ class OnboardingPageState extends State<OnboardingPage> {
   List<QueryDocumentSnapshot<JSON>> classesDocs = [];
   List<QueryDocumentSnapshot<JSON>> teachersDocs = [];
   QueryDocumentSnapshot<JSON>? selectedTeacher;
-  final Map<String, bool> selections = {};
+  QueryDocumentSnapshot<JSON>? selectedClass;
+
   final TextEditingController nameController = TextEditingController(),
       hpController = TextEditingController(),
       parentsNameController = TextEditingController(),
@@ -20,13 +21,12 @@ class OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AxisColors.blackPurple50,
-      child: Padding(
+    return Scaffold(
+      backgroundColor: AxisColors.blackPurple50,
+      body: Padding(
         padding: const EdgeInsetsGeometry.only(
           left: 260,
           right: 260,
-          top: 100,
         ),
         child: SingleChildScrollView(
           child: FutureBuilderTemplate(
@@ -34,7 +34,6 @@ class OnboardingPageState extends State<OnboardingPage> {
               if (classesDocs.isEmpty) {
                 classesDocs =
                     (await firestore.collection('classes').get()).docs;
-                selections.addAll({for (final cl in classesDocs) cl.id: false});
               }
               if (teachersDocs.isEmpty) {
                 teachersDocs =
@@ -62,6 +61,7 @@ class OnboardingPageState extends State<OnboardingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 80),
                   Text(
                     'Student Onboarding Form',
                     style: heading1,
@@ -77,6 +77,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                   TextField(
                     controller: nameController,
                     cursorColor: AxisColors.lilacPurple20,
+                    style: body2,
                   ),
                   const SizedBox(height: 15),
                   Text(
@@ -86,7 +87,10 @@ class OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(controller: hpController),
+                  TextField(
+                    controller: hpController,
+                    style: body2,
+                  ),
                   const SizedBox(height: 15),
                   Text(
                     "Parent's Name",
@@ -95,7 +99,10 @@ class OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(controller: parentsNameController),
+                  TextField(
+                    controller: parentsNameController,
+                    style: body2,
+                  ),
                   const SizedBox(height: 15),
                   Text(
                     "Parent's Contact Number",
@@ -104,7 +111,10 @@ class OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(controller: parentsHpController),
+                  TextField(
+                    controller: parentsHpController,
+                    style: body2,
+                  ),
                   const SizedBox(height: 15),
                   Text(
                     "Select your teacher",
@@ -139,42 +149,83 @@ class OnboardingPageState extends State<OnboardingPage> {
 
                   const SizedBox(height: 15),
                   Text(
-                    'Select your class(es)',
+                    'Select your class',
                     style: heading3.copyWith(
                       color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  ...[
-                    for (final cl in classesDocs) ...[
-                      const SizedBox(height: 5),
+                  RadioGroup(
+                    groupValue: selectedClass,
+                    onChanged: (selected) => selected != null
+                        ? setState(() {
+                            selectedClass = selected;
+                          })
+                        : null,
+                    child: Column(
+                      children: [
+                        for (final cl in classesDocs) ...[
+                          const SizedBox(height: 5),
 
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: selections[cl.id],
-                            onChanged: (selected) => selected != null
-                                ? setState(() {
-                                    selections[cl.id] = selected;
-                                  })
-                                : null,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            ClassData.fromJson(cl.data()).name,
-                            style: body2,
+                          Row(
+                            children: [
+                              Radio(
+                                value: cl,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                ClassData.fromJson(cl.data()).name,
+                                style: body2,
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
-                  ],
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 15),
 
                   const SizedBox(height: 30),
-                  TextButton(
-                    onPressed: () async {},
-                    child: Text('Submit'),
+                  AxisButton.text(
+                    width: 90,
+                    onPressed: () async {
+                      final String msg;
+                      if (nameController.text != '' &&
+                          hpController.text != '' &&
+                          parentsHpController.text != '' &&
+                          parentsNameController.text != '' &&
+                          selectedClass != null &&
+                          selectedTeacher != null) {
+                        await firestore
+                            .collection('global')
+                            .doc('state')
+                            .collection('pendingOnboarding')
+                            .add(
+                              OnboardingStudentData(
+                                studentContactNo: hpController.text,
+                                studentName: nameController.text,
+                                parentContactNo: parentsNameController.text,
+                                parentName: parentsHpController.text,
+                                teacherId: selectedTeacher!.id,
+                                classId: selectedClass!.id,
+                              ).toJson(),
+                            );
+                        msg =
+                            "Onboarding information submitted for admin's review successfully.";
+                      } else {
+                        msg =
+                            "Ensure no fields are empty, and all questions are answered.";
+                      }
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(msg)));
+                      }
+                    },
+                    isHighlighted: true,
+                    label: 'Submit',
                   ),
+                  const SizedBox(height: 60),
                 ],
               ),
             ),
