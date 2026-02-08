@@ -88,7 +88,7 @@ class TermReportV2 {
           .replaceAll('-', '/');
       dateStrings.add(dateString);
       for (final studentId in classData.studentIds) {
-        String? attendanceRecord = null;
+        String attendanceRecord = '';
         if (classData.attendance[dateKey]!.containsKey(studentId)) {
           attendanceRecord = 'X';
           if (classData.attendance[dateKey]![studentId]!.isPresent) {
@@ -107,13 +107,13 @@ class TermReportV2 {
       [
         'Name',
         'Level',
-        List<String>.generate(dateStrings.length, (_) => 'Date'),
+        ...List<String>.generate(dateStrings.length, (_) => 'Date'),
         'Initial Count',
         'Final Count',
       ],
     ];
 
-    attendanceDatesIndices = (2, classData.attendance.keys.length + 1);
+    attendanceDatesIndices = (2, dateStrings.length + 1);
 
     for (final studentId in classData.studentIds) {
       final studentData = (await studentDataCache.get(studentId));
@@ -126,17 +126,18 @@ class TermReportV2 {
             attendance[studentId]!
                 .where(
                   (attendanceType) =>
-                      attendanceType != null && attendanceType != 'X',
+                      attendanceType != '' && attendanceType != 'X',
                 )
                 .length,
       ]);
+
       progresses.add(
         1 -
             ((studentData.initialSessionCount[classId]! -
                     attendance[studentId]!
                         .where(
                           (attendanceType) =>
-                              attendanceType != null && attendanceType != 'X',
+                              attendanceType != '' && attendanceType != 'X',
                         )
                         .length) /
                 studentData.initialSessionCount[classId]!),

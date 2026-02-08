@@ -8,8 +8,8 @@ class StudentsPage extends StatefulWidget {
 }
 
 class StudentsPageState extends State<StudentsPage> {
-  final GenericCache<TermReport> reportCache = GenericCache((classId) async {
-    final TermReport tr = TermReport();
+  final GenericCache<TermReportV2> reportCache = GenericCache((classId) async {
+    final TermReportV2 tr = TermReportV2();
     await tr.generateTermReport(classId);
     return tr;
   });
@@ -67,7 +67,7 @@ class TermReportWidget extends StatefulWidget {
 
 class TermReportWidgetState extends State<TermReportWidget> {
   final Map<String, ClassData> classesData = {};
-  final List<TermReport> termReports = [];
+  final List<TermReportV2> termReports = [];
 
   @override
   Widget build(BuildContext context) {

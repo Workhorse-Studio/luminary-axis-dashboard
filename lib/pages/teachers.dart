@@ -13,8 +13,8 @@ class TeachersPageState extends State<TeachersPage> {
   final Map<String, int> teachersSessionsCounts = {};
   bool showTermReport = false;
 
-  final GenericCache<TermReport> reportCache = GenericCache((classId) async {
-    final TermReport tr = TermReport();
+  final GenericCache<TermReportV2> reportCache = GenericCache((classId) async {
+    final TermReportV2 tr = TermReportV2();
     await tr.generateTermReport(classId);
     return tr;
   });
@@ -35,7 +35,10 @@ class TeachersPageState extends State<TeachersPage> {
               tr.attendanceDatesIndices.$1,
               tr.attendanceDatesIndices.$2 + 1,
             )
-            .fold(0, (a, b) => a + ((b as AttendanceType).isPresent ? 1 : 0));
+            .fold(
+              0,
+              (a, b) => a + ((b as String?) != '' && b != 'X' ? 1 : 0),
+            );
       }
     }
     return numSessions;
