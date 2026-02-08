@@ -27,6 +27,7 @@ part './components/protected_page.dart';
 part './components/attendance_dialog.dart';
 part './components/register_for_class_dialog.dart';
 part './components/withdraw_from_class_dialog.dart';
+part './components/student_info_dialog.dart';
 part './components/future_builder_template.dart';
 
 part './design_system/colors.dart';
