@@ -43,9 +43,27 @@ class NavbarState extends State<Navbar> {
             ),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 30),
+              Padding(
+                padding: const EdgeInsets.only(left: 30),
+                child: Text(
+                  'AXIS',
+                  style: brandTitle,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 30),
+                child: Text(
+                  'EDUCATION CENTRE',
+                  style: brandSubtitle,
+                ),
+              ),
+              const SizedBox(height: 30),
               for (final r in Routes.values)
-                if (hasRolesForRoute(r))
+                if (!((const [Routes.login, Routes.dev]).contains(r)) &&
+                    hasRolesForRoute(r))
                   Padding(
                     padding: EdgeInsetsGeometry.only(
                       left: 16,
@@ -62,6 +80,26 @@ class NavbarState extends State<Navbar> {
                       onPressed: () => Navigator.of(context).pushNamed(r.slug),
                     ),
                   ),
+              const Spacer(),
+              Padding(
+                padding: EdgeInsetsGeometry.only(
+                  left: 16,
+                  right: 16,
+                  bottom: 5,
+                  top: 5,
+                ),
+                child: AxisButton.text(
+                  label: Routes.login.label,
+                  isHighlighted:
+                      Routes.login.slug ==
+                      ModalRoute.of(context)?.settings.name,
+                  width: double.infinity,
+                  icon: Routes.login.icon,
+                  onPressed: () =>
+                      Navigator.of(context).pushNamed(Routes.login.slug),
+                ),
+              ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

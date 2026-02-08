@@ -41,10 +41,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
       child: Container(
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.9,
-        foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AxisColors.blackPurple20),
-        ),
+        foregroundDecoration: dialogForegroundDecoration,
         child: Scaffold(
           backgroundColor: AxisColors.blackPurple50,
           body: Padding(

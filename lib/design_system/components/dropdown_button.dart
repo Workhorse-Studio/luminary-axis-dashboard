@@ -6,11 +6,13 @@ class AxisDropdownButton<T> extends StatefulWidget {
   final String? initalLabel;
   final List<(String, T)> entries;
   final void Function(T? newData)? onSelected;
+  final Color Function(T data)? customBgColoring;
 
   const AxisDropdownButton({
     required this.width,
     required this.entries,
     required this.onSelected,
+    this.customBgColoring,
     this.initialSelection,
     this.initalLabel,
 
@@ -62,7 +64,15 @@ class AxisDropdownButtonState<T> extends State<AxisDropdownButton<T>> {
             if (widget.initalLabel != null && widget.initialSelection != null)
               DropdownMenuEntry(
                 value: widget.initialSelection!,
-                style: menuEntryStyle,
+                style: menuEntryStyle.copyWith(
+                  backgroundColor: widget.customBgColoring != null
+                      ? WidgetStatePropertyAll(
+                          widget.customBgColoring!.call(
+                            widget.initialSelection!,
+                          ),
+                        )
+                      : null,
+                ),
                 label: widget.initalLabel!,
               ),
             ...[
@@ -70,7 +80,15 @@ class AxisDropdownButtonState<T> extends State<AxisDropdownButton<T>> {
                 DropdownMenuEntry(
                   value: e.$2,
                   label: e.$1,
-                  style: menuEntryStyle,
+                  style: menuEntryStyle.copyWith(
+                    backgroundColor: widget.customBgColoring != null
+                        ? WidgetStatePropertyAll(
+                            widget.customBgColoring!.call(
+                              e.$2,
+                            ),
+                          )
+                        : null,
+                  ),
                 ),
             ],
           ],

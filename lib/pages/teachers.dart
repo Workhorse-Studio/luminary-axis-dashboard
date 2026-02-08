@@ -106,7 +106,7 @@ class TeachersPageState extends State<TeachersPage> {
                           as int;
                     }(),
                     builder: (context, snapshot) => Text(
-                      '${TeacherData.fromJson(currentTeacher!.$2.data()).name} ${snapshot.data} Attendance Sheet',
+                      '${TeacherData.fromJson(currentTeacher!.$2.data()).name} Term ${snapshot.data} Attendance Sheet',
                       style: body2,
                     ),
                   ),

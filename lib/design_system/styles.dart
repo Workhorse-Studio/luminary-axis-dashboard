@@ -16,3 +16,8 @@ final menuEntryStyle = ButtonStyle(
     }
   }),
 );
+
+final BoxDecoration dialogForegroundDecoration = BoxDecoration(
+  borderRadius: BorderRadius.circular(10),
+  border: Border.all(color: AxisColors.blackPurple20),
+);

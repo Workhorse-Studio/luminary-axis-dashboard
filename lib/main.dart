@@ -22,7 +22,6 @@ part './pages/onboarding_page.dart';
 part './pages/dev_screen.dart';
 
 part './components/navbar.dart';
-part './components/editable_row.dart';
 part './components/protected_page.dart';
 part './components/attendance_dialog.dart';
 part './components/register_for_class_dialog.dart';
@@ -57,7 +56,7 @@ part './utils/utils.dart';
 part './firebase/firestore.dart';
 part './firebase/auth.dart';
 
-late String role = 'admin';
+late String role = '';
 bool isAdmin = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

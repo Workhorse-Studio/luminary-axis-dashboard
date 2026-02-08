@@ -124,7 +124,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
           widgets.addAll([
             AxisCard(
               header: classesData.values.elementAt(i).name,
-              width: MediaQuery.of(context).size.width * 0.7,
+              width: MediaQuery.of(context).size.width * 0.85,
               height: null,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -132,6 +132,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                   columns: [
                     for (final c in termReports[i].data.first)
                       DataColumn(
+                        columnWidth: IntrinsicColumnWidth(flex: 1),
                         label: Text(
                           c.toString(),
                           style: body2.copyWith(
@@ -155,21 +156,50 @@ class TermReportWidgetState extends State<TermReportWidget> {
             ),
           );
         }
-        return widget.teacherData == null
-            ? SingleChildScrollView(
-                child: Column(
+        return Padding(
+          padding: const EdgeInsets.only(left: 40, right: 40),
+          child: widget.teacherData == null
+              ? SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
+                      if (widget.teacherData != null)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 80,
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              TeacherData.fromJson(
+                                widget.teacherData!.data(),
+                              ).name,
+                              style: heading1,
+                            ),
+                          ),
+                        ),
+                      ...widgets,
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                )
+              : Column(
                   children: [
+                    const SizedBox(height: 40),
+
                     if (widget.teacherData != null)
                       SizedBox(
                         width: double.infinity,
                         height: 80,
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(
-                            TeacherData.fromJson(
-                              widget.teacherData!.data(),
-                            ).name,
-                            style: heading1,
+                          child: Padding(
+                            padding: const EdgeInsetsGeometry.only(left: 40),
+                            child: Text(
+                              TeacherData.fromJson(
+                                widget.teacherData!.data(),
+                              ).name,
+                              style: heading1,
+                            ),
                           ),
                         ),
                       ),
@@ -177,30 +207,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                     const SizedBox(height: 80),
                   ],
                 ),
-              )
-            : Column(
-                children: [
-                  if (widget.teacherData != null)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 80,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsetsGeometry.only(left: 40),
-                          child: Text(
-                            TeacherData.fromJson(
-                              widget.teacherData!.data(),
-                            ).name,
-                            style: heading1,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ...widgets,
-                  const SizedBox(height: 80),
-                ],
-              );
+        );
       },
     );
   }

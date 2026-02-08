@@ -1,5 +1,19 @@
 part of axis_dashboard;
 
+final TextStyle brandTitle = TextStyle(
+  color: AxisColors.lilacPurple20.withValues(alpha: 0.7),
+  fontFamily: 'Urbanist',
+  fontWeight: FontWeight.w700,
+  fontSize: 40,
+);
+
+final TextStyle brandSubtitle = TextStyle(
+  color: AxisColors.lilacPurple50,
+  fontFamily: 'Urbanist',
+  fontWeight: FontWeight.w600,
+  fontSize: 18,
+);
+
 final TextStyle heading1 = TextStyle(
   color: AxisColors.white50,
   fontFamily: 'Urbanist',
