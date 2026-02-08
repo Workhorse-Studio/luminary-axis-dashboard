@@ -12,7 +12,7 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
   late final Query<JSON> _defaultQuery = firestore
       .collection('users')
       .where('role', isEqualTo: 'student');
-
+  List<DataRow> sortedRows = const [];
   late Query<JSON> currentQuery = _defaultQuery;
   List<QueryDocumentSnapshot<JSON>> studentsData = [];
   final Map<String, String> classIdToTeacherNameMap = {};
@@ -21,6 +21,8 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
     ({TextEditingController iscController, TextEditingController fscController})
   >
   textControllers = {};
+  bool sortFSCLowToHigh = false;
+  final Set<String> filterClassesIncluded = {};
 
   final GenericCache<DocumentSnapshot<JSON>> classesDataCache = GenericCache((
     classId,
@@ -43,19 +45,65 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
         } else {
           currentQuery = _defaultQuery;
         }
+
         if (studentsData.isEmpty) {
           studentsData = (await currentQuery.get()).docs;
+        }
+        if (classesDataCache.registry.isEmpty) {
+          final docs = (await firestore.collection('classes').get()).docs;
+          for (final doc in docs) {
+            classesDataCache.registry[doc.id] = doc;
+          }
         }
         return studentsData;
       }(),
       builder: (context, snapshot) => Navbar(
         pageTitle: 'Student Details',
         actions: [
+          /* AxisDropdownButton(
+            width: 150,
+            entries: [
+              for (final doc in classesDataCache.registry.values)
+                (
+                  ClassData.fromJson(doc.data()!).name,
+                  SizedBox(
+                    width: 100,
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: filterClassesIncluded.contains(
+                            ClassData.fromJson(doc.data()!).name,
+                          ),
+                          onChanged: (isSelected) {
+                            if (isSelected == null) return;
+                            setState(() {
+                              if (!isSelected) {
+                                filterClassesIncluded.remove(
+                                  ClassData.fromJson(doc.data()!).name,
+                                );
+                              } else {
+                                filterClassesIncluded.add(
+                                  ClassData.fromJson(doc.data()!).name,
+                                );
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+            onSelected: (selection) {},
+          ), */
           SizedBox(
             width: 240,
             height: 50,
             child: TextField(
               controller: nameController,
+              onSubmitted: (_) => setState(() {
+                studentsData.clear();
+              }),
               style: body2,
               decoration: InputDecoration(
                 hint: Text(
@@ -149,7 +197,10 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                               entry.key,
                             )).data()!,
                           );
-
+                          /*  if (filterClassesIncluded.isNotEmpty &&
+                              !filterClassesIncluded.contains(cd.name)) {
+                            continue;
+                          } */
                           final numSessionsAttended = cd.attendance.entries
                               .where(
                                 (entry) =>
@@ -409,68 +460,92 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                           );
                         }
                       }
-
+                      /**
+                       * sorting
+                       */
                       return rows;
                     }(),
-                    builder: (context, snapshot) => SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        dataRowMinHeight: 60,
-                        dataRowMaxHeight: 80,
-                        columns: [
-                          DataColumn(
-                            label: Text(
-                              'Name',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                    builder: (context, snapshot) {
+                      if (!sortFSCLowToHigh) sortedRows = snapshot.data ?? [];
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          dataRowMinHeight: 60,
+                          dataRowMaxHeight: 80,
+                          sortColumnIndex: 3,
+                          columns: [
+                            DataColumn(
+                              label: Text(
+                                'Name',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Class',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                            DataColumn(
+                              label: Text(
+                                'Class',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Teacher',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                            DataColumn(
+                              label: Text(
+                                'Teacher',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Initial Session Count',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                            DataColumn(
+                              label: Text(
+                                'Initial Session Count',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Final Session Count',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
+                            DataColumn(
+                              label: Text(
+                                'Final Session Count',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              onSort: (columnIndex, ascending) {
+                                sortFSCLowToHigh = !sortFSCLowToHigh;
+                                sortedRows.sort(
+                                  (row1, row2) =>
+                                      int.parse(
+                                        (row1.cells[4].child as TextField)
+                                            .controller!
+                                            .text,
+                                      ).compareTo(
+                                        int.parse(
+                                          (row2.cells[4].child as TextField)
+                                              .controller!
+                                              .text,
+                                        ),
+                                      ),
+                                );
+                                setState(() {});
+                              },
+                            ),
+                            DataColumn(
+                              label: Text(
+                                'Actions',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Actions',
-                              style: body2.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          DataColumn(label: Text('')),
-                        ],
-                        rows: snapshot.data ?? const [],
-                      ),
-                    ),
+                            DataColumn(label: Text('')),
+                          ],
+                          rows: sortedRows,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
