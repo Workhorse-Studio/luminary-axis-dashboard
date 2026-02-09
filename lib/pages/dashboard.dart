@@ -61,6 +61,161 @@ class DashboardPageState extends State<DashboardPage> {
                     "You're signed in as ${isAdmin ? 'an' : 'a'} ${isAdmin ? 'admin' : role}",
                     style: body2,
                   ),
+                  const SizedBox(height: 30),
+                  if (isAdmin) ...[
+                    Text('Pending Onboarding', style: heading1),
+                    const SizedBox(height: 10),
+                    FutureBuilderTemplate(
+                      future: () async {
+                        return (await firestore
+                                .collection('global')
+                                .doc('state')
+                                .collection('pendingOnboarding')
+                                .where('hasOnboarded', isEqualTo: false)
+                                .get())
+                            .docs;
+                      }(),
+                      builder: (context, snapshot) {
+                        return snapshot.data!.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No students pending onboarding.',
+                                  style: heading3,
+                                ),
+                              )
+                            : SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.3,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: ListView(
+                                    children: [
+                                      for (final poDoc in snapshot.data!)
+                                        AxisCard(
+                                          header:
+                                              OnboardingStudentData.fromJson(
+                                                poDoc.data(),
+                                              ).studentName,
+                                          width: double.infinity,
+                                          height: 360,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 30,
+                                              right: 30,
+                                              bottom: 30,
+                                            ),
+                                            child: Align(
+                                              alignment: Alignment.topLeft,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "Contact: ${OnboardingStudentData.fromJson(
+                                                      poDoc.data(),
+                                                    ).studentContactNo}",
+                                                    style: body2,
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  Text(
+                                                    "Parent: ${OnboardingStudentData.fromJson(
+                                                      poDoc.data(),
+                                                    ).parentName}",
+                                                    style: body2,
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  Text(
+                                                    "Parent's Contact: ${OnboardingStudentData.fromJson(
+                                                      poDoc.data(),
+                                                    ).parentContactNo}",
+                                                    style: body2,
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  FutureBuilderTemplate(
+                                                    future: () async {
+                                                      return (await firestore
+                                                              .collection(
+                                                                'users',
+                                                              )
+                                                              .doc(
+                                                                OnboardingStudentData.fromJson(
+                                                                  poDoc.data(),
+                                                                ).teacherId,
+                                                              )
+                                                              .get())
+                                                          .data()!;
+                                                    }(),
+                                                    builder:
+                                                        (
+                                                          context,
+                                                          snapshot,
+                                                        ) => Text(
+                                                          TeacherData.fromJson(
+                                                            snapshot.data!,
+                                                          ).name,
+                                                          style: heading3,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  FutureBuilderTemplate(
+                                                    future: () async {
+                                                      return (await firestore
+                                                              .collection(
+                                                                'classes',
+                                                              )
+                                                              .doc(
+                                                                OnboardingStudentData.fromJson(
+                                                                  poDoc.data(),
+                                                                ).classId,
+                                                              )
+                                                              .get())
+                                                          .data()!;
+                                                    }(),
+                                                    builder:
+                                                        (
+                                                          context,
+                                                          snapshot,
+                                                        ) => Text(
+                                                          ClassData.fromJson(
+                                                            snapshot.data!,
+                                                          ).name,
+                                                          style: heading3,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 20),
+                                                  AxisButton.text(
+                                                    label: 'Approve',
+                                                    isHighlighted: true,
+                                                    width: 100,
+                                                    height: 60,
+                                                    onPressed: () async {
+                                                      await firestore
+                                                          .collection('global')
+                                                          .doc('state')
+                                                          .collection(
+                                                            'pendingOnboarding',
+                                                          )
+                                                          .doc(poDoc.id)
+                                                          .update({
+                                                            'hasOnboarded':
+                                                                true,
+                                                          });
+                                                      setState(() {});
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
