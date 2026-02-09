@@ -9,6 +9,7 @@ import 'package:firebase_ui_auth/firebase_ui_auth.dart' as auth_ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:pdf/widgets.dart' as pdf;
 import 'options.dart';
 
 part './pages/dashboard.dart';

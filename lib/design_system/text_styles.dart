@@ -40,6 +40,13 @@ final TextStyle body2 = TextStyle(
   fontSize: 16,
 );
 
+final TextStyle body3 = TextStyle(
+  color: AxisColors.blackPurple50,
+  fontFamily: 'Urbanist',
+  fontWeight: FontWeight.w400,
+  fontSize: 16,
+);
+
 final TextStyle appBarTitle = TextStyle(
   color: AxisColors.white50,
   fontFamily: 'Urbanist',

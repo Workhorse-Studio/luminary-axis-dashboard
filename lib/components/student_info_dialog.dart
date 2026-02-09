@@ -19,6 +19,7 @@ class StudentInfoDialog extends StatefulWidget {
 class StudentInfoDialogState extends State<StudentInfoDialog> {
   late QueryDocumentSnapshot<JSON> studentData;
   late final Map<String, String> classIdToTeacherNameMap;
+  late InvoiceWidget invoiceWidget;
   @override
   void initState() {
     studentData = widget.studentData;
@@ -125,6 +126,32 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                       ],
                     ),
                   ),
+                  Text(
+                    'Latest Invoice',
+                    style: heading1,
+                  ),
+                  const SizedBox(height: 20),
+                  invoiceWidget = InvoiceWidget(
+                    id: 'INV-000013',
+                    amt: 1140.00,
+                    parentName: 'Goh Hui Hoon',
+                    childName: 'Jaden kaiser',
+                    address: '5 Kew Drive',
+                    invoiceDateFormatted: '14 Jan 2026',
+                    terms: 'Custom',
+                    dueDateFormatted: '21 Jan 2026',
+                    invoiceEntries: [
+                      (
+                        desc: 'HL Mathematics Lesson (Term 1)',
+                        qty: 12,
+                        rate: 95,
+                        amt: 1140,
+                      ),
+                    ],
+                    total: 1140,
+                  ),
+                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
