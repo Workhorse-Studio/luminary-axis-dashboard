@@ -190,17 +190,27 @@ class DashboardPageState extends State<DashboardPage> {
                                                     width: 100,
                                                     height: 60,
                                                     onPressed: () async {
-                                                      await firestore
-                                                          .collection('global')
-                                                          .doc('state')
-                                                          .collection(
-                                                            'pendingOnboarding',
-                                                          )
-                                                          .doc(poDoc.id)
-                                                          .update({
-                                                            'hasOnboarded':
-                                                                true,
-                                                          });
+                                                      final obData =
+                                                          OnboardingStudentData.fromJson(
+                                                            poDoc.data(),
+                                                          );
+                                                      onboardStudent(
+                                                        StudentData(
+                                                          role: 'student',
+                                                          name: obData
+                                                              .studentName,
+                                                          email: obData.email,
+                                                          studentContactNo: obData
+                                                              .studentContactNo,
+                                                          parentContactNo: obData
+                                                              .parentContactNo,
+                                                          parentName: obData
+                                                              .parentContactNo,
+                                                          initialSessionCount: {
+                                                            obData.classId: 0,
+                                                          },
+                                                        ),
+                                                      );
                                                       setState(() {});
                                                     },
                                                   ),

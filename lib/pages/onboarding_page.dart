@@ -17,6 +17,7 @@ class OnboardingPageState extends State<OnboardingPage> {
       hpController = TextEditingController(),
       parentsNameController = TextEditingController(),
       parentsHpController = TextEditingController(),
+      emailController = TextEditingController(),
       teachersNameController = TextEditingController();
 
   @override
@@ -87,8 +88,22 @@ class OnboardingPageState extends State<OnboardingPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
+
                   TextField(
                     controller: hpController,
+                    style: body2,
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    'Invoicing Email',
+                    style: heading3.copyWith(
+                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  TextField(
+                    controller: emailController,
                     style: body2,
                   ),
                   const SizedBox(height: 15),
@@ -204,6 +219,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                               OnboardingStudentData(
                                 studentContactNo: hpController.text,
                                 studentName: nameController.text,
+                                email: emailController.text,
                                 parentContactNo: parentsNameController.text,
                                 parentName: parentsHpController.text,
                                 teacherId: selectedTeacher!.id,
