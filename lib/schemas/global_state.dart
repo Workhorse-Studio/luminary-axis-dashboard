@@ -1,25 +1,22 @@
 part of axis_dashboard;
 
 class GlobalState extends JSONSerialisable {
-  final int currentTermNum, currentTermStartDate, currentTermEndDate;
+  final List<TermData> terms;
 
   const GlobalState({
-    required this.currentTermNum,
-    required this.currentTermStartDate,
-    required this.currentTermEndDate,
+    required this.terms,
   });
 
   GlobalState.fromJson(JSON json)
-    : currentTermNum = json['currentTermNum'] as int,
-      currentTermStartDate = json['currentTermStartDate'] as int,
-      currentTermEndDate = json['currentTermEndDate'] as int;
-
-  bool get hasEndDateSet => currentTermEndDate != 0;
+    : terms = (json['terms'] as List)
+          .cast<JSON>()
+          .map(
+            (m) => TermData.fromJson(m),
+          )
+          .toList();
 
   @override
   JSON toJson() => {
-    'currentTermNum': currentTermNum,
-    'currentTermStartDate': currentTermStartDate,
-    'currentTermEndDate': currentTermEndDate,
+    'terms': terms.map((t) => t.toJson()).toList(),
   };
 }

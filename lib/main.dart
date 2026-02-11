@@ -43,6 +43,7 @@ part './schemas/class_data.dart';
 part './schemas/archived_attendance_sheet.dart';
 part './schemas/global_state.dart';
 part './schemas/onboarding_student_data.dart';
+part './schemas/term_data.dart';
 
 part './operations/generate_term_report.dart';
 part './operations/calculate_teacher_payout.dart';

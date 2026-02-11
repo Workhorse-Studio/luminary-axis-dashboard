@@ -11,6 +11,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
   String termName = '';
   GlobalState? globalState;
   bool showSessionAllocation = false;
+  late TermData currentTerm;
   final shadowColl = firestore
       .collection('global')
       .doc('state')
@@ -43,25 +44,27 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     .data()!,
               )
             : globalState;
-        termName = "${DateTime.now().year} T${gs!.currentTermNum}";
+        // termName = "${DateTime.now().year} T${gs!.currentTermNum}";
+        currentTerm = gs!.terms.last;
+        termName = currentTerm.termName;
         return gs;
       }(),
       builder: (context, snapshot) => Navbar(
         pageTitle: 'Term Details',
         actions: [
-          if (globalState!.hasEndDateSet &&
+          if (currentTerm.hasEndDateSet &&
               DateTime.now().isAfter(
                 DateTime.fromMillisecondsSinceEpoch(
-                  globalState!.currentTermEndDate,
+                  currentTerm.termEndDate,
                 ).subtract(const Duration(days: 7)),
               ))
             Padding(
               padding: const EdgeInsets.only(right: 20),
               child:
-                  globalState!.hasEndDateSet &&
+                  currentTerm.hasEndDateSet &&
                       DateTime.now().isSameDayAs(
                         DateTime.fromMillisecondsSinceEpoch(
-                          globalState!.currentTermEndDate,
+                          currentTerm.termEndDate,
                         ),
                       )
                   ? TextButton(
@@ -96,7 +99,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     )
                   : Text(
                       "${DateTime.fromMillisecondsSinceEpoch(
-                        globalState!.currentTermEndDate,
+                        currentTerm.termEndDate,
                       ).difference(DateTime.now()).inDays} days to term end",
                       style: body2,
                     ),
@@ -107,14 +110,14 @@ class TermDetailsPageState extends State<TermDetailsPage> {
             padding: const EdgeInsetsGeometry.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              key: ValueKey(globalState!.currentTermEndDate),
+              key: ValueKey(currentTerm.termEndDate),
 
               children: [
                 const SizedBox(height: 30),
-                if (globalState!.hasEndDateSet &&
+                if (currentTerm.hasEndDateSet &&
                     DateTime.now().isSameDayAs(
                       DateTime.fromMillisecondsSinceEpoch(
-                        globalState!.currentTermEndDate,
+                        currentTerm.termEndDate,
                       ),
                     )) ...[
                   Text(
@@ -135,7 +138,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                 ),
                 Text(
                   DateTime.fromMillisecondsSinceEpoch(
-                    globalState!.currentTermStartDate,
+                    currentTerm.termStartDate,
                   ).toTimestampStringShort(),
                   style: body2,
                 ),
@@ -145,16 +148,16 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   style: heading3,
                 ),
                 Text(
-                  globalState!.hasEndDateSet
+                  currentTerm.hasEndDateSet
                       ? DateTime.fromMillisecondsSinceEpoch(
-                          globalState!.currentTermEndDate,
+                          currentTerm.termEndDate,
                         ).toTimestampStringShort()
                       : 'No date set.',
                   style: body2,
                 ),
                 const SizedBox(height: 10),
                 AxisNMButton(
-                  label: globalState!.currentTermEndDate == 0
+                  label: currentTerm.termEndDate == 0
                       ? 'Set Date'
                       : 'Modify Date',
                   onPressed: () async {
@@ -175,7 +178,17 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     if (!confirm) return;
                     if (endDate != null) {
                       await firestore.collection('global').doc('state').update({
-                        'currentTermEndDate': endDate.millisecondsSinceEpoch,
+                        'terms': [
+                          ...globalState!.terms.sublist(
+                            0,
+                            globalState!.terms.length - 1,
+                          ),
+                          TermData(
+                            termEndDate: currentTerm.termEndDate,
+                            termName: currentTerm.termName,
+                            termStartDate: endDate.millisecondsSinceEpoch,
+                          ),
+                        ],
                       });
                       if (context.mounted) {
                         ScaffoldMessenger.of(
