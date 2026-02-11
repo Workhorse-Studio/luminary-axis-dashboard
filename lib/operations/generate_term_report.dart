@@ -74,7 +74,11 @@ class TermReportV2 {
     ),
   );
   late ClassData classData;
-  Future<List<List>> generateTermReport(String classId) async {
+  Future<List<List>> generateTermReport(
+    String classId,
+    int start,
+    int end,
+  ) async {
     // 12/01: {<id>: true | false}
     // final Map<String, Map<String, String>> attendance = {};
     final Map<String, List<String?>> attendance = {};
@@ -82,7 +86,16 @@ class TermReportV2 {
       (await firestore.collection('classes').doc(classId).get()).data()!,
     );
     final List<String> dateStrings = [];
-    for (final dateKey in classData.attendance.keys) {
+    for (final dateKey in classData.attendance.keys.where((key) {
+      final List<int> chunks = key.split('-').map((c) => int.parse(c)).toList();
+      final DateTime date = DateTime(chunks[2], chunks[1], chunks[0]);
+      return ((date.isAfter(DateTime.fromMillisecondsSinceEpoch(start)) ||
+                  date.isAtSameMomentAs(
+                    DateTime.fromMillisecondsSinceEpoch(start),
+                  )) &&
+              date.isBefore(DateTime.fromMillisecondsSinceEpoch(end)) ||
+          date.isAtSameMomentAs(DateTime.fromMillisecondsSinceEpoch(end)));
+    })) {
       final String dateString = dateKey
           .substring(0, dateKey.length - 5)
           .replaceAll('-', '/');

@@ -10,7 +10,14 @@ class StudentsPage extends StatefulWidget {
 class StudentsPageState extends State<StudentsPage> {
   final GenericCache<TermReportV2> reportCache = GenericCache((classId) async {
     final TermReportV2 tr = TermReportV2();
-    await tr.generateTermReport(classId);
+    final latestTerm = GlobalState.fromJson(
+      (await firestore.collection('gobal').doc('state').get()).data()!,
+    ).terms.last;
+    await tr.generateTermReport(
+      classId,
+      latestTerm.termStartDate,
+      latestTerm.termEndDate,
+    );
     return tr;
   });
   final (String, TeacherData) allOption = (
@@ -53,10 +60,12 @@ class TermReportWidget extends StatefulWidget {
   final String teacherId;
   final QueryDocumentSnapshot<JSON>? teacherData;
   final GenericCache reportCache;
+  final List<TermReportV2>? termReports;
 
   const TermReportWidget({
     required this.teacherId,
     required this.reportCache,
+    this.termReports,
     this.teacherData,
     super.key,
   });
@@ -73,6 +82,8 @@ class TermReportWidgetState extends State<TermReportWidget> {
   Widget build(BuildContext context) {
     return FutureBuilderTemplate(
       future: () async {
+        if (termReports.isEmpty) return termReports;
+        if (widget.termReports != null) termReports.addAll(widget.termReports!);
         final List<String> classIds = TeacherData.fromJson(
           (await firestore.collection('users').doc(widget.teacherId).get())
               .data()!,
@@ -87,9 +98,9 @@ class TermReportWidgetState extends State<TermReportWidget> {
       builder: (context, snapshot) {
         final List<Widget> widgets = [];
 
-        for (int i = 0; i < classesData.length; i++) {
+        void createWidgetsForReport(TermReportV2 termReport, int? i) {
           final List<DataRow> rows = [];
-          final currentReport = termReports[i].data.skip(1).toList();
+          final currentReport = termReport.data.skip(1).toList();
           for (int j = 0; j < currentReport.length; j++) {
             rows.add(
               DataRow(
@@ -104,7 +115,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                         const SizedBox(width: 10),
                         Flexible(
                           child: LinearProgressIndicator(
-                            value: termReports[i].progresses[j],
+                            value: termReport.progresses[j],
                           ),
                         ),
                       ],
@@ -123,14 +134,14 @@ class TermReportWidgetState extends State<TermReportWidget> {
           }
           widgets.addAll([
             AxisCard(
-              header: classesData.values.elementAt(i).name,
+              header: i != null ? classesData.values.elementAt(i).name : '',
               width: MediaQuery.of(context).size.width * 0.85,
               height: null,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
                   columns: [
-                    for (final c in termReports[i].data.first)
+                    for (final c in termReport.data.first)
                       DataColumn(
                         columnWidth: IntrinsicColumnWidth(flex: 1),
                         label: Text(
@@ -148,7 +159,18 @@ class TermReportWidgetState extends State<TermReportWidget> {
             const SizedBox(height: 40),
           ]);
         }
-        if (classesData.isEmpty) {
+
+        if (widget.termReports != null) {
+          for (final tr in widget.termReports!) {
+            createWidgetsForReport(tr, null);
+          }
+        } else {
+          for (int i = 0; i < classesData.length; i++) {
+            createWidgetsForReport(termReports[i], i);
+          }
+        }
+        if ((widget.termReports != null && widget.termReports!.isEmpty) ||
+            (widget.termReports == null && classesData.isEmpty)) {
           return Center(
             child: Text(
               'No term reports to show.',
