@@ -47,7 +47,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
         return gs;
       }(),
       builder: (context, snapshot) => Navbar(
-        pageTitle: 'Term Details $termName',
+        pageTitle: 'Term Details',
         actions: [
           if (globalState!.hasEndDateSet &&
               DateTime.now().isAfter(
@@ -124,6 +124,12 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   const SizedBox(height: 30),
                 ],
                 Text(
+                  'Term Name',
+                  style: heading3,
+                ),
+                Text(termName, style: body2),
+                const SizedBox(height: 20),
+                Text(
                   'Current Term Start Date',
                   style: heading3,
                 ),
@@ -159,6 +165,14 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                       ),
                       lastDate: DateTime.now().add(const Duration(days: 60)),
                     );
+                    final bool confirm = await showDialog(
+                      context: context,
+                      builder: (_) => ConfirmationDialog(
+                        confirmationMsg:
+                            'Are you sure you want to adjust the term end date?',
+                      ),
+                    );
+                    if (!confirm) return;
                     if (endDate != null) {
                       await firestore.collection('global').doc('state').update({
                         'currentTermEndDate': endDate.millisecondsSinceEpoch,
@@ -201,16 +215,15 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   },
                 ),
                 const SizedBox(height: 50),
-                Text(
-                  'Show Session Allocations For Next Term',
-                  style: body2,
-                ),
-                const SizedBox(height: 10),
-                Switch(
-                  value: showSessionAllocation,
-                  onChanged: (newVal) => setState(() {
-                    showSessionAllocation = newVal;
-                  }),
+                AxisButton.text(
+                  width: 370,
+                  label: 'Show Session Allocations For Next Term',
+                  isHighlighted: true,
+                  onPressed: () {
+                    setState(() {
+                      showSessionAllocation = !showSessionAllocation;
+                    });
+                  },
                 ),
                 const SizedBox(height: 30),
                 if (showSessionAllocation)

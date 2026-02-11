@@ -60,12 +60,22 @@ class RegisterForClassDialogState extends State<RegisterForClassDialog> {
                       const Spacer(),
 
                       IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pop<RegisterForClassData>((
-                            classId: currentClassId,
-                            sessionsCount:
-                                int.tryParse(sessionCountController.text) ?? -1,
-                          ));
+                        onPressed: () async {
+                          final confirm = await showDialog(
+                            context: context,
+                            builder: (_) => ConfirmationDialog(
+                              confirmationMsg: 'Confirm changes?',
+                            ),
+                          );
+                          if (!confirm) return;
+                          if (context.mounted) {
+                            Navigator.of(context).pop<RegisterForClassData>((
+                              classId: currentClassId,
+                              sessionsCount:
+                                  int.tryParse(sessionCountController.text) ??
+                                  -1,
+                            ));
+                          }
                         },
                         icon: Icon(Icons.check),
                       ),

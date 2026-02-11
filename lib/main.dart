@@ -9,7 +9,6 @@ import 'package:firebase_ui_auth/firebase_ui_auth.dart' as auth_ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
-import 'package:pdf/widgets.dart' as pdf;
 import 'options.dart';
 
 part './pages/dashboard.dart';
@@ -63,9 +62,17 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: options);
+
   try {
     firestore;
     auth;
+    if (kDebugMode) {
+      await auth.signInWithEmailAndPassword(
+        email: 'admin@gmail.com',
+        password: 'admin123',
+      );
+      isAdmin = true;
+    }
   } catch (e, st) {
     print(e);
     print(st);
@@ -83,7 +90,7 @@ enum Routes {
   login('/login', 'Login', [], Icons.account_circle),
   syllabus(
     '/syllabus',
-    'Syllabus',
+    'Attendance',
     ['teacher'],
     Icons.checklist,
   ),
@@ -146,7 +153,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
     return TooltipVisibility(
       visible: false,
       child: MaterialApp(
-        initialRoute: Routes.login.slug,
+        initialRoute: kDebugMode ? Routes.dashboard.slug : Routes.login.slug,
         debugShowCheckedModeBanner: false,
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),

@@ -15,7 +15,7 @@ class SyllabusPageState extends State<SyllabusPage> {
   @override
   Widget build(BuildContext context) {
     return Navbar(
-      pageTitle: 'Syllabus',
+      pageTitle: 'Attendance',
       actions: [
         TextButton(
           onPressed: () {
@@ -60,6 +60,11 @@ class SyllabusPageState extends State<SyllabusPage> {
             return (snapshot.data != null && snapshot.data!.isNotEmpty)
                 ? ListView(
                     children: [
+                      const SizedBox(height: 30),
+                      Text(
+                        'Classes',
+                        style: heading1,
+                      ),
                       for (final cl in snapshot.data!) ...[
                         const SizedBox(height: 30),
                         Center(
