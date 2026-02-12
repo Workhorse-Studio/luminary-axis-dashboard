@@ -63,14 +63,17 @@ class ClassData extends JSONSerialisable {
   JSON toJson() => {
     'name': name,
     'students': studentIds,
-    'attendance': {
-      for (final entry in attendance.entries)
-        {
-          entry.key: {
-            for (final e in entry.value.entries) {e.key: e.value.toString()},
+    'attendance': attendance.entries.isEmpty
+        ? Map<String, Map<String, AttendanceType>>()
+        : {
+            for (final entry in attendance.entries)
+              {
+                entry.key: {
+                  for (final e in entry.value.entries)
+                    {e.key: e.value.toString()},
+                },
+              },
           },
-        },
-    },
   };
 }
 

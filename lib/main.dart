@@ -28,6 +28,7 @@ part './components/register_for_class_dialog.dart';
 part './components/withdraw_from_class_dialog.dart';
 part './components/student_info_dialog.dart';
 part './components/future_builder_template.dart';
+part './components/class_creation_dialog.dart';
 
 part './design_system/colors.dart';
 part './design_system/text_styles.dart';
@@ -68,6 +69,7 @@ void main() async {
     firestore;
     auth;
     if (kDebugMode) {
+      role = 'admin';
       await auth.signInWithEmailAndPassword(
         email: 'admin@gmail.com',
         password: 'admin123',
