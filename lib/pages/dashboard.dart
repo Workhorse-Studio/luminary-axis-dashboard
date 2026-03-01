@@ -10,6 +10,8 @@ class DashboardPage extends StatefulWidget {
 class DashboardPageState extends State<DashboardPage> {
   bool hasLoaded = false;
   String name = '';
+  GlobalState? globalState;
+  late TermData currentTerm;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +65,36 @@ class DashboardPageState extends State<DashboardPage> {
                       "You're signed in as ${isAdmin ? 'an' : 'a'} ${isAdmin ? 'admin' : role}",
                       style: body2,
                     ),
+                    const SizedBox(height: 30),
+                    if (isAdmin)
+                      FutureBuilderTemplate(
+                        future: () async {
+                          final gs = (globalState == null)
+                              ? globalState = GlobalState.fromJson(
+                                  (await firestore
+                                          .collection('global')
+                                          .doc('state')
+                                          .get())
+                                      .data()!,
+                                )
+                              : globalState;
+
+                          currentTerm = gs!.terms.last;
+                          return currentTerm;
+                        }(),
+                        builder: (context, snapshot) =>
+                            (currentTerm.hasEndDateSet &&
+                                DateTime.now().isSameDayAs(
+                                  DateTime.fromMillisecondsSinceEpoch(
+                                    currentTerm.termEndDate,
+                                  ),
+                                ))
+                            ? Text(
+                                'New Term Setup Required\nPlease update initial session allocations for students before logging attendance for the new term.',
+                                style: body2,
+                              )
+                            : const SizedBox(),
+                      ),
                     const SizedBox(height: 30),
                     if (isAdmin) ...[
                       Text('Pending Onboarding', style: heading1),
@@ -232,7 +264,7 @@ class DashboardPageState extends State<DashboardPage> {
                                 );
                         },
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 60),
                       Text('Class Details', style: heading1),
                       const SizedBox(height: 10),
                       FutureBuilderTemplate(
