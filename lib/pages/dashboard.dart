@@ -243,11 +243,12 @@ class DashboardPageState extends State<DashboardPage> {
                                                                 .parentContactNo,
                                                             parentName: obData
                                                                 .parentContactNo,
-                                                            initialSessionCount:
-                                                                {
-                                                                  obData.classId:
-                                                                      0,
-                                                                },
+                                                            sessionCounts: [
+                                                              {
+                                                                obData.classId:
+                                                                    0,
+                                                              },
+                                                            ],
                                                           ),
                                                         );
                                                         setState(() {});

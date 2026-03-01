@@ -44,19 +44,19 @@ class TermReport {
         studentsData[studentId]!.name,
         classData.name.split(' ').first,
         ...attendance[studentId]!,
-        studentsData[studentId]!.initialSessionCount[classId]!,
-        studentsData[studentId]!.initialSessionCount[classId]! -
+        studentsData[studentId]!.sessionCounts[termNum][classId]!,
+        studentsData[studentId]!.sessionCounts[termNum][classId]! -
             attendance[studentId]!
                 .where((attendanceType) => attendanceType.isPresent)
                 .length,
       ]);
       progresses.add(
         1 -
-            ((studentsData[studentId]!.initialSessionCount[classId]! -
+            ((studentsData[studentId]!.sessionCounts[termNum][classId]! -
                     attendance[studentId]!
                         .where((attendanceType) => attendanceType.isPresent)
                         .length) /
-                studentsData[studentId]!.initialSessionCount[classId]!),
+                studentsData[studentId]!.sessionCounts[termNum][classId]!),
       );
     }
 
@@ -134,8 +134,8 @@ class TermReportV2 {
         studentData.name,
         classData.name.split(' ').first,
         ...attendance[studentId]!,
-        studentData.initialSessionCount[classId]!,
-        studentData.initialSessionCount[classId]! -
+        studentData.sessionCounts[termNum][classId]!,
+        studentData.sessionCounts[termNum][classId]! -
             attendance[studentId]!
                 .where(
                   (attendanceType) =>
@@ -146,14 +146,14 @@ class TermReportV2 {
 
       progresses.add(
         1 -
-            ((studentData.initialSessionCount[classId]! -
+            ((studentData.sessionCounts[termNum][classId]! -
                     attendance[studentId]!
                         .where(
                           (attendanceType) =>
                               attendanceType != '' && attendanceType != 'X',
                         )
                         .length) /
-                studentData.initialSessionCount[classId]!),
+                studentData.sessionCounts[termNum][classId]!),
       );
     }
 

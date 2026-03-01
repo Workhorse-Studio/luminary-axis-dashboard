@@ -3,7 +3,9 @@ part of axis_dashboard;
 class StudentData extends JSONSerialisable {
   final String role;
   final String name;
-  final Map<String, int> initialSessionCount;
+
+  /// Indexed by termNum, and each item maps a `classId` to a `sessionsCount`
+  final List<Map<String, int>> sessionCounts;
   final String studentContactNo;
   final String parentName;
   final String parentContactNo;
@@ -17,8 +19,7 @@ class StudentData extends JSONSerialisable {
     required this.studentContactNo,
     required this.parentContactNo,
     required this.parentName,
-
-    required this.initialSessionCount,
+    required this.sessionCounts,
   });
 
   StudentData.fromJson(JSON json)
@@ -28,9 +29,9 @@ class StudentData extends JSONSerialisable {
       parentName = json['parentName'] as String,
       parentContactNo = json['parentContactNo'] as String,
 
-      initialSessionCount = Map<String, int>.from(
-        json['initialSessionCount'] as Map,
-      ),
+      sessionCounts = (json['sessionCounts'] as List)
+          .map((e) => Map<String, int>.from(e))
+          .toList(),
       name = json['name'] as String;
 
   @override
@@ -41,6 +42,6 @@ class StudentData extends JSONSerialisable {
     'studentContactNo': studentContactNo,
     'parentName': parentName,
     'parentContactNo': parentContactNo,
-    'initialSessionCount': initialSessionCount,
+    'sessionCounts': sessionCounts,
   };
 }

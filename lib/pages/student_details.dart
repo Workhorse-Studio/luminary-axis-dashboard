@@ -165,7 +165,7 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                       for (final currentStudent in studentsData) {
                         for (final entry in StudentData.fromJson(
                           currentStudent.data(),
-                        ).initialSessionCount.entries) {
+                        ).sessionCounts[termNum].entries) {
                           final String rowKey =
                               "${currentStudent.id}-${entry.key}";
 
@@ -262,7 +262,7 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
                                       final String msg;
                                       final updatedISC = StudentData.fromJson(
                                         currentStudent.data(),
-                                      ).initialSessionCount;
+                                      ).sessionCounts[termNum];
                                       final int? newInt = int.tryParse(
                                         textControllers[rowKey]!
                                             .iscController

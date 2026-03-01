@@ -86,12 +86,12 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                         studentData.data(),
                       );
 
-                      return sd.initialSessionCount.isNotEmpty
+                      return sd.sessionCounts.isNotEmpty
                           ? (await firestore
                                     .collection('classes')
                                     .where(
                                       FieldPath.documentId,
-                                      whereIn: sd.initialSessionCount.keys,
+                                      whereIn: sd.sessionCounts[termNum].keys,
                                     )
                                     .get())
                                 .docs

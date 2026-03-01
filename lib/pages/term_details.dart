@@ -253,8 +253,9 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                             final shadowDoc = shadowColl.doc(doc.id);
                             final newData = StudentData.fromJson(doc.data());
                             for (final classEntry
-                                in newData.initialSessionCount.entries) {
-                              newData.initialSessionCount[classEntry.key] = -1;
+                                in newData.sessionCounts[termNum].entries) {
+                              newData.sessionCounts[termNum][classEntry.key] =
+                                  -1;
                             }
                             await shadowDoc.set(newData.toJson());
                             shadowDocsCache.registry[shadowDoc.id] =
@@ -304,7 +305,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
 
                                 for (final entry
                                     in studentData
-                                        .initialSessionCount
+                                        .sessionCounts[termNum]
                                         .entries) {
                                   final classData = ClassData.fromJson(
                                     (await classesDataCache.get(

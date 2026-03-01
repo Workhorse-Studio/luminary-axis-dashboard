@@ -60,6 +60,7 @@ part './firebase/auth.dart';
 
 late String role = '';
 bool isAdmin = false;
+late int termNum;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -69,6 +70,7 @@ void main() async {
     firestore;
     auth;
     if (kDebugMode) {
+      termNum = 0;
       role = 'admin';
       await auth.signInWithEmailAndPassword(
         email: 'admin@gmail.com',

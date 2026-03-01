@@ -24,6 +24,10 @@ class LoginPage extends StatelessWidget {
                 role = userData['role'];
                 isAdmin = role == 'admin';
                 if (isAdmin) role = 'teacher';
+                termNum = GlobalState.fromJson(
+                  (await firestore.collection('global').doc('state').get())
+                      .data()!,
+                ).currentTermNum;
                 if (context.mounted) {
                   if (!await Navigator.of(context).maybePop()) {
                     Navigator.of(context).pushNamed(Routes.dashboard.slug);
