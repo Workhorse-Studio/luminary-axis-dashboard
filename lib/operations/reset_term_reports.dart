@@ -79,7 +79,12 @@ class ResetTermReportsOperation {
             .docs;
     for (final tDoc in teachersDocs) {
       final tData = TeacherData.fromJson(tDoc.data());
-      int numSessions = tData.priorSessionCount;
+      int numSessions = tData.payments
+          .map(
+            (p) =>
+                p.sessionsPerClass.values.fold(0, (total, val) => total + val),
+          )
+          .fold(0, (total, val) => total + val);
       for (final clId in tData.classIds) {
         numSessions += ClassData.fromJson(
           (await classesCache.get(clId)).data(),
