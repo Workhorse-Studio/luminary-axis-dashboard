@@ -7,447 +7,532 @@ class TermDetailsPage extends StatefulWidget {
   State<StatefulWidget> createState() => TermDetailsPageState();
 }
 
-class TermDetailsPageState extends State<TermDetailsPage> {
-  String termName = '';
-  GlobalState? globalState;
-  bool showSessionAllocation = false;
-  late TermData currentTerm;
-  final shadowColl = firestore
-      .collection('global')
-      .doc('state')
-      .collection('nextTermSessionAllocations');
+typedef ClassAllocations = Map<String, int>;
 
-  // Session Alloc State
-  final GenericCache<DocumentSnapshot<JSON>> classesDataCache = GenericCache((
-    classId,
-  ) async {
-    return (await firestore.collection('classes').doc(classId).get());
-  });
-  final GenericCache<DocumentSnapshot<JSON>> shadowDocsCache = GenericCache((
-    studentId,
-  ) async {
-    return (await firestore
+class TermDetailsPageState extends State<TermDetailsPage> {
+  int currentTabIndex = 0;
+  GlobalState? globalState;
+  final Map<String, TextEditingController> controllers = {};
+  final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
+    (termName) async => (await firestore
         .collection('global')
         .doc('state')
-        .collection('nextTermSessionAllocations')
-        .doc(studentId)
-        .get());
-  });
+        .collection('allocations')
+        .doc(termName)
+        .get()),
+  );
+  final TextEditingController termNameController = TextEditingController();
+
+  final GenericCache<DocumentSnapshot<JSON>> classesCache = GenericCache(
+    (classId) async =>
+        (await firestore.collection('classes').doc(classId).get()),
+  );
+  final GenericCache<DocumentSnapshot<JSON>> studentsCache = GenericCache(
+    (studentId) async =>
+        (await firestore.collection('users').doc(studentId).get()),
+  );
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilderTemplate(
       future: () async {
-        final gs = (globalState == null)
-            ? globalState = GlobalState.fromJson(
-                (await firestore.collection('global').doc('state').get())
-                    .data()!,
-              )
-            : globalState;
-        // termName = "${DateTime.now().year} T${gs!.currentTermNum}";
-        currentTerm = gs!.terms.last;
-        termName = currentTerm.termName;
-        return gs;
+        globalState ??= GlobalState.fromJson(
+          (await firestore.collection('global').doc('state').get()).data()!,
+        );
+        await classesCache.initAll(firestore.collection('classes'));
+        termNameController.text = globalState!.terms[currentTabIndex].termName;
+        return globalState;
       }(),
+
       builder: (context, snapshot) => Navbar(
         pageTitle: 'Term Details',
         actions: [
-          if (currentTerm.hasEndDateSet &&
-              DateTime.now().isAfter(
-                DateTime.fromMillisecondsSinceEpoch(
-                  currentTerm.termEndDate,
-                ).subtract(const Duration(days: 7)),
-              ))
-            Padding(
-              padding: const EdgeInsets.only(right: 20),
-              child:
-                  currentTerm.hasEndDateSet &&
-                      DateTime.now().isSameDayAs(
-                        DateTime.fromMillisecondsSinceEpoch(
-                          currentTerm.termEndDate,
-                        ),
-                      )
-                  ? TextButton(
-                      onPressed: () async {
-                        final bool confirm = await showDialog(
-                          context: context,
-                          builder: (_) => ConfirmationDialog(
-                            confirmationMsg:
-                                'Are you sure you would like to end the current term?\nThis will take a snapshot of all attendance sheets and then reset them.',
-                          ),
-                        );
-                        final String msg;
-                        if (confirm) {
-                          await ResetTermReportsOperation().executeInSequence(
-                            termName,
-                          );
-                          msg = 'Current term has been ended!';
-                        } else {
-                          msg = 'Action cancelled';
-                        }
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(msg)),
-                          );
-                        }
-                        setState(() {});
-                      },
-                      child: Text(
-                        'End Current Term',
-                        style: buttonLabel,
-                      ),
-                    )
-                  : Text(
-                      "${DateTime.fromMillisecondsSinceEpoch(
-                        currentTerm.termEndDate,
-                      ).difference(DateTime.now()).inDays} days to term end",
-                      style: body2,
-                    ),
-            ),
-        ],
-        body: (context) => SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsetsGeometry.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              key: ValueKey(currentTerm.termEndDate),
-
-              children: [
-                const SizedBox(height: 30),
-                if (currentTerm.hasEndDateSet &&
-                    DateTime.now().isSameDayAs(
-                      DateTime.fromMillisecondsSinceEpoch(
-                        currentTerm.termEndDate,
-                      ),
-                    )) ...[
-                  Text(
-                    'New Term Setup Required\nPlease update initial session allocations for students before logging attendance for the new term.',
-                    style: body2,
+          SizedBox(
+            width: 240,
+            height: 50,
+            child: TextField(
+              controller: termNameController,
+              onSubmitted: (newTermName) async {
+                final String oldName =
+                    globalState!.terms[currentTabIndex].termName;
+                await firestore
+                    .collection('global')
+                    .doc('state')
+                    .collection('allocations')
+                    .doc(newTermName)
+                    .set(
+                      (await allocationsCache.get(
+                        oldName,
+                      )).data()!,
+                    );
+                allocationsCache.registry.remove(oldName);
+                allocationsCache.registry[newTermName] = await firestore
+                    .collection('global')
+                    .doc('state')
+                    .collection('allocations')
+                    .doc(newTermName)
+                    .get();
+                await firestore
+                    .collection('global')
+                    .doc('state')
+                    .collection('allocations')
+                    .doc(oldName)
+                    .delete();
+                await firestore.collection('global').doc('state').update({
+                  'terms': [
+                    for (final term in globalState!.terms)
+                      term.termName == oldName
+                          ? TermData(
+                              termEndDate: term.termEndDate,
+                              termName: newTermName,
+                              termStartDate: term.termStartDate,
+                            ).toJson()
+                          : term.toJson(),
+                  ],
+                });
+                setState(() {});
+              },
+              style: body2,
+              decoration: InputDecoration(
+                hint: Text(
+                  termNameController.text,
+                  style: body2.copyWith(
+                    color: AxisColors.blackPurple20.withValues(alpha: 0.5),
                   ),
-                  const SizedBox(height: 30),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AxisColors.lilacPurple20),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: AxisColors.lilacPurple50.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 20),
+          AxisButton.text(
+            label: 'New Term',
+            onPressed: () async {
+              String recursivelyNameNewTerm(String prevName) {
+                final dupNames = globalState!.terms.where(
+                  (t) => t.termName == prevName,
+                );
+                if (dupNames.isNotEmpty) {
+                  return recursivelyNameNewTerm('$prevName ${dupNames.length}');
+                } else {
+                  return prevName;
+                }
+              }
+
+              String termName = recursivelyNameNewTerm('Term ${termNum + 2}');
+
+              await firestore
+                  .collection('global')
+                  .doc('state')
+                  .collection('allocations')
+                  .doc(termName)
+                  .set(
+                    TermAllocation(
+                      sessions: {
+                        for (final classData in classesCache.registry.entries)
+                          classData.key: {
+                            for (final studentId in ClassData.fromJson(
+                              classData.value.data()!,
+                            ).studentIds)
+                              studentId: 0,
+                          },
+                      },
+                    ).toJson(),
+                  );
+              await firestore.collection('global').doc('state').update({
+                'terms': [
+                  ...globalState!.terms.map((t) => t.toJson()),
+                  TermData(
+                    termEndDate:
+                        globalState!.terms.last.termEndDate +
+                        Duration(days: 30).inMilliseconds,
+                    termName: termName,
+                    termStartDate:
+                        globalState!.terms.last.termEndDate +
+                        Duration(minutes: 1).inMilliseconds,
+                  ).toJson(),
                 ],
-                Text(
-                  'Term Name',
-                  style: heading3,
-                ),
-                Text(termName, style: body2),
-                const SizedBox(height: 20),
-                Text(
-                  'Current Term Start Date',
-                  style: heading3,
-                ),
-                Text(
-                  DateTime.fromMillisecondsSinceEpoch(
-                    currentTerm.termStartDate,
-                  ).toTimestampStringShort(),
-                  style: body2,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Current Term End Date',
-                  style: heading3,
-                ),
-                Text(
-                  currentTerm.hasEndDateSet
-                      ? DateTime.fromMillisecondsSinceEpoch(
-                          currentTerm.termEndDate,
-                        ).toTimestampStringShort()
-                      : 'No date set.',
-                  style: body2,
-                ),
-                const SizedBox(height: 10),
-                AxisNMButton(
-                  label: currentTerm.termEndDate == 0
-                      ? 'Set Date'
-                      : 'Modify Date',
-                  onPressed: () async {
-                    final endDate = await showDatePicker(
-                      context: context,
-                      firstDate: DateTime.now().subtract(
-                        const Duration(days: 30),
-                      ),
-                      lastDate: DateTime.now().add(const Duration(days: 60)),
-                    );
-                    final bool confirm = await showDialog(
-                      context: context,
-                      builder: (_) => ConfirmationDialog(
-                        confirmationMsg:
-                            'Are you sure you want to adjust the term end date?',
-                      ),
-                    );
-                    if (!confirm) return;
-                    if (endDate != null) {
-                      await firestore.collection('global').doc('state').update({
-                        'terms': [
-                          ...globalState!.terms.sublist(
-                            0,
-                            globalState!.terms.length - 1,
-                          ),
-                          TermData(
-                            termEndDate: currentTerm.termEndDate,
-                            termName: currentTerm.termName,
-                            termStartDate: endDate.millisecondsSinceEpoch,
-                          ),
-                        ],
-                      });
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Term end date set successfully!',
-                              style: body2,
-                            ),
-                          ),
-                        );
-                        globalState = globalState = GlobalState.fromJson(
-                          (await firestore
-                                  .collection('global')
-                                  .doc('state')
-                                  .get())
-                              .data()!,
-                        );
-                      }
-
-                      setState(() {});
-                    } else {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'No date set',
-                              style: body2,
-                            ),
-                          ),
-                        );
-                      }
-                    }
+              });
+              globalState = GlobalState.fromJson(
+                (await firestore.collection('global').doc('state').get())
+                    .data()!,
+              );
+              setState(() {});
+            },
+          ),
+        ],
+        body: (context) => DefaultTabController(
+          length: globalState!.terms.length,
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TabBar(
+                  isScrollable: true,
+                  key: ValueKey(
+                    globalState!.terms.map((t) => t.termName).join('-'),
+                  ),
+                  onTap: (index) {
+                    currentTabIndex = index;
+                    termNameController.text =
+                        globalState!.terms[index].termName;
                   },
+                  tabs: [
+                    for (final term in globalState!.terms)
+                      Tab(
+                        text: term.termName,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 50),
-                AxisButton.text(
-                  width: 370,
-                  label: 'Show Session Allocations For Next Term',
-                  isHighlighted: true,
-                  onPressed: () {
-                    setState(() {
-                      showSessionAllocation = !showSessionAllocation;
-                    });
-                  },
-                ),
-                const SizedBox(height: 30),
-                if (showSessionAllocation)
-                  FutureBuilderTemplate(
-                    future: () async {
-                      if (shadowDocsCache.registry.isEmpty) {
-                        final shadowDocs = (await shadowColl.get()).docs;
-                        if (shadowDocs.isEmpty) {
-                          final query = (await firestore
-                              .collection('users')
-                              .where('role', isEqualTo: 'student')
-                              .get());
-                          for (final doc in query.docs) {
-                            final shadowDoc = shadowColl.doc(doc.id);
-                            final newData = StudentData.fromJson(doc.data());
-                            for (final classEntry
-                                in newData.sessionCounts[termNum].entries) {
-                              newData.sessionCounts[termNum][classEntry.key] =
-                                  -1;
-                            }
-                            await shadowDoc.set(newData.toJson());
-                            shadowDocsCache.registry[shadowDoc.id] =
-                                await shadowDoc.get();
-                          }
-
-                          setState(() {});
-                        } else {
-                          for (final doc in shadowDocs) {
-                            shadowDocsCache.registry[doc.id] = doc;
-                          }
-                        }
-                      }
-                      return shadowDocsCache.registry;
-                    }(),
-                    builder: (context, snapshot) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height - 130,
+                  child: Center(
+                    child: TabBarView(
                       children: [
-                        const SizedBox(height: 30),
-                        AxisCard(
-                          header: 'Session Allocations',
-                          width: MediaQuery.of(context).size.width * 0.8,
-                          height: null,
-                          child: FutureBuilderTemplate(
+                        for (final term in globalState!.terms)
+                          FutureBuilderTemplate(
                             future: () async {
-                              final List<DataRow> rows = [];
-                              for (final student
-                                  in shadowDocsCache.registry.entries) {
-                                final studentData = StudentData.fromJson(
-                                  student.value.data()!,
-                                );
-                                rows.add(
-                                  DataRow(
-                                    cells: [
-                                      DataCell(
-                                        Text(
-                                          studentData.name,
-                                          style: body2,
-                                        ),
-                                      ),
-                                      DataCell.empty,
-                                      DataCell.empty,
-                                      DataCell.empty,
-                                    ],
-                                  ),
-                                );
+                              final allocations = (await allocationsCache.get(
+                                term.termName,
+                              ));
+                              if (allocations.exists) {
+                                return allocations;
+                              } else {
+                                final currentTermName = globalState!
+                                    .terms[globalState!.currentTermNum]
+                                    .termName;
+                                final currentTermAllocations =
+                                    (await allocationsCache.get(
+                                      currentTermName,
+                                    ));
+                                if (currentTermAllocations.exists) {
+                                  (await firestore
+                                      .collection('global')
+                                      .doc('state')
+                                      .collection('allocations')
+                                      .doc(term.termName)
+                                      .set(currentTermAllocations.data()!));
 
-                                for (final entry
-                                    in studentData
-                                        .sessionCounts[termNum]
-                                        .entries) {
-                                  final classData = ClassData.fromJson(
-                                    (await classesDataCache.get(
-                                      entry.key,
-                                    )).data()!,
+                                  allocationsCache.registry[term.termName] =
+                                      await firestore
+                                          .collection('global')
+                                          .doc('state')
+                                          .collection('allocations')
+                                          .doc(term.termName)
+                                          .get();
+                                } else {
+                                  final newAllocations = TermAllocation(
+                                    sessions: {
+                                      for (final classData
+                                          in classesCache.registry.entries)
+                                        classData.key: {
+                                          for (final studentId
+                                              in ClassData.fromJson(
+                                                classData.value.data()!,
+                                              ).studentIds)
+                                            studentId: 0,
+                                        },
+                                    },
                                   );
-                                  rows.add(
-                                    DataRow(
-                                      color: entry.value != -1
-                                          ? null
-                                          : WidgetStatePropertyAll(
-                                              Colors.yellow.withValues(
-                                                alpha: 0.1,
+
+                                  for (final tname in [
+                                    term.termName,
+                                    currentTermName,
+                                  ]) {
+                                    (await firestore
+                                        .collection('global')
+                                        .doc('state')
+                                        .collection('allocations')
+                                        .doc(tname)
+                                        .set(newAllocations.toJson()));
+                                    allocationsCache.registry[tname] =
+                                        (await firestore
+                                            .collection('global')
+                                            .doc('state')
+                                            .collection('allocations')
+                                            .doc(tname)
+                                            .get());
+                                  }
+                                }
+                                return (await allocationsCache.get(
+                                  term.termName,
+                                ));
+                              }
+                            }(),
+                            builder: (context, snapshot) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 30),
+                                FutureBuilderTemplate(
+                                  future: () async {
+                                    final List<DataRow> rows = [];
+                                    for (final entry in TermAllocation.fromJson(
+                                      snapshot.data!.data()!,
+                                    ).sessions.entries) {
+                                      final classData = ClassData.fromJson(
+                                        (await classesCache.get(
+                                          entry.key,
+                                        )).data()!,
+                                      );
+                                      rows.add(
+                                        DataRow(
+                                          color: WidgetStatePropertyAll(
+                                            AxisColors.blackPurple20.withValues(
+                                              alpha: 0.14,
+                                            ),
+                                          ),
+                                          cells: [
+                                            DataCell(
+                                              Text(
+                                                classData.name,
+                                                style: body2,
                                               ),
                                             ),
-                                      cells: [
-                                        DataCell.empty,
-                                        DataCell(
-                                          Text(
-                                            classData.name,
-                                            style: body2,
-                                          ),
+                                            DataCell.empty,
+                                          ],
                                         ),
-                                        DataCell(
-                                          Text(
-                                            entry.value != -1
-                                                ? '${entry.value}'
-                                                : 'Not set',
-                                            style: body2,
-                                          ),
-                                        ),
-                                        DataCell(
-                                          AxisNMButton(
-                                            label: entry.value == -1
-                                                ? 'Allocate sessions'
-                                                : 'Update allocation',
+                                      );
 
-                                            onPressed: () async {
-                                              final RegisterForClassData data =
-                                                  await showDialog(
+                                      for (final studentEntry
+                                          in entry.value.entries) {
+                                        final studentData =
+                                            StudentData.fromJson(
+                                              (await studentsCache.get(
+                                                studentEntry.key,
+                                              )).data()!,
+                                            );
+                                        final rowKey =
+                                            "${entry.key}-${studentEntry.key}";
+                                        if (!controllers.containsKey(rowKey)) {
+                                          controllers[rowKey] =
+                                              TextEditingController(
+                                                text: studentEntry.value
+                                                    .toString(),
+                                              );
+                                        }
+                                        rows.add(
+                                          DataRow(
+                                            color: studentEntry.value != -1
+                                                ? null
+                                                : WidgetStatePropertyAll(
+                                                    Colors.yellow.withValues(
+                                                      alpha: 0.1,
+                                                    ),
+                                                  ),
+                                            cells: [
+                                              DataCell(
+                                                Text(
+                                                  studentData.name,
+                                                  style: body2,
+                                                ),
+                                              ),
+                                              DataCell(
+                                                TextField(
+                                                  controller:
+                                                      controllers[rowKey]!,
+                                                  onEditingComplete: () async {
+                                                    final String msg;
+
+                                                    final int?
+                                                    newInt = int.tryParse(
+                                                      controllers[rowKey]!.text,
+                                                    );
+                                                    if (controllers[rowKey]!
+                                                        .text
+                                                        .isEmpty) {
+                                                      msg = 'Action canclled.';
+                                                      controllers[rowKey]!
+                                                          .text = studentEntry
+                                                          .value
+                                                          .toString();
+                                                    } else if (newInt != null) {
+                                                      await firestore
+                                                          .collection('global')
+                                                          .doc('state')
+                                                          .collection(
+                                                            'allocations',
+                                                          )
+                                                          .doc(term.termName)
+                                                          .update({
+                                                            '${entry.key}.${studentEntry.key}':
+                                                                newInt,
+                                                          });
+                                                      msg =
+                                                          'Updated session count successfully!';
+
+                                                      //                setState(() {});
+                                                    } else {
+                                                      msg =
+                                                          'Invalid input provided, where only a number was expected. Try again.';
+                                                    }
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(msg),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  decoration: InputDecoration(
+                                                    hint: Text(
+                                                      controllers[rowKey]!
+                                                          .value
+                                                          .text,
+                                                      style: body2.copyWith(
+                                                        color: AxisColors
+                                                            .blackPurple20,
+                                                      ),
+                                                    ),
+                                                    focusedBorder:
+                                                        OutlineInputBorder(
+                                                          borderSide: BorderSide(
+                                                            color: AxisColors
+                                                                .lilacPurple20
+                                                                .withValues(
+                                                                  alpha: 0.6,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                    enabledBorder:
+                                                        OutlineInputBorder(
+                                                          borderSide: BorderSide(
+                                                            color: AxisColors
+                                                                .lilacPurple50
+                                                                .withValues(
+                                                                  alpha: 0.4,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                  ),
+                                                  style: body2,
+                                                ),
+                                              ),
+                                              /*   DataCell(
+                                              AxisNMButton(
+                                                label: studentEntry.value == -1
+                                                    ? 'Allocate sessions'
+                                                    : 'Update allocation',
+
+                                                onPressed: () async {
+                                                  final RegisterForClassData
+                                                  data = await showDialog(
                                                     context: context,
                                                     builder: (_) =>
                                                         RegisterForClassDialog(
                                                           classesDataCache:
-                                                              classesDataCache,
+                                                              classesCache,
                                                           fixedClassId:
                                                               entry.key,
                                                         ),
                                                   );
-                                              final msg;
-                                              if (data.sessionsCount == -1) {
-                                                msg =
-                                                    'Session allocation cancelled';
-                                              } else {
-                                                await shadowColl
-                                                    .doc(student.key)
-                                                    .update({
-                                                      'initialSessionCount.${entry.key}':
-                                                          data.sessionsCount,
-                                                    });
-                                                await removeAndRefresh(
-                                                  student.key,
-                                                );
+                                                  final msg;
+                                                  if (data.sessionsCount ==
+                                                      -1) {
+                                                    msg =
+                                                        'Session allocation cancelled';
+                                                  } else {
+                                                    await firestore
+                                                        .collection('global')
+                                                        .doc('state')
+                                                        .collection(
+                                                          'allocations',
+                                                        )
+                                                        .doc(term.termName)
+                                                        .update({
+                                                          '${data.classId}.${studentEntry.key}':
+                                                              data.sessionsCount,
+                                                        });
+                                                    /*  await removeAnd(
+                                                      student.key,
+                                                    ); */
 
-                                                msg =
-                                                    'Session allocations updated successfully!';
-                                              }
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(msg),
+                                                    msg =
+                                                        'Session allocations updated successfully!';
+                                                  }
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(msg),
+                                                      ),
+                                                    );
+                                                  }
+
+                                                  setState(() {});
+                                                },
+                                              ),
+                                            ),
+                                           */
+                                            ],
+                                          ),
+                                        );
+                                      }
+                                    }
+
+                                    return rows;
+                                  }(),
+                                  builder: (context, snapshot) =>
+                                      SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Center(
+                                          child: DataTable(
+                                            dataRowMinHeight: 60,
+                                            dataRowMaxHeight: 80,
+                                            columns: [
+                                              DataColumn(
+                                                columnWidth: FixedColumnWidth(
+                                                  240,
+                                                ),
+                                                label: Text(
+                                                  'Name',
+                                                  style: body2.copyWith(
+                                                    fontWeight: FontWeight.bold,
                                                   ),
-                                                );
-                                              }
+                                                ),
+                                              ),
 
-                                              setState(() {});
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                              }
-
-                              return rows;
-                            }(),
-                            builder: (context, snapshot) =>
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                    dataRowMinHeight: 60,
-                                    dataRowMaxHeight: 80,
-                                    columns: [
-                                      DataColumn(
-                                        label: Text(
-                                          'Name',
-                                          style: body2.copyWith(
-                                            fontWeight: FontWeight.bold,
+                                              DataColumn(
+                                                label: Text(
+                                                  'Allocated Session Count',
+                                                  style: body2.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              //   DataColumn(label: const SizedBox()),
+                                            ],
+                                            rows: snapshot.data ?? const [],
                                           ),
                                         ),
                                       ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Class',
-                                          style: body2.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(
-                                        label: Text(
-                                          'Initial Session Count',
-                                          style: body2.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      DataColumn(label: const SizedBox()),
-                                    ],
-                                    rows: snapshot.data ?? const [],
-                                  ),
                                 ),
+                                const SizedBox(height: 20),
+                              ],
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> removeAndRefresh(String studentId) async {
-    shadowDocsCache.registry.remove(studentId);
-    await shadowDocsCache.get(studentId);
   }
 }

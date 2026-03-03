@@ -18,6 +18,7 @@ part './pages/teachers.dart';
 part './pages/login.dart';
 part './pages/student_details.dart';
 part './pages/term_details.dart';
+part 'pages/old_term_details.dart';
 part './pages/onboarding_page.dart';
 part './pages/dev_screen.dart';
 
@@ -44,6 +45,7 @@ part './schemas/class_data.dart';
 part './schemas/archived_attendance_sheet.dart';
 part './schemas/global_state.dart';
 part './schemas/onboarding_student_data.dart';
+part './schemas/term_allocation.dart';
 part './schemas/term_data.dart';
 
 part './operations/generate_term_report.dart';
@@ -78,39 +80,6 @@ void main() async {
       );
       isAdmin = true;
     }
-    Future<void> fx() async {
-      final teachers =
-          (await firestore
-                  .collection('users')
-                  .where('role', whereIn: ['teacher', 'admin'])
-                  .get())
-              .docs;
-      for (final teacher in teachers) {
-        final td = TeacherData.fromJson(teacher.data());
-        final Map<String, int> sessionsPerClass = {};
-        if (td.classIds.isNotEmpty) {
-          for (final clId in td.classIds) {
-            final cl = ClassData.fromJson(
-              (await firestore.collection('classes').doc(clId).get()).data()!,
-            );
-            sessionsPerClass[clId] = 0;
-            for (final session in cl.attendance.values) {
-              sessionsPerClass[clId] = sessionsPerClass[clId]! + session.length;
-            }
-          }
-          await firestore.collection('users').doc(teacher.id).update({
-            'payments': [
-              TeacherPaymentInfo(
-                sessionsPerClass: sessionsPerClass,
-                paid: true,
-              ).toJson(),
-            ],
-          });
-        }
-      }
-    }
-
-    await fx();
   } catch (e, st) {
     print(e);
     print(st);

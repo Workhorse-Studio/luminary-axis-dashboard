@@ -6,6 +6,13 @@ class GenericCache<T> {
 
   GenericCache(this.operation);
 
+  Future<void> initAll(CollectionReference coll) async {
+    final res = (await coll.get()).docs;
+    for (final item in res) {
+      registry[item.id] = item as T;
+    }
+  }
+
   Future<T> get(String id) async {
     if (registry.containsKey(id)) {
       return registry[id]!;
