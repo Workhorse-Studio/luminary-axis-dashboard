@@ -47,6 +47,106 @@ class TermDetailsPageState extends State<TermDetailsPage> {
       builder: (context, snapshot) => Navbar(
         pageTitle: 'Term Details',
         actions: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            key: ValueKey(currentTabIndex),
+            children: [
+              Text(
+                'Start: ${DateTime.fromMillisecondsSinceEpoch(globalState!.terms[currentTabIndex].termStartDate).toTimestampStringShort()}',
+                style: body2,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'End: ${DateTime.fromMillisecondsSinceEpoch(globalState!.terms[currentTabIndex].termEndDate).toTimestampStringShort()}',
+                style: body2,
+              ),
+            ],
+          ),
+          const SizedBox(width: 10),
+          AxisButton.text(
+            label: 'Modify End Date',
+            onPressed: () async {
+              final endDate = await showDatePicker(
+                context: context,
+                firstDate: DateTime.now().subtract(
+                  const Duration(days: 30 * 6),
+                ),
+                lastDate: DateTime.now().add(const Duration(days: 30 * 6)),
+              );
+              if (endDate == null) return;
+
+              final bool? confirm = await showDialog(
+                context: context,
+                builder: (_) => ConfirmationDialog(
+                  confirmationMsg:
+                      'Are you sure you want to adjust the term end date? This will shift all subsequent term start/end dates.',
+                ),
+              );
+              if (confirm == null || !confirm) return;
+              final List<TermData> newData = [
+                ...globalState!.terms.sublist(
+                  0,
+                  currentTabIndex,
+                ),
+                TermData(
+                  termEndDate: endDate.millisecondsSinceEpoch,
+                  termName: globalState!.terms[currentTabIndex].termName,
+                  termStartDate:
+                      globalState!.terms[currentTabIndex].termStartDate,
+                ),
+              ];
+              Duration? delta;
+              for (
+                int i = currentTabIndex + 1;
+                i < globalState!.terms.length;
+                i++
+              ) {
+                delta ??= DateTime.fromMillisecondsSinceEpoch(
+                  globalState!.terms[i].termStartDate,
+                ).difference(endDate);
+                if (delta.isNegative) {
+                  newData.add(
+                    TermData(
+                      termEndDate:
+                          globalState!.terms[i].termEndDate +
+                          delta.abs().inMilliseconds +
+                          1000,
+                      termName: globalState!.terms[i].termName,
+                      termStartDate:
+                          globalState!.terms[i].termStartDate +
+                          delta.abs().inMilliseconds +
+                          1000,
+                    ),
+                  );
+                } else {
+                  break;
+                }
+              }
+              await firestore.collection('global').doc('state').update({
+                'terms': newData.map((e) => e.toJson()),
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Term end date set successfully!',
+                      style: body2,
+                    ),
+                  ),
+                );
+                globalState = GlobalState.fromJson(
+                  (await firestore.collection('global').doc('state').get())
+                      .data()!,
+                );
+              }
+
+              setState(() {});
+            },
+          ),
+          const SizedBox(width: 60),
           SizedBox(
             width: 240,
             height: 50,
@@ -152,11 +252,12 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   TermData(
                     termEndDate:
                         globalState!.terms.last.termEndDate +
-                        Duration(days: 30).inMilliseconds,
+                        Duration(days: 1).inMilliseconds +
+                        Duration(days: 30 * 3).inMilliseconds,
                     termName: termName,
                     termStartDate:
                         globalState!.terms.last.termEndDate +
-                        Duration(minutes: 1).inMilliseconds,
+                        Duration(days: 1).inMilliseconds,
                   ).toJson(),
                 ],
               });
@@ -185,6 +286,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     currentTabIndex = index;
                     termNameController.text =
                         globalState!.terms[index].termName;
+                    setState(() {});
                   },
                   tabs: [
                     for (final term in globalState!.terms)

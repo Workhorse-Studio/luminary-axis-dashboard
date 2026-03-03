@@ -17,7 +17,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
     return Dialog(
       child: Container(
         width: 200,
-        height: 140,
+        height: 180,
         child: Column(
           children: [
             Text(
