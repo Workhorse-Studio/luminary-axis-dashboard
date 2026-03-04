@@ -18,7 +18,6 @@ part './pages/teachers.dart';
 part './pages/login.dart';
 part './pages/student_details.dart';
 part './pages/term_details.dart';
-part 'pages/old_term_details.dart';
 part './pages/onboarding_page.dart';
 part './pages/dev_screen.dart';
 

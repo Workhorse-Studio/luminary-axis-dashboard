@@ -13,6 +13,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
   int currentTabIndex = 0;
   GlobalState? globalState;
   final Map<String, TextEditingController> controllers = {};
+  final Map<String, String> classIdToTeacherNameMap = {};
   final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
     (termName) async => (await firestore
         .collection('global')
@@ -396,11 +397,35 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                           ),
                                           cells: [
                                             DataCell(
-                                              Text(
-                                                classData.name,
-                                                style: body2,
+                                              RichText(
+                                                text: TextSpan(
+                                                  text: classData.name,
+                                                  style: heading3,
+                                                  children: [
+                                                    TextSpan(
+                                                      style: body2,
+                                                      text:
+                                                          "     by ${!classIdToTeacherNameMap.containsKey(entry.key) ? classIdToTeacherNameMap[entry.key] = TeacherData.fromJson(
+                                                                  (await firestore.collection(
+                                                                    'users',
+                                                                  ).where(
+                                                                    'role',
+                                                                    whereIn: const [
+                                                                      'teacher',
+                                                                      'admin',
+                                                                    ],
+                                                                  ).where(
+                                                                    'classes',
+                                                                    arrayContains: entry.key,
+                                                                  ).get()).docs.first.data(),
+                                                                ).name : classIdToTeacherNameMap[entry.key]}",
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
+                                            DataCell.empty,
+                                            DataCell.empty,
                                             DataCell.empty,
                                           ],
                                         ),
@@ -438,6 +463,20 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                                   studentData.name,
                                                   style: body2,
                                                 ),
+                                                onTap: () async {
+                                                  final sd = await studentsCache
+                                                      .get(studentEntry.key);
+                                                  await showDialog(
+                                                    context: context,
+                                                    builder: (_) => StudentInfoDialog(
+                                                      studentId:
+                                                          studentEntry.key,
+                                                      studentData: sd,
+                                                      classIdToTeacherNameMap:
+                                                          classIdToTeacherNameMap,
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                               DataCell(
                                                 TextField(
@@ -522,63 +561,71 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                                   style: body2,
                                                 ),
                                               ),
-                                              /*   DataCell(
-                                              AxisNMButton(
-                                                label: studentEntry.value == -1
-                                                    ? 'Allocate sessions'
-                                                    : 'Update allocation',
-
-                                                onPressed: () async {
-                                                  final RegisterForClassData
-                                                  data = await showDialog(
-                                                    context: context,
-                                                    builder: (_) =>
-                                                        RegisterForClassDialog(
-                                                          classesDataCache:
-                                                              classesCache,
-                                                          fixedClassId:
-                                                              entry.key,
-                                                        ),
-                                                  );
-                                                  final msg;
-                                                  if (data.sessionsCount ==
-                                                      -1) {
-                                                    msg =
-                                                        'Session allocation cancelled';
-                                                  } else {
-                                                    await firestore
-                                                        .collection('global')
-                                                        .doc('state')
-                                                        .collection(
-                                                          'allocations',
-                                                        )
-                                                        .doc(term.termName)
-                                                        .update({
-                                                          '${data.classId}.${studentEntry.key}':
-                                                              data.sessionsCount,
-                                                        });
-                                                    /*  await removeAnd(
-                                                      student.key,
-                                                    ); */
-
-                                                    msg =
-                                                        'Session allocations updated successfully!';
-                                                  }
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(msg),
-                                                      ),
-                                                    );
-                                                  }
-
-                                                  setState(() {});
-                                                },
+                                              DataCell(
+                                                Text(
+                                                  "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
+                                                        (entry) => entry.value.containsKey(
+                                                              studentEntry.key,
+                                                            ) && entry.value[studentEntry.key]!.isPresent,
+                                                      ).length}",
+                                                  style: body2,
+                                                ),
                                               ),
-                                            ),
-                                           */
+                                              DataCell(
+                                                AxisNMButton(
+                                                  label: 'Withdraw',
+                                                  onPressed: () async {
+                                                    final bool
+                                                    confirm = await showDialog(
+                                                      context: context,
+                                                      builder: (_) =>
+                                                          ConfirmationDialog(
+                                                            confirmationMsg:
+                                                                'Are you sure you would like to withdraw from class "${classData.name}"?',
+                                                          ),
+                                                    );
+                                                    final String msg;
+                                                    if (confirm) {
+                                                      await withdrawStudentFromClass(
+                                                        studentId:
+                                                            studentEntry.key,
+                                                        classId:
+                                                            (await classesCache
+                                                                    .get(
+                                                                      entry.key,
+                                                                    ))
+                                                                .id,
+                                                      );
+                                                      await classesCache.get(
+                                                        entry.key,
+                                                        bypassCache: true,
+                                                      );
+                                                      studentsCache.get(
+                                                        studentEntry.key,
+                                                        bypassCache: true,
+                                                      );
+                                                      setState(() {});
+                                                      msg =
+                                                          'Withdrawn student from class successfully!';
+                                                    } else {
+                                                      msg = 'Action cancelled';
+                                                    }
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            msg,
+                                                            style: body2,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                    setState(() {});
+                                                  },
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         );
@@ -597,7 +644,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                             columns: [
                                               DataColumn(
                                                 columnWidth: FixedColumnWidth(
-                                                  240,
+                                                  280,
                                                 ),
                                                 label: Text(
                                                   'Name',
@@ -615,7 +662,17 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                                   ),
                                                 ),
                                               ),
-                                              //   DataColumn(label: const SizedBox()),
+                                              DataColumn(
+                                                label: Text(
+                                                  'Remaining Session Count',
+                                                  style: body2.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              DataColumn(
+                                                label: const SizedBox(),
+                                              ),
                                             ],
                                             rows: snapshot.data ?? const [],
                                           ),

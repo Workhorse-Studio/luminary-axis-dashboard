@@ -13,11 +13,11 @@ class GenericCache<T> {
     }
   }
 
-  Future<T> get(String id) async {
-    if (registry.containsKey(id)) {
-      return registry[id]!;
-    } else {
+  Future<T> get(String id, {bool bypassCache = false}) async {
+    if (bypassCache || !registry.containsKey(id)) {
       return registry[id] = await operation(id);
+    } else {
+      return registry[id]!;
     }
   }
 }

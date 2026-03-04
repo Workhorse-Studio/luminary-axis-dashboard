@@ -2,7 +2,7 @@ part of axis_dashboard;
 
 class StudentInfoDialog extends StatefulWidget {
   final String studentId;
-  final QueryDocumentSnapshot<JSON> studentData;
+  final DocumentSnapshot<JSON> studentData;
   final Map<String, String> classIdToTeacherNameMap;
 
   const StudentInfoDialog({
@@ -17,7 +17,7 @@ class StudentInfoDialog extends StatefulWidget {
 }
 
 class StudentInfoDialogState extends State<StudentInfoDialog> {
-  late QueryDocumentSnapshot<JSON> studentData;
+  late DocumentSnapshot<JSON> studentData;
   late final Map<String, String> classIdToTeacherNameMap;
   late InvoiceWidget invoiceWidget;
   @override
@@ -58,7 +58,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                   ),
                   const SizedBox(height: 20),
                   for (final infoItem in generateContactDetailsRows(
-                    StudentData.fromJson(studentData.data()),
+                    StudentData.fromJson(studentData.data()!),
                   ).entries) ...[
                     RichText(
                       text: TextSpan(
@@ -82,9 +82,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                   const SizedBox(height: 20),
                   FutureBuilderTemplate(
                     future: () async {
-                      final sd = StudentData.fromJson(
-                        studentData.data(),
-                      );
+                      final sd = StudentData.fromJson(studentData.data()!);
 
                       return sd.sessionCounts.isNotEmpty
                           ? (await firestore
