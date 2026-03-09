@@ -3,13 +3,25 @@ part of axis_dashboard;
 class GenericCache<T> {
   final Map<String, T> registry = {};
   final FutureOr<T> Function(String id) operation;
+  bool _hasInitAll = false;
 
   GenericCache(this.operation);
 
-  Future<void> initAll(CollectionReference coll) async {
-    final res = (await coll.get()).docs;
-    for (final item in res) {
-      registry[item.id] = item as T;
+  Future<void> initAll({
+    CollectionReference? collection,
+    Query? query,
+    bool force = false,
+  }) async {
+    if (_hasInitAll) {
+      if (!force) return;
+    } else {
+      final res = collection != null
+          ? (await collection.get()).docs
+          : (await query!.get()).docs;
+      for (final item in res) {
+        registry[item.id] = item as T;
+      }
+      _hasInitAll = true;
     }
   }
 

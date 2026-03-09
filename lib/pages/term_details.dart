@@ -12,8 +12,14 @@ typedef ClassAllocations = Map<String, int>;
 class TermDetailsPageState extends State<TermDetailsPage> {
   int currentTabIndex = 0;
   GlobalState? globalState;
+  bool sortASC = false, sortRSC = false;
   final Map<String, TextEditingController> controllers = {};
   final Map<String, String> classIdToTeacherNameMap = {};
+  final TextEditingController filterStudentMenuController =
+          TextEditingController(),
+      filterClassMenuController = TextEditingController(),
+      filterISCMenuController = TextEditingController(),
+      filterFSCMenuController = TextEditingController();
   final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
     (termName) async => (await firestore
         .collection('global')
@@ -40,7 +46,12 @@ class TermDetailsPageState extends State<TermDetailsPage> {
         globalState ??= GlobalState.fromJson(
           (await firestore.collection('global').doc('state').get()).data()!,
         );
-        await classesCache.initAll(firestore.collection('classes'));
+        await classesCache.initAll(collection: firestore.collection('classes'));
+        await studentsCache.initAll(
+          query: firestore
+              .collection('users')
+              .where('role', isEqualTo: 'student'),
+        );
         termNameController.text = globalState!.terms[currentTabIndex].termName;
         return globalState;
       }(),
@@ -276,8 +287,47 @@ class TermDetailsPageState extends State<TermDetailsPage> {
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
+                Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: 60,
+                  child: Row(
+                    children: [
+                      createFilterMenu(
+                        context,
+                        controller: filterStudentMenuController,
+                        entries: [
+                          for (final studentEntry
+                              in studentsCache.registry.entries)
+                            DropdownMenuEntry(
+                              label: StudentData.fromJson(
+                                studentEntry.value.data()!,
+                              ).name,
+                              value: studentEntry.value,
+                              style: menuEntryStyle,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 30),
+                      createFilterMenu(
+                        context,
+                        controller: filterClassMenuController,
+                        entries: [
+                          for (final classEntry
+                              in classesCache.registry.entries)
+                            DropdownMenuEntry(
+                              label: ClassData.fromJson(
+                                classEntry.value.data()!,
+                              ).name,
+                              value: classEntry.value,
+                              style: menuEntryStyle,
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 TabBar(
                   isScrollable: true,
                   key: ValueKey(
@@ -298,8 +348,9 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                 ),
                 SizedBox(
                   width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height - 130,
-                  child: Center(
+                  height: MediaQuery.of(context).size.height - 190,
+                  child: Align(
+                    alignment: Alignment.topLeft,
                     child: TabBarView(
                       children: [
                         for (final term in globalState!.terms)
@@ -374,9 +425,8 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                             }(),
                             builder: (context, snapshot) => Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                const SizedBox(height: 30),
                                 FutureBuilderTemplate(
                                   future: () async {
                                     final List<DataRow> rows = [];
@@ -388,6 +438,12 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                           entry.key,
                                         )).data()!,
                                       );
+                                      if (filterClassMenuController.text !=
+                                              'None' &&
+                                          filterClassMenuController.text !=
+                                              classData.name) {
+                                        continue;
+                                      }
                                       rows.add(
                                         DataRow(
                                           color: WidgetStatePropertyAll(
@@ -430,7 +486,8 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                           ],
                                         ),
                                       );
-
+                                      /* int startIndex = 1;
+                                      int numEntriesAdded = 0; */
                                       for (final studentEntry
                                           in entry.value.entries) {
                                         final studentData =
@@ -439,6 +496,13 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                                 studentEntry.key,
                                               )).data()!,
                                             );
+                                        if (filterStudentMenuController.text !=
+                                                'None' &&
+                                            filterStudentMenuController.text !=
+                                                studentData.name) {
+                                          continue;
+                                        }
+                                        //  numEntriesAdded += 1;
                                         final rowKey =
                                             "${entry.key}-${studentEntry.key}";
                                         if (!controllers.containsKey(rowKey)) {
@@ -630,54 +694,82 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                           ),
                                         );
                                       }
+                                      if (rows.last.cells[1] ==
+                                          DataCell.empty) {
+                                        rows.removeLast();
+                                      } /* else {
+                                        rows.replaceRange(
+                                          startIndex,
+                                          startIndex + numEntriesAdded,
+                                          rows.sublist(
+                                            startIndex,
+                                            startIndex + numEntriesAdded + 1,
+                                          ).,
+                                        );
+
+                                        startIndex = rows.length - 1;
+                                      } */
                                     }
 
                                     return rows;
                                   }(),
-                                  builder: (context, snapshot) =>
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Center(
-                                          child: DataTable(
-                                            dataRowMinHeight: 60,
-                                            dataRowMaxHeight: 80,
-                                            columns: [
-                                              DataColumn(
-                                                columnWidth: FixedColumnWidth(
-                                                  280,
-                                                ),
-                                                label: Text(
-                                                  'Name',
-                                                  style: body2.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                  builder: (context, snapshot) => Align(
+                                    alignment: Alignment.topLeft,
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Align(
+                                        alignment: Alignment.topLeft,
+                                        child: DataTable(
+                                          dataRowMinHeight: 60,
+                                          dataRowMaxHeight: 80,
+                                          columns: [
+                                            DataColumn(
+                                              columnWidth: FixedColumnWidth(
+                                                280,
+                                              ),
+                                              label: Text(
+                                                'Name',
+                                                style: body2.copyWith(
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
+                                            ),
 
-                                              DataColumn(
-                                                label: Text(
-                                                  'Allocated Session Count',
-                                                  style: body2.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                            DataColumn(
+                                              onSort: (columnIndex, ascending) {
+                                                setState(() {
+                                                  sortASC = ascending;
+                                                });
+                                              },
+                                              label: Text(
+                                                'Allocated Session Count',
+                                                style: body2.copyWith(
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
-                                              DataColumn(
-                                                label: Text(
-                                                  'Remaining Session Count',
-                                                  style: body2.copyWith(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                            ),
+                                            DataColumn(
+                                              onSort: (columnIndex, ascending) {
+                                                setState(() {
+                                                  sortRSC = ascending;
+                                                });
+                                              },
+                                              label: Text(
+                                                'Remaining Session Count',
+                                                style: body2.copyWith(
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
-                                              DataColumn(
-                                                label: const SizedBox(),
-                                              ),
-                                            ],
-                                            rows: snapshot.data ?? const [],
-                                          ),
+                                            ),
+                                            DataColumn(
+                                              label: const SizedBox(),
+                                            ),
+                                          ],
+                                          rows: snapshot.data ?? const [],
                                         ),
                                       ),
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 20),
                               ],
@@ -694,4 +786,36 @@ class TermDetailsPageState extends State<TermDetailsPage> {
       ),
     );
   }
+
+  Widget createFilterMenu<T>(
+    BuildContext context, {
+    required TextEditingController controller,
+    required List<DropdownMenuEntry<T>> entries,
+  }) => DropdownMenu(
+    leadingIcon: controller.value.text != 'None' ? Icon(Icons.check) : null,
+    controller: controller,
+    inputDecorationTheme: InputDecorationTheme(
+      border: InputBorder.none,
+      contentPadding: EdgeInsets.only(left: 20),
+    ),
+    menuStyle: MenuStyle(
+      side: WidgetStatePropertyAll(
+        BorderSide(color: AxisColors.blackPurple20),
+      ),
+      backgroundColor: WidgetStatePropertyAll(
+        AxisColors.blackPurple30,
+      ),
+    ),
+    dropdownMenuEntries: [
+      DropdownMenuEntry(
+        label: 'None',
+        value: null,
+        style: menuEntryStyle,
+      ),
+      ...entries,
+    ],
+    onSelected: (_) {
+      setState(() {});
+    },
+  );
 }
