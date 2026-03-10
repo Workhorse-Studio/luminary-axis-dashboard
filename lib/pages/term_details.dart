@@ -16,18 +16,19 @@ class TermDetailsPageState extends State<TermDetailsPage> {
   final Map<String, TextEditingController> controllers = {};
   final Map<String, String> classIdToTeacherNameMap = {};
   final TextEditingController filterStudentMenuController =
-          TextEditingController(),
-      filterClassMenuController = TextEditingController(),
+          TextEditingController(text: 'None'),
+      filterClassMenuController = TextEditingController(text: 'None'),
       filterISCMenuController = TextEditingController(),
-      filterFSCMenuController = TextEditingController();
-  final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
+      filterFSCMenuController = TextEditingController(),
+      allocateAllSessionsController = TextEditingController();
+  /* final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
     (termName) async => (await firestore
         .collection('global')
         .doc('state')
         .collection('allocations')
         .doc(termName)
         .get()),
-  );
+  ); */
   final TextEditingController termNameController = TextEditingController();
 
   final GenericCache<DocumentSnapshot<JSON>> classesCache = GenericCache(
@@ -38,11 +39,16 @@ class TermDetailsPageState extends State<TermDetailsPage> {
     (studentId) async =>
         (await firestore.collection('users').doc(studentId).get()),
   );
+  List<(DocumentSnapshot<JSON>, String)> visibleRows = [];
+  List<Widget> tabViews = [];
 
   @override
   Widget build(BuildContext context) {
+    visibleRows.clear();
+
     return FutureBuilderTemplate(
       future: () async {
+        if (globalState != null) return globalState;
         globalState ??= GlobalState.fromJson(
           (await firestore.collection('global').doc('state').get()).data()!,
         );
@@ -53,6 +59,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
               .where('role', isEqualTo: 'student'),
         );
         termNameController.text = globalState!.terms[currentTabIndex].termName;
+        setState(() {});
         return globalState;
       }(),
 
@@ -165,43 +172,16 @@ class TermDetailsPageState extends State<TermDetailsPage> {
             child: TextField(
               controller: termNameController,
               onSubmitted: (newTermName) async {
-                final String oldName =
-                    globalState!.terms[currentTabIndex].termName;
-                await firestore
-                    .collection('global')
-                    .doc('state')
-                    .collection('allocations')
-                    .doc(newTermName)
-                    .set(
-                      (await allocationsCache.get(
-                        oldName,
-                      )).data()!,
-                    );
-                allocationsCache.registry.remove(oldName);
-                allocationsCache.registry[newTermName] = await firestore
-                    .collection('global')
-                    .doc('state')
-                    .collection('allocations')
-                    .doc(newTermName)
-                    .get();
-                await firestore
-                    .collection('global')
-                    .doc('state')
-                    .collection('allocations')
-                    .doc(oldName)
-                    .delete();
-                await firestore.collection('global').doc('state').update({
-                  'terms': [
-                    for (final term in globalState!.terms)
-                      term.termName == oldName
-                          ? TermData(
-                              termEndDate: term.termEndDate,
-                              termName: newTermName,
-                              termStartDate: term.termStartDate,
-                            ).toJson()
-                          : term.toJson(),
-                  ],
+                final oldTerm = globalState!.terms[currentTabIndex];
+                final newTerm = TermData(
+                  termEndDate: oldTerm.termEndDate,
+                  termName: newTermName,
+                  termStartDate: oldTerm.termStartDate,
+                );
+                await firestore.collection('global').doc('state').set({
+                  'terms': globalState!.terms..[currentTabIndex] = newTerm,
                 });
+
                 setState(() {});
               },
               style: body2,
@@ -239,25 +219,32 @@ class TermDetailsPageState extends State<TermDetailsPage> {
               }
 
               String termName = recursivelyNameNewTerm('Term ${termNum + 2}');
+              await studentsCache.initAll();
+              for (final studentEntry in studentsCache.registry.entries) {
+                final student = StudentData.fromJson(
+                  studentEntry.value.data()!,
+                );
+                await firestore
+                    .collection('users')
+                    .doc(studentEntry.key)
+                    .update(
+                      StudentData(
+                        role: student.role,
+                        name: student.name,
+                        email: student.email,
+                        studentContactNo: student.studentContactNo,
+                        parentContactNo: student.parentContactNo,
+                        parentName: student.parentName,
+                        sessionCounts: student.sessionCounts
+                          ..add({
+                            for (final clId in student.sessionCounts[0].keys)
+                              clId: 0,
+                          }),
+                      ).toJson(),
+                    );
+                await studentsCache.get(studentEntry.key, bypassCache: true);
+              }
 
-              await firestore
-                  .collection('global')
-                  .doc('state')
-                  .collection('allocations')
-                  .doc(termName)
-                  .set(
-                    TermAllocation(
-                      sessions: {
-                        for (final classData in classesCache.registry.entries)
-                          classData.key: {
-                            for (final studentId in ClassData.fromJson(
-                              classData.value.data()!,
-                            ).studentIds)
-                              studentId: 0,
-                          },
-                      },
-                    ).toJson(),
-                  );
               await firestore.collection('global').doc('state').update({
                 'terms': [
                   ...globalState!.terms.map((t) => t.toJson()),
@@ -282,7 +269,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
           ),
         ],
         body: (context) => DefaultTabController(
-          length: globalState!.terms.length,
+          length: globalState == null ? 0 : globalState!.terms.length,
           child: SizedBox(
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height,
@@ -292,40 +279,133 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                 Container(
                   width: MediaQuery.of(context).size.width,
                   height: 60,
-                  child: Row(
-                    children: [
-                      createFilterMenu(
-                        context,
-                        controller: filterStudentMenuController,
-                        entries: [
-                          for (final studentEntry
-                              in studentsCache.registry.entries)
-                            DropdownMenuEntry(
-                              label: StudentData.fromJson(
-                                studentEntry.value.data()!,
-                              ).name,
-                              value: studentEntry.value,
-                              style: menuEntryStyle,
+                  child: Padding(
+                    padding: const EdgeInsetsGeometry.only(left: 40, right: 40),
+                    child: Row(
+                      children: [
+                        createFilterMenu(
+                          context,
+                          controller: filterStudentMenuController,
+                          entries: [
+                            for (final studentEntry
+                                in studentsCache.registry.entries)
+                              DropdownMenuEntry(
+                                label: StudentData.fromJson(
+                                  studentEntry.value.data()!,
+                                ).name,
+                                value: studentEntry.value,
+                                style: menuEntryStyle,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 30),
+                        createFilterMenu(
+                          context,
+                          controller: filterClassMenuController,
+                          entries: [
+                            for (final classEntry
+                                in classesCache.registry.entries)
+                              DropdownMenuEntry(
+                                label: ClassData.fromJson(
+                                  classEntry.value.data()!,
+                                ).name,
+                                value: classEntry.value,
+                                style: menuEntryStyle,
+                              ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 230,
+                          child: TextField(
+                            controller: allocateAllSessionsController,
+                            decoration: InputDecoration(
+                              hint: Text(
+                                'Allocate sessions for all',
+                                style: body2.copyWith(
+                                  color: AxisColors.blackPurple20.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: AxisColors.lilacPurple20,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: AxisColors.lilacPurple50.withValues(
+                                    alpha: 0.7,
+                                  ),
+                                ),
+                              ),
                             ),
-                        ],
-                      ),
-                      const SizedBox(width: 30),
-                      createFilterMenu(
-                        context,
-                        controller: filterClassMenuController,
-                        entries: [
-                          for (final classEntry
-                              in classesCache.registry.entries)
-                            DropdownMenuEntry(
-                              label: ClassData.fromJson(
-                                classEntry.value.data()!,
-                              ).name,
-                              value: classEntry.value,
-                              style: menuEntryStyle,
-                            ),
-                        ],
-                      ),
-                    ],
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        AxisButton.text(
+                          label: 'Allocate',
+                          isHighlighted: true,
+                          onPressed: () async {
+                            String msg;
+                            if (int.tryParse(
+                                  allocateAllSessionsController.text.trim(),
+                                ) !=
+                                null) {
+                              msg = 'Allocated all sessions successfully!';
+                              final int sc = int.parse(
+                                allocateAllSessionsController.text.trim(),
+                              );
+                              final bool res = await showDialog(
+                                context: context,
+                                builder: (_) => ConfirmationDialog(
+                                  confirmationMsg:
+                                      "This action will allocate $sc sessions for every student visible in the current view (${visibleRows.length} students). Are you sure you want to continue?",
+                                ),
+                              );
+                              if (res) {
+                                for (final sd in visibleRows) {
+                                  final oldData = StudentData.fromJson(
+                                    sd.$1.data()!,
+                                  );
+                                  final newSessionCounts =
+                                      oldData.sessionCounts;
+                                  newSessionCounts[currentTabIndex][sd.$2] = sc;
+                                  await firestore
+                                      .collection('users')
+                                      .doc(sd.$1.id)
+                                      .set(
+                                        StudentData(
+                                          role: oldData.role,
+                                          name: oldData.name,
+                                          email: oldData.email,
+                                          studentContactNo:
+                                              oldData.studentContactNo,
+                                          parentContactNo:
+                                              oldData.parentContactNo,
+                                          parentName: oldData.parentName,
+                                          sessionCounts: newSessionCounts,
+                                        ).toJson(),
+                                      );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).showSnackBar(
+                                      SnackBar(content: Text(msg)),
+                                    );
+                                  }
+                                }
+                              } else {
+                                msg = 'Action cancelled.';
+                              }
+                            } else {
+                              msg = 'Error: Invalid input provided.';
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 TabBar(
@@ -352,352 +432,277 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   child: Align(
                     alignment: Alignment.topLeft,
                     child: TabBarView(
-                      children: [
-                        for (final term in globalState!.terms)
-                          FutureBuilderTemplate(
-                            future: () async {
-                              final allocations = (await allocationsCache.get(
-                                term.termName,
-                              ));
-                              if (allocations.exists) {
-                                return allocations;
-                              } else {
-                                final currentTermName = globalState!
-                                    .terms[globalState!.currentTermNum]
-                                    .termName;
-                                final currentTermAllocations =
-                                    (await allocationsCache.get(
-                                      currentTermName,
-                                    ));
-                                if (currentTermAllocations.exists) {
-                                  (await firestore
-                                      .collection('global')
-                                      .doc('state')
-                                      .collection('allocations')
-                                      .doc(term.termName)
-                                      .set(currentTermAllocations.data()!));
+                      key: ValueKey(
+                        '${filterClassMenuController.text}-${filterStudentMenuController.text}',
+                      ),
+                      children: rebuildTabViews(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-                                  allocationsCache.registry[term.termName] =
-                                      await firestore
-                                          .collection('global')
-                                          .doc('state')
-                                          .collection('allocations')
-                                          .doc(term.termName)
-                                          .get();
-                                } else {
-                                  final newAllocations = TermAllocation(
-                                    sessions: {
-                                      for (final classData
-                                          in classesCache.registry.entries)
-                                        classData.key: {
-                                          for (final studentId
-                                              in ClassData.fromJson(
-                                                classData.value.data()!,
-                                              ).studentIds)
-                                            studentId: 0,
-                                        },
-                                    },
-                                  );
-
-                                  for (final tname in [
-                                    term.termName,
-                                    currentTermName,
-                                  ]) {
-                                    (await firestore
-                                        .collection('global')
-                                        .doc('state')
-                                        .collection('allocations')
-                                        .doc(tname)
-                                        .set(newAllocations.toJson()));
-                                    allocationsCache.registry[tname] =
-                                        (await firestore
-                                            .collection('global')
-                                            .doc('state')
-                                            .collection('allocations')
-                                            .doc(tname)
-                                            .get());
-                                  }
-                                }
-                                return (await allocationsCache.get(
-                                  term.termName,
-                                ));
-                              }
-                            }(),
-                            builder: (context, snapshot) => Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.start,
+  List<Widget> rebuildTabViews() {
+    tabViews.clear();
+    for (int i = 0; i < globalState!.terms.length; i++) {
+      tabViews.add(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            FutureBuilderTemplate(
+              future: () async {
+                final List<DataRow> rows = [];
+                for (final entry in classesCache.registry.entries) {
+                  final cd = (await classesCache.get(
+                    entry.key,
+                  ));
+                  final classData = ClassData.fromJson(
+                    cd.data()!,
+                  );
+                  if (filterClassMenuController.text != 'None' &&
+                      filterClassMenuController.text != classData.name) {
+                    continue;
+                  }
+                  rows.add(
+                    DataRow(
+                      color: WidgetStatePropertyAll(
+                        AxisColors.blackPurple20.withValues(
+                          alpha: 0.14,
+                        ),
+                      ),
+                      cells: [
+                        DataCell(
+                          RichText(
+                            text: TextSpan(
+                              text: classData.name,
+                              style: heading3,
                               children: [
-                                FutureBuilderTemplate(
-                                  future: () async {
-                                    final List<DataRow> rows = [];
-                                    for (final entry in TermAllocation.fromJson(
-                                      snapshot.data!.data()!,
-                                    ).sessions.entries) {
-                                      final classData = ClassData.fromJson(
-                                        (await classesCache.get(
-                                          entry.key,
-                                        )).data()!,
-                                      );
-                                      if (filterClassMenuController.text !=
-                                              'None' &&
-                                          filterClassMenuController.text !=
-                                              classData.name) {
-                                        continue;
-                                      }
-                                      rows.add(
-                                        DataRow(
-                                          color: WidgetStatePropertyAll(
-                                            AxisColors.blackPurple20.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                          ),
-                                          cells: [
-                                            DataCell(
-                                              RichText(
-                                                text: TextSpan(
-                                                  text: classData.name,
-                                                  style: heading3,
-                                                  children: [
-                                                    TextSpan(
-                                                      style: body2,
-                                                      text:
-                                                          "     by ${!classIdToTeacherNameMap.containsKey(entry.key) ? classIdToTeacherNameMap[entry.key] = TeacherData.fromJson(
-                                                                  (await firestore.collection(
-                                                                    'users',
-                                                                  ).where(
-                                                                    'role',
-                                                                    whereIn: const [
-                                                                      'teacher',
-                                                                      'admin',
-                                                                    ],
-                                                                  ).where(
-                                                                    'classes',
-                                                                    arrayContains: entry.key,
-                                                                  ).get()).docs.first.data(),
-                                                                ).name : classIdToTeacherNameMap[entry.key]}",
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            DataCell.empty,
-                                            DataCell.empty,
-                                            DataCell.empty,
-                                          ],
-                                        ),
-                                      );
-                                      /* int startIndex = 1;
+                                TextSpan(
+                                  style: body2,
+                                  text:
+                                      "     by ${!classIdToTeacherNameMap.containsKey(entry.key) ? classIdToTeacherNameMap[entry.key] = TeacherData.fromJson(
+                                              (await firestore.collection(
+                                                'users',
+                                              ).where(
+                                                'role',
+                                                whereIn: const [
+                                                  'teacher',
+                                                  'admin',
+                                                ],
+                                              ).where(
+                                                'classes',
+                                                arrayContains: entry.key,
+                                              ).get()).docs.first.data(),
+                                            ).name : classIdToTeacherNameMap[entry.key]}",
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        DataCell.empty,
+                        DataCell.empty,
+                        DataCell.empty,
+                      ],
+                    ),
+                  );
+
+                  /* int startIndex = 1;
                                       int numEntriesAdded = 0; */
-                                      for (final studentEntry
-                                          in entry.value.entries) {
-                                        final studentData =
-                                            StudentData.fromJson(
-                                              (await studentsCache.get(
-                                                studentEntry.key,
-                                              )).data()!,
-                                            );
-                                        if (filterStudentMenuController.text !=
-                                                'None' &&
-                                            filterStudentMenuController.text !=
-                                                studentData.name) {
-                                          continue;
-                                        }
-                                        //  numEntriesAdded += 1;
-                                        final rowKey =
-                                            "${entry.key}-${studentEntry.key}";
-                                        if (!controllers.containsKey(rowKey)) {
-                                          controllers[rowKey] =
-                                              TextEditingController(
-                                                text: studentEntry.value
-                                                    .toString(),
-                                              );
-                                        }
-                                        rows.add(
-                                          DataRow(
-                                            color: studentEntry.value != -1
-                                                ? null
-                                                : WidgetStatePropertyAll(
-                                                    Colors.yellow.withValues(
-                                                      alpha: 0.1,
-                                                    ),
-                                                  ),
-                                            cells: [
-                                              DataCell(
-                                                Text(
-                                                  studentData.name,
-                                                  style: body2,
-                                                ),
-                                                onTap: () async {
-                                                  final sd = await studentsCache
-                                                      .get(studentEntry.key);
-                                                  await showDialog(
-                                                    context: context,
-                                                    builder: (_) => StudentInfoDialog(
-                                                      studentId:
-                                                          studentEntry.key,
-                                                      studentData: sd,
-                                                      classIdToTeacherNameMap:
-                                                          classIdToTeacherNameMap,
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                              DataCell(
-                                                TextField(
-                                                  controller:
-                                                      controllers[rowKey]!,
-                                                  onEditingComplete: () async {
-                                                    final String msg;
+                  for (final stId in classData.studentIds) {
+                    final sd = (await studentsCache.get(
+                      stId,
+                    ));
+                    final studentData = StudentData.fromJson(
+                      sd.data()!,
+                    );
+                    if (filterStudentMenuController.text != 'None' &&
+                        filterStudentMenuController.text != studentData.name) {
+                      continue;
+                    }
+                    //  numEntriesAdded += 1;
+                    visibleRows.add((sd, cd.id));
 
-                                                    final int?
-                                                    newInt = int.tryParse(
-                                                      controllers[rowKey]!.text,
-                                                    );
-                                                    if (controllers[rowKey]!
-                                                        .text
-                                                        .isEmpty) {
-                                                      msg = 'Action canclled.';
-                                                      controllers[rowKey]!
-                                                          .text = studentEntry
-                                                          .value
-                                                          .toString();
-                                                    } else if (newInt != null) {
-                                                      await firestore
-                                                          .collection('global')
-                                                          .doc('state')
-                                                          .collection(
-                                                            'allocations',
-                                                          )
-                                                          .doc(term.termName)
-                                                          .update({
-                                                            '${entry.key}.${studentEntry.key}':
-                                                                newInt,
-                                                          });
-                                                      msg =
-                                                          'Updated session count successfully!';
+                    final rowKey = "${entry.key}-$stId";
+                    if (!controllers.containsKey(rowKey)) {
+                      controllers[rowKey] = TextEditingController(
+                        text: studentData.sessionCounts[i][entry.key]
+                            .toString(),
+                      );
+                    }
+                    final r = DataRow(
+                      color: studentData.sessionCounts[i][entry.key] != -1
+                          ? null
+                          : WidgetStatePropertyAll(
+                              Colors.yellow.withValues(
+                                alpha: 0.1,
+                              ),
+                            ),
+                      cells: [
+                        DataCell(
+                          Text(
+                            studentData.name,
+                            style: body2,
+                          ),
+                          onTap: () async {
+                            final sd = await studentsCache.get(stId);
+                            await showDialog(
+                              context: context,
+                              builder: (_) => StudentInfoDialog(
+                                studentId: stId,
+                                studentData: sd,
+                                classIdToTeacherNameMap:
+                                    classIdToTeacherNameMap,
+                              ),
+                            );
+                          },
+                        ),
+                        DataCell(
+                          TextField(
+                            controller: controllers[rowKey]!,
+                            onEditingComplete: () async {
+                              final String msg;
 
-                                                      //                setState(() {});
-                                                    } else {
-                                                      msg =
-                                                          'Invalid input provided, where only a number was expected. Try again.';
-                                                    }
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(msg),
-                                                        ),
-                                                      );
-                                                    }
-                                                  },
-                                                  decoration: InputDecoration(
-                                                    hint: Text(
-                                                      controllers[rowKey]!
-                                                          .value
-                                                          .text,
-                                                      style: body2.copyWith(
-                                                        color: AxisColors
-                                                            .blackPurple20,
-                                                      ),
-                                                    ),
-                                                    focusedBorder:
-                                                        OutlineInputBorder(
-                                                          borderSide: BorderSide(
-                                                            color: AxisColors
-                                                                .lilacPurple20
-                                                                .withValues(
-                                                                  alpha: 0.6,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                    enabledBorder:
-                                                        OutlineInputBorder(
-                                                          borderSide: BorderSide(
-                                                            color: AxisColors
-                                                                .lilacPurple50
-                                                                .withValues(
-                                                                  alpha: 0.4,
-                                                                ),
-                                                          ),
-                                                        ),
-                                                  ),
-                                                  style: body2,
-                                                ),
-                                              ),
-                                              DataCell(
-                                                Text(
-                                                  "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
-                                                        (entry) => entry.value.containsKey(
-                                                              studentEntry.key,
-                                                            ) && entry.value[studentEntry.key]!.isPresent,
-                                                      ).length}",
-                                                  style: body2,
-                                                ),
-                                              ),
-                                              DataCell(
-                                                AxisNMButton(
-                                                  label: 'Withdraw',
-                                                  onPressed: () async {
-                                                    final bool
-                                                    confirm = await showDialog(
-                                                      context: context,
-                                                      builder: (_) =>
-                                                          ConfirmationDialog(
-                                                            confirmationMsg:
-                                                                'Are you sure you would like to withdraw from class "${classData.name}"?',
-                                                          ),
-                                                    );
-                                                    final String msg;
-                                                    if (confirm) {
-                                                      await withdrawStudentFromClass(
-                                                        studentId:
-                                                            studentEntry.key,
-                                                        classId:
-                                                            (await classesCache
-                                                                    .get(
-                                                                      entry.key,
-                                                                    ))
-                                                                .id,
-                                                      );
-                                                      await classesCache.get(
-                                                        entry.key,
-                                                        bypassCache: true,
-                                                      );
-                                                      studentsCache.get(
-                                                        studentEntry.key,
-                                                        bypassCache: true,
-                                                      );
-                                                      setState(() {});
-                                                      msg =
-                                                          'Withdrawn student from class successfully!';
-                                                    } else {
-                                                      msg = 'Action cancelled';
-                                                    }
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                            msg,
-                                                            style: body2,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    }
-                                                    setState(() {});
-                                                  },
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }
-                                      if (rows.last.cells[1] ==
-                                          DataCell.empty) {
-                                        rows.removeLast();
-                                      } /* else {
+                              final int? newInt = int.tryParse(
+                                controllers[rowKey]!.text,
+                              );
+                              if (controllers[rowKey]!.text.isEmpty) {
+                                msg = 'Action canclled.';
+                                controllers[rowKey]!.text = studentData
+                                    .sessionCounts[currentTabIndex][entry.key]
+                                    .toString();
+                              } else if (newInt != null) {
+                                await firestore
+                                    .collection('users')
+                                    .doc(stId)
+                                    .update(
+                                      StudentData(
+                                        role: studentData.role,
+                                        name: studentData.name,
+                                        email: studentData.email,
+                                        studentContactNo:
+                                            studentData.studentContactNo,
+                                        parentContactNo:
+                                            studentData.parentContactNo,
+                                        parentName: studentData.parentName,
+                                        sessionCounts: studentData.sessionCounts
+                                          ..[i][entry.key] = newInt,
+                                      ).toJson(),
+                                    );
+
+                                msg = 'Updated session count successfully!';
+
+                                //                setState(() {});
+                              } else {
+                                msg =
+                                    'Invalid input provided, where only a number was expected. Try again.';
+                              }
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(
+                                  SnackBar(
+                                    content: Text(msg),
+                                  ),
+                                );
+                              }
+                            },
+                            decoration: InputDecoration(
+                              hint: Text(
+                                controllers[rowKey]!.value.text,
+                                style: body2.copyWith(
+                                  color: AxisColors.blackPurple20,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: AxisColors.lilacPurple20.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: AxisColors.lilacPurple50.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            style: body2,
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
+                                  (entry) => entry.value.containsKey(
+                                        stId,
+                                      ) && entry.value[stId]!.isPresent,
+                                ).length}",
+                            style: body2,
+                          ),
+                        ),
+                        DataCell(
+                          AxisNMButton(
+                            label: 'Withdraw',
+                            onPressed: () async {
+                              final bool confirm = await showDialog(
+                                context: context,
+                                builder: (_) => ConfirmationDialog(
+                                  confirmationMsg:
+                                      'Are you sure you would like to withdraw from class "${classData.name}"?',
+                                ),
+                              );
+                              final String msg;
+                              if (confirm) {
+                                await withdrawStudentFromClass(
+                                  studentId: stId,
+                                  classId: (await classesCache.get(
+                                    entry.key,
+                                  )).id,
+                                );
+                                await classesCache.get(
+                                  entry.key,
+                                  bypassCache: true,
+                                );
+                                await studentsCache.get(
+                                  stId,
+                                  bypassCache: true,
+                                );
+                                setState(() {});
+                                msg =
+                                    'Withdrawn student from class successfully!';
+                              } else {
+                                msg = 'Action cancelled';
+                              }
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      msg,
+                                      style: body2,
+                                    ),
+                                  ),
+                                );
+                              }
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                    rows.add(r);
+                  }
+                  if (rows.last.cells[1] == DataCell.empty) {
+                    rows.removeLast();
+                  } /* else {
                                         rows.replaceRange(
                                           startIndex,
                                           startIndex + numEntriesAdded,
@@ -709,82 +714,73 @@ class TermDetailsPageState extends State<TermDetailsPage> {
 
                                         startIndex = rows.length - 1;
                                       } */
-                                    }
-
-                                    return rows;
-                                  }(),
-                                  builder: (context, snapshot) => Align(
-                                    alignment: Alignment.topLeft,
-                                    child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Align(
-                                        alignment: Alignment.topLeft,
-                                        child: DataTable(
-                                          dataRowMinHeight: 60,
-                                          dataRowMaxHeight: 80,
-                                          columns: [
-                                            DataColumn(
-                                              columnWidth: FixedColumnWidth(
-                                                280,
-                                              ),
-                                              label: Text(
-                                                'Name',
-                                                style: body2.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-
-                                            DataColumn(
-                                              onSort: (columnIndex, ascending) {
-                                                setState(() {
-                                                  sortASC = ascending;
-                                                });
-                                              },
-                                              label: Text(
-                                                'Allocated Session Count',
-                                                style: body2.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                            DataColumn(
-                                              onSort: (columnIndex, ascending) {
-                                                setState(() {
-                                                  sortRSC = ascending;
-                                                });
-                                              },
-                                              label: Text(
-                                                'Remaining Session Count',
-                                                style: body2.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                            DataColumn(
-                                              label: const SizedBox(),
-                                            ),
-                                          ],
-                                          rows: snapshot.data ?? const [],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                              ],
+                }
+                return rows;
+              }(),
+              builder: (context, snapshot) => Align(
+                alignment: Alignment.topLeft,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: DataTable(
+                      dataRowMinHeight: 60,
+                      dataRowMaxHeight: 80,
+                      columns: [
+                        DataColumn(
+                          columnWidth: FixedColumnWidth(
+                            280,
+                          ),
+                          label: Text(
+                            'Name',
+                            style: body2.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                        ),
+
+                        DataColumn(
+                          onSort: (columnIndex, ascending) {
+                            setState(() {
+                              sortASC = ascending;
+                            });
+                          },
+                          label: Text(
+                            'Allocated Session Count',
+                            style: body2.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        DataColumn(
+                          onSort: (columnIndex, ascending) {
+                            setState(() {
+                              sortRSC = ascending;
+                            });
+                          },
+                          label: Text(
+                            'Remaining Session Count',
+                            style: body2.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        DataColumn(
+                          label: const SizedBox(),
+                        ),
                       ],
+                      rows: snapshot.data ?? const [],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 20),
+          ],
         ),
-      ),
-    );
+      );
+    }
+    return tabViews;
   }
 
   Widget createFilterMenu<T>(

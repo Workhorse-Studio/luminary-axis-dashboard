@@ -1,6 +1,6 @@
 part of axis_dashboard;
 
-class TermAllocation extends JSONSerialisable {
+/* class TermAllocation extends JSONSerialisable {
   final Map<String, Map<String, int>> sessions;
 
   TermAllocation({
@@ -15,3 +15,4 @@ class TermAllocation extends JSONSerialisable {
   @override
   JSON toJson() => sessions;
 }
+ */
