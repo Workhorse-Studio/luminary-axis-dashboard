@@ -235,6 +235,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         studentContactNo: student.studentContactNo,
                         parentContactNo: student.parentContactNo,
                         parentName: student.parentName,
+                        invoiceIds: student.invoiceIds,
                         sessionCounts: student.sessionCounts
                           ..add({
                             for (final clId in student.sessionCounts[0].keys)
@@ -384,6 +385,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                               oldData.studentContactNo,
                                           parentContactNo:
                                               oldData.parentContactNo,
+                                          invoiceIds: oldData.invoiceIds,
                                           parentName: oldData.parentName,
                                           sessionCounts: newSessionCounts,
                                         ).toJson(),
@@ -590,6 +592,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                         parentContactNo:
                                             studentData.parentContactNo,
                                         parentName: studentData.parentName,
+                                        invoiceIds: studentData.invoiceIds,
                                         sessionCounts: studentData.sessionCounts
                                           ..[i][entry.key] = newInt,
                                       ).toJson(),

@@ -25,7 +25,7 @@ class StudentsPageState extends State<StudentsPage> {
     TeacherData(
       name: 'name',
       role: 'role',
-      payments: const [],
+      invoiceIds: const {},
       classIds: const [],
     ),
   );
@@ -36,7 +36,7 @@ class StudentsPageState extends State<StudentsPage> {
     TeacherData(
       name: 'name',
       role: 'role',
-      payments: const [],
+      invoiceIds: const {},
       classIds: const [],
     ),
   );

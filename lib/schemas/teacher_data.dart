@@ -4,30 +4,28 @@ class TeacherData extends JSONSerialisable {
   final String role;
   final List<String> classIds;
   final String name;
-  final List<TeacherPaymentInfo> payments;
+
+  /// Maps a term's index to the invoice ID of the student for that term
+  final Map<int, String?> invoiceIds;
 
   const TeacherData({
     required this.name,
     required this.role,
     required this.classIds,
-    required this.payments,
+    required this.invoiceIds,
   });
 
   TeacherData.fromJson(JSON json)
     : name = json['name'] as String,
       role = json['role'] as String,
-      payments = (json['payments'] as List)
-          .map(
-            (e) => TeacherPaymentInfo.fromJson(e),
-          )
-          .toList(),
+      invoiceIds = (json['invoiceIds'] as Map).cast(),
       classIds = (json['classes'] as List).cast();
 
   @override
   JSON toJson() => {
     'name': name,
     'role': role,
-    'payments': [for (final p in payments) p.toJson()],
+    'invoiceIds': invoiceIds,
     'classes': classIds,
   };
 }

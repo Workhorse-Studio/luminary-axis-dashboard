@@ -243,6 +243,7 @@ class DashboardPageState extends State<DashboardPage> {
                                                                 .parentContactNo,
                                                             parentName: obData
                                                                 .parentContactNo,
+                                                            invoiceIds: {},
                                                             sessionCounts: [
                                                               {
                                                                 obData.classId:

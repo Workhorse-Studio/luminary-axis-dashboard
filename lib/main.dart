@@ -16,6 +16,7 @@ part './pages/syllabus.dart';
 part './pages/students.dart';
 part './pages/teachers.dart';
 part './pages/login.dart';
+part './pages/invoicing.dart';
 part './pages/student_details.dart';
 part './pages/term_details.dart';
 part './pages/onboarding_page.dart';
@@ -46,6 +47,7 @@ part './schemas/global_state.dart';
 part './schemas/onboarding_student_data.dart';
 part './schemas/term_allocation.dart';
 part './schemas/term_data.dart';
+part './schemas/invoice_data.dart';
 
 part './operations/generate_term_report.dart';
 part './operations/calculate_teacher_payout.dart';
@@ -106,6 +108,12 @@ enum Routes {
     ['teacher', 'admin'],
     Icons.school,
   ),
+  invoicing(
+    '/invoicing',
+    'Invoicing',
+    ['admin'],
+    Icons.receipt,
+  ),
   teachers(
     '/teachers',
     'Teachers',
@@ -129,13 +137,13 @@ enum Routes {
     'Dev',
     [],
     Icons.code,
-  ),
-  studentDetails(
+  )
+  /* studentDetails(
     '/studentDetails',
     'Student Details',
     ['admin'],
     Icons.person_pin,
-  )
+  ) */
   ;
 
   final String slug;
@@ -180,9 +188,9 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
             redirectOnIncorrectRole: Routes.login,
             child: const TeachersPage(),
           ),
-          Routes.studentDetails.slug: (_) => ProtectedPage(
-            redirectOnIncorrectRole: Routes.login,
-            child: const StudentDetailsPage(),
+          Routes.invoicing.slug: (_) => ProtectedPage(
+            redirectOnIncorrectRole: Routes.invoicing,
+            child: const InvoicingPage(),
           ),
           Routes.termDetails.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,

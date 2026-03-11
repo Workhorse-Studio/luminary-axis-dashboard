@@ -15,7 +15,7 @@ class ResetTermReportsOperation {
 
   Future<void> executeInSequence(String termName) async {
     await archiveAllClassAttendanceSheets(termName);
-    await rollOverTeacherSessionCounts();
+    // await rollOverTeacherSessionCounts();
     await resetAllClassAttendanceSheets();
   }
 
@@ -70,7 +70,7 @@ class ResetTermReportsOperation {
     await batchDelete.commit();
   }
 
-  Future<void> rollOverTeacherSessionCounts() async {
+  /* Future<void> rollOverTeacherSessionCounts() async {
     final teachersDocs =
         (await firestore
                 .collection('users')
@@ -94,5 +94,5 @@ class ResetTermReportsOperation {
         'priorSessionCount': numSessions,
       });
     }
-  }
+  } */
 }
