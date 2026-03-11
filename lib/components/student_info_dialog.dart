@@ -129,7 +129,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                     style: heading1,
                   ),
                   const SizedBox(height: 20),
-                  invoiceWidget = InvoiceWidget(
+                  /* invoiceWidget = InvoiceWidget(
                     id: 'INV-000013',
                     amt: 1140.00,
                     parentName: 'Goh Hui Hoon',
@@ -147,7 +147,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                       ),
                     ],
                     total: 1140,
-                  ),
+                  ), */
                   const SizedBox(height: 20),
                   const SizedBox(height: 30),
                 ],

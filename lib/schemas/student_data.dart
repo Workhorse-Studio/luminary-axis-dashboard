@@ -8,7 +8,7 @@ class StudentData extends JSONSerialisable {
   final List<Map<String, int>> sessionCounts;
 
   /// Maps a term's index to the invoice ID of the student for that term
-  final Map<int, String?> invoiceIds;
+  final List<String?> invoiceIds;
   final String studentContactNo;
   final String parentName;
   final String parentContactNo;
@@ -28,7 +28,7 @@ class StudentData extends JSONSerialisable {
   StudentData.fromJson(JSON json)
     : role = json['role'] as String,
       studentContactNo = json['studentContactNo'] as String,
-      invoiceIds = (json['invoiceIds'] as Map).cast(),
+      invoiceIds = (json['invoiceIds'] as List).cast(),
       email = json['email'] as String,
       parentName = json['parentName'] as String,
       parentContactNo = json['parentContactNo'] as String,

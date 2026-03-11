@@ -13,7 +13,7 @@ class DevScreen extends StatelessWidget {
 }
 
 class InvoiceWidget extends StatelessWidget {
-  final String id;
+  /* final String id;
   final double amt;
   final String parentName;
   final String childName;
@@ -22,19 +22,14 @@ class InvoiceWidget extends StatelessWidget {
   final String terms;
   final String dueDateFormatted;
   final List<({String desc, double qty, double rate, double amt})>
-  invoiceEntries;
+  invoiceEntries; */
+  final StudentInvoiceData? studentInvoiceData;
+  final TeacherInvoiceData? teacherInvoiceData;
   final double total;
 
   const InvoiceWidget({
-    required this.id,
-    required this.amt,
-    required this.parentName,
-    required this.childName,
-    required this.address,
-    required this.invoiceDateFormatted,
-    required this.terms,
-    required this.dueDateFormatted,
-    required this.invoiceEntries,
+    this.studentInvoiceData,
+    this.teacherInvoiceData,
     required this.total,
     super.key,
   });
@@ -42,6 +37,10 @@ class InvoiceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<DataRow> invoiceRows = [];
+    final List<({String desc, double qty, double rate, double amt})>
+    invoiceEntries = studentInvoiceData == null
+        ? teacherInvoiceData!.entries
+        : studentInvoiceData!.entries;
     for (int i = 0; i < invoiceEntries.length; i++) {
       invoiceRows.add(
         DataRow(
@@ -120,12 +119,14 @@ class InvoiceWidget extends StatelessWidget {
                       const SizedBox(height: 5),
                       Text('axiseducationcentre@gmail.com', style: body3),
                       const SizedBox(height: 100),
-                      Text(
-                        '$parentName (Child: $childName)',
-                        style: body3.copyWith(fontWeight: FontWeight.bold),
-                      ),
+                      if (studentInvoiceData != null)
+                        Text(
+                          '${studentInvoiceData!.parentName} (Child: ${studentInvoiceData!.studentName})',
+                          style: body3.copyWith(fontWeight: FontWeight.bold),
+                        ),
                       const SizedBox(height: 5),
-                      Text(address, style: body3),
+                      if (studentInvoiceData != null)
+                        Text(studentInvoiceData!.address, style: body3),
                       const SizedBox(height: 30),
                       Text('Payment Methods:', style: body3),
                       const SizedBox(height: 30),
@@ -167,31 +168,33 @@ class InvoiceWidget extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        '# $id',
-                        style: heading3.copyWith(
-                          color: AxisColors.blackPurple50,
+                      if (studentInvoiceData != null)
+                        Text(
+                          '# ${studentInvoiceData!.invoiceId}',
+                          style: heading3.copyWith(
+                            color: AxisColors.blackPurple50,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 40),
                       Text(
                         'Balance Due',
                         style: body3.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 5),
-                      Text(
-                        'SGD ${amt.toStringAsFixed(2)}',
-                        style: body3.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                      if (studentInvoiceData != null)
+                        Text(
+                          'SGD ${studentInvoiceData!.amtPayable.toStringAsFixed(2)}',
+                          style: body3.copyWith(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 100),
-                      ...[
+                      if (studentInvoiceData != null) ...[
                         for (final line in [
-                          'Invoice Date: ${invoiceDateFormatted.padLeft(40, ' ')}',
-                          'Terms:    ${terms.padLeft(40, ' ')}',
-                          'Due Date: ${dueDateFormatted.padLeft(40, ' ')}',
+                          'Invoice Date: ${studentInvoiceData!.invoiceDateFormatted.padLeft(40, ' ')}',
+                          'Terms:    ${studentInvoiceData!.terms.padLeft(40, ' ')}',
+                          'Due Date: ${studentInvoiceData!.dueDateFormatted.padLeft(40, ' ')}',
                         ]) ...[
                           Text(line, style: body3, textAlign: TextAlign.right),
                           const SizedBox(height: 5),
