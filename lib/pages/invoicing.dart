@@ -392,9 +392,48 @@ class InvoicingPageState extends State<InvoicingPage> {
                                 .data()!,
                           ).amtPayable;
                         }(),
-                        builder: (_, snapshot) => Text(
-                          "\$${snapshot.data!.toStringAsFixed(2)}",
-                          style: body2,
+                        builder: (_, snapshot) => SizedBox(
+                          width: 200,
+                          height: 80,
+                          child: Row(
+                            children: [
+                              if (studentData.invoiceIds.isNotEmpty &&
+                                  studentData.invoiceIds[i] != null)
+                                AxisButton(
+                                  width: 60,
+                                  child: Icon(Icons.edit),
+                                  onPressed: () async {
+                                    final studentInvData =
+                                        StudentInvoiceData.fromJson(
+                                          (await firestore
+                                                  .collection('global')
+                                                  .doc('archives')
+                                                  .collection('invoices')
+                                                  .doc(
+                                                    studentData.invoiceIds[i],
+                                                  )
+                                                  .get())
+                                              .data()!,
+                                        );
+
+                                    if (context.mounted) {
+                                      await showDialog(
+                                        context: context,
+                                        builder: (_) => EditableInvoiceDialog(
+                                          studentInvoiceData: studentInvData,
+                                          teacherInvoiceData: null,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              const SizedBox(width: 10),
+                              Text(
+                                "\$${snapshot.data!.toStringAsFixed(2)}",
+                                style: body2,
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : Text(''))

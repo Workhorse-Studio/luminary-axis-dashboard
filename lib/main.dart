@@ -30,6 +30,8 @@ part './components/withdraw_from_class_dialog.dart';
 part './components/student_info_dialog.dart';
 part './components/future_builder_template.dart';
 part './components/class_creation_dialog.dart';
+part './components/invoice.dart';
+part './components/editable_invoice_dialog.dart';
 
 part './design_system/colors.dart';
 part './design_system/text_styles.dart';
@@ -167,7 +169,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
     return TooltipVisibility(
       visible: false,
       child: MaterialApp(
-        initialRoute: kDebugMode ? Routes.dashboard.slug : Routes.login.slug,
+        initialRoute: kDebugMode ? Routes.dev.slug : Routes.login.slug,
         debugShowCheckedModeBanner: false,
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
