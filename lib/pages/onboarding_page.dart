@@ -224,7 +224,6 @@ class OnboardingPageState extends State<OnboardingPage> {
                                 parentName: parentsHpController.text,
                                 teacherId: selectedTeacher!.id,
                                 classId: selectedClass!.id,
-                                hasOnboarded: false,
                               ).toJson(),
                             );
                         msg =

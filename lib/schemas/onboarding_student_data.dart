@@ -7,14 +7,12 @@ class OnboardingStudentData extends JSONSerialisable {
   final String parentContactNo;
   final String teacherId;
   final String classId;
-  final bool hasOnboarded;
   final String email;
 
   const OnboardingStudentData({
     required this.studentContactNo,
     required this.studentName,
     required this.parentContactNo,
-    required this.hasOnboarded,
     required this.parentName,
     required this.teacherId,
     required this.email,
@@ -23,7 +21,6 @@ class OnboardingStudentData extends JSONSerialisable {
 
   OnboardingStudentData.fromJson(JSON json)
     : studentContactNo = json['studentContactNo'] as String,
-      hasOnboarded = json['hasOnboarded'] as bool,
       studentName = json['studentName'] as String,
       parentName = json['parentName'] as String,
       email = json['email'] as String,
@@ -37,7 +34,6 @@ class OnboardingStudentData extends JSONSerialisable {
     'studentContactNo': studentContactNo,
     'parentName': parentName,
     'email': email,
-    'hasOnboarded': hasOnboarded,
     'parentContactNo': parentContactNo,
     'teacherId': teacherId,
     'classId': classId,

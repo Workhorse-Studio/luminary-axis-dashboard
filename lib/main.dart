@@ -112,7 +112,7 @@ enum Routes {
   ),
   invoicing(
     '/invoicing',
-    'Invoicing',
+    'Billings',
     ['admin'],
     Icons.receipt,
   ),
@@ -169,7 +169,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
     return TooltipVisibility(
       visible: false,
       child: MaterialApp(
-        initialRoute: kDebugMode ? Routes.dev.slug : Routes.login.slug,
+        initialRoute: kDebugMode ? Routes.dashboard.slug : Routes.login.slug,
         debugShowCheckedModeBanner: false,
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),

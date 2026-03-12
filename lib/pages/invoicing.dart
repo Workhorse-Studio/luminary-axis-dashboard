@@ -43,7 +43,7 @@ class InvoicingPageState extends State<InvoicingPage> {
   @override
   Widget build(BuildContext context) {
     return Navbar(
-      pageTitle: 'Invoicing',
+      pageTitle: 'Billings',
       actions: [
         AxisButton.text(
           label: 'Refresh Invoices',
