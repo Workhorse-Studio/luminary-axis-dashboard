@@ -148,7 +148,79 @@ class InvoicingPageState extends State<InvoicingPage> {
                       );
                 }
               }
-            } else {}
+            } else {
+              /* 
+              for (final teacherEntry in teachersCache.registry.entries) {
+                final teacherData = TeacherData.fromJson(
+                  teacherEntry.value.data()!,
+                );
+                Map<int, int> numSessionsForMonths = {};
+                for (int i = 0; i < teacherData.classIds.length; i++) {
+                  final String clId = teacherData.classIds[i];
+                  final classData = ClassData.fromJson(
+                    (await classesCache.get(clId)).data()!,
+                  );
+
+                  for (final attEntry in classData.attendance.entries) {
+                    final List<
+                      ({double amt, String desc, double qty, double rate})
+                    >
+                    entries = [];
+                    int monthIndex =
+                        (DateTime.parse(
+                              attEntry.key,
+                            ).difference(DateTime(2026, 01, 01)).inDays %
+                            30) -
+                        1;
+
+                    if (!numSessionsForMonths.containsKey(monthIndex)) {
+                      numSessionsForMonths[monthIndex] = 0;
+                    } else {
+                      numSessionsForMonths[monthIndex];
+                    }
+
+                    final newInvoice = TeacherInvoiceData(
+                      invoiceDateFormatted: DateTime.now()
+                          .toTimestampStringShort(),
+                      address: 'studentData.address',
+                      amtDue: entries.fold((0), (a, b) => a + b.amt),
+                      paidDateFormatted: 'PENDING',
+                      entries: entries,
+                      invoiceId: 'docRef.id',
+                      teacherName: teacherData.name,
+                      adminName: TeacherData.fromJson(
+                        (await firestore
+                                .collection('users')
+                                .doc(auth.currentUser!.uid)
+                                .get())
+                            .data()!,
+                      ).name,
+                      terms: 'Custom',
+                    );
+
+                    await docRef.set(newInvoice.toJson());
+                    final List<String?> newInvIds = studentData.invoiceIds;
+                    newInvIds[t] = docRef.id;
+                    await firestore
+                        .collection('users')
+                        .doc(teacherEntry.key)
+                        .update(
+                          StudentData(
+                            role: studentData.role,
+                            name: studentData.name,
+                            email: studentData.email,
+                            invoiceIds: newInvIds,
+                            studentContactNo: studentData.studentContactNo,
+                            parentContactNo: studentData.parentContactNo,
+                            parentName: studentData.parentName,
+                            sessionCounts: studentData.sessionCounts,
+                          ).toJson(),
+                        );
+                  }
+                }
+              }
+             */
+            }
             setState(() {});
           },
         ),
