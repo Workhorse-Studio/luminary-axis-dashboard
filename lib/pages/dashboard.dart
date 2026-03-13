@@ -436,6 +436,209 @@ class DashboardPageState extends State<DashboardPage> {
                                 const SizedBox(height: 40),
                               ],
                             ),
+                      const SizedBox(height: 60),
+                      Text('Teachers', style: heading1),
+                      const SizedBox(height: 10),
+
+                      teachersCache.registry.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No teachers.',
+                                style: heading3,
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 50,
+                              runSpacing: 50,
+                              children: [
+                                for (final teacherEntry
+                                    in teachersCache.registry.entries)
+                                  Container(
+                                    width: 300,
+                                    decoration: BoxDecoration(
+                                      color: AxisColors.blackPurple30
+                                          .withValues(alpha: 0.4),
+                                      border: Border.all(
+                                        color: AxisColors.blackPurple30,
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                        10,
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                TeacherData.fromJson(
+                                                  teacherEntry.value.data()!,
+                                                ).name,
+                                                style: heading2,
+                                              ),
+                                              const Spacer(),
+                                              AxisButton(
+                                                width: 45,
+                                                height: 45,
+                                                child: Icon(
+                                                  Icons.edit,
+                                                  color:
+                                                      AxisColors.blackPurple20,
+                                                ),
+                                                onPressed: () async {
+                                                  final TeacherData?
+                                                  tData = await showDialog(
+                                                    context: context,
+                                                    builder: (_) =>
+                                                        TeacherCreationDialog(
+                                                          teacherId:
+                                                              teacherEntry.key,
+                                                        ),
+                                                  );
+                                                  final String msg;
+                                                  if (tData != null) {
+                                                    await firestore
+                                                        .collection('users')
+                                                        .doc(teacherEntry.key)
+                                                        .set(tData.toJson());
+                                                    teachersCache
+                                                        .registry[teacherEntry
+                                                        .key] = await firestore
+                                                        .collection('users')
+                                                        .doc(
+                                                          teacherEntry.key,
+                                                        )
+                                                        .get();
+                                                    msg =
+                                                        'Teacher details updated!';
+                                                    setState(() {});
+                                                  } else {
+                                                    msg = 'No updates made.';
+                                                  }
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(msg),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                            ],
+                                          ),
+
+                                          if (TeacherData.fromJson(
+                                            teacherEntry.value.data()!,
+                                          ).classIds.isEmpty)
+                                            Text(
+                                              'No classes taught.',
+                                              style: body2,
+                                            ),
+                                          for (final clId
+                                              in TeacherData.fromJson(
+                                                teacherEntry.value.data()!,
+                                              ).classIds) ...[
+                                            const SizedBox(height: 20),
+                                            Container(
+                                              width: double.infinity,
+                                              height: 40,
+
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      5,
+                                                    ),
+                                                border: Border.all(
+                                                  color:
+                                                      AxisColors.blackPurple30,
+                                                ),
+                                                color: AxisColors.blackPurple30
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(
+                                                  10,
+                                                ),
+                                                child: FutureBuilderTemplate(
+                                                  future: () async {
+                                                    return ClassData.fromJson(
+                                                      (await classesCache.get(
+                                                        clId,
+                                                      )).data()!,
+                                                    );
+                                                  }(),
+                                                  builder:
+                                                      (
+                                                        context,
+                                                        snapshot,
+                                                      ) => Row(
+                                                        children: [
+                                                          Text(
+                                                            snapshot.data!.name,
+                                                            style: body2,
+                                                          ),
+                                                          const Spacer(),
+                                                          Text(
+                                                            "${snapshot.data!.studentIds.length} students",
+                                                            style: body2.copyWith(
+                                                              color: body2
+                                                                  .color!
+                                                                  .withValues(
+                                                                    alpha: 0.2,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                AxisButton.text(
+                                  label: 'Add New Teacher',
+                                  width: 180,
+                                  isHighlighted: true,
+                                  onPressed: () async {
+                                    final TeacherData? tData = await showDialog(
+                                      context: context,
+                                      builder: (_) => TeacherCreationDialog(
+                                        teacherId: null,
+                                      ),
+                                    );
+                                    final String msg;
+                                    if (tData != null) {
+                                      msg = 'New teacher added successfully!';
+                                      final docRef = await firestore
+                                          .collection('users')
+                                          .add(tData.toJson());
+                                      teachersCache.registry[docRef.id] =
+                                          await docRef.get();
+                                      setState(() {});
+                                    } else {
+                                      msg = 'Action cancelled.';
+                                    }
+
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text(msg)),
+                                      );
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 40),
+                              ],
+                            ),
                     ],
                   ],
                 ),

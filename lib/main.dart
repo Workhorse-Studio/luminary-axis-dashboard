@@ -30,6 +30,7 @@ part './components/withdraw_from_class_dialog.dart';
 part './components/student_info_dialog.dart';
 part './components/future_builder_template.dart';
 part './components/class_creation_dialog.dart';
+part './components/teacher_creation_dialog.dart';
 part './components/invoice.dart';
 part './components/editable_invoice_dialog.dart';
 
