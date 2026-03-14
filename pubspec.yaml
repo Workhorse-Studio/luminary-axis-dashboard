@@ -41,6 +41,7 @@ dependencies:
   flutter_neumorphic_plus: ^3.5.0
   google_sign_in: ^7.2.0
   pdf: ^3.11.3
+  data_table_2: ^2.7.2
 
 dev_dependencies:
   flutter_test:

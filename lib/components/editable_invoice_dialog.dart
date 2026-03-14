@@ -21,7 +21,7 @@ typedef RowControllerGroup = ({
 class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
   late double total;
   final TextEditingController dueDateController = TextEditingController();
-  late final List<({double amt, String desc, double qty, double rate})> entries;
+  late final List<({double amt, String desc, int qty, double rate})> entries;
   final List<RowControllerGroup> controllers = [];
   StudentInvoiceData? studentInvoiceData;
   TeacherInvoiceData? teacherInvoiceData;
@@ -102,7 +102,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
             onSubmitted: (value) async {
               final updatedEntries = entries;
               updatedEntries[index] = (
-                qty: double.parse(value),
+                qty: int.parse(value),
                 amt: double.parse(value) * entries[index].rate,
                 rate: entries[index].rate,
                 desc: entries[index].desc,
@@ -206,7 +206,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
   }
 
   Future<void> updateInvoice(
-    List<({double amt, String desc, double qty, double rate})> updatedEntries,
+    List<({double amt, String desc, int qty, double rate})> updatedEntries,
   ) async {
     await firestore
         .collection('global')

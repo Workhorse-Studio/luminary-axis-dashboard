@@ -120,13 +120,6 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                     AxisButton.text(
                       label: 'Save',
                       onPressed: () async {
-                        final terms = GlobalState.fromJson(
-                          (await firestore
-                                  .collection('global')
-                                  .doc('state')
-                                  .get())
-                              .data()!,
-                        ).terms;
                         if (teacherNameController.text != '') {
                           Navigator.of(context).pop(
                             TeacherData(
@@ -140,10 +133,7 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                                   ? TeacherData.fromJson(
                                       teacherData!.data()!,
                                     ).invoiceIds
-                                  : List.generate(
-                                      terms.length,
-                                      (_) => null,
-                                    ),
+                                  : {},
                             ),
                           );
                         } else {

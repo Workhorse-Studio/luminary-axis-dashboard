@@ -101,9 +101,12 @@ class TeachersPageState extends State<TeachersPage> {
                                   .length;
                             }
                           }
-                          final double billableAmt = calculatePayout(
-                            numSessions,
-                          );
+                          final double billableAmt =
+                              TeacherPayout(
+                                classToNumSessionsMap: {},
+                              ).calculateFinalPayout(
+                                numSessions,
+                              );
                           return (numSessions, billableAmt, reports);
                         }(),
                         builder: (context, snapshot) => AxisCard(

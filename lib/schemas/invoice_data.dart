@@ -10,7 +10,7 @@ class StudentInvoiceData extends JSONSerialisable {
   final String invoiceDateFormatted;
   final String terms;
   final String dueDateFormatted;
-  final List<({double amt, String desc, double qty, double rate})> entries;
+  final List<({double amt, String desc, int qty, double rate})> entries;
 
   const StudentInvoiceData({
     required this.invoiceDateFormatted,
@@ -40,7 +40,7 @@ class StudentInvoiceData extends JSONSerialisable {
             (e) => (
               amt: e['amt'] as double,
               desc: e['desc'] as String,
-              qty: e['qty'] as double,
+              qty: e['qty'] as int,
               rate: e['rate'] as double,
             ),
           )
@@ -80,7 +80,7 @@ class TeacherInvoiceData extends JSONSerialisable {
   final String invoiceDateFormatted;
   final String terms;
   final String paidDateFormatted;
-  final List<({double amt, String desc, double qty, double rate})> entries;
+  final List<({double amt, String desc, int qty, double rate})> entries;
 
   const TeacherInvoiceData({
     required this.invoiceDateFormatted,
@@ -111,7 +111,7 @@ class TeacherInvoiceData extends JSONSerialisable {
             (e) => (
               amt: e['amt'] as double,
               desc: e['desc'] as String,
-              qty: e['qty'] as double,
+              qty: e['qty'] as int,
               rate: e['rate'] as double,
             ),
           )

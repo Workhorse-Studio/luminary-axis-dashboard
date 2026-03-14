@@ -2,6 +2,7 @@ library axis_dashboard;
 
 import 'dart:async';
 
+import 'package:data_table_2/data_table_2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';

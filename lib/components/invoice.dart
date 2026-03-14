@@ -20,7 +20,7 @@ class InvoiceWidget extends StatelessWidget {
         ? teacherInvoiceData!.amtDue
         : studentInvoiceData!.amtPayable;
     final List<DataRow> invoiceRows = [];
-    final List<({String desc, double qty, double rate, double amt})>
+    final List<({String desc, int qty, double rate, double amt})>
     invoiceEntries = studentInvoiceData == null
         ? teacherInvoiceData!.entries
         : studentInvoiceData!.entries;

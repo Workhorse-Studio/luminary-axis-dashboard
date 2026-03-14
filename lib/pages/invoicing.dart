@@ -40,6 +40,8 @@ class InvoicingPageState extends State<InvoicingPage> {
             .get(),
       );
 
+  final Map<String, Map<String, Map<String, int>>> sessionsMap = {};
+
   @override
   Widget build(BuildContext context) {
     return Navbar(
@@ -48,6 +50,7 @@ class InvoicingPageState extends State<InvoicingPage> {
         AxisButton.text(
           label: 'Refresh Invoices',
           onPressed: () async {
+            int numUpdated = 0;
             if (currentTabIndex == 0) {
               for (final studentEntry in studentCache.registry.entries) {
                 final studentData = StudentData.fromJson(
@@ -69,9 +72,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                       oldInvoiceSnapshot.data()!,
                     );
                   }
-                  final List<
-                    ({double amt, String desc, double qty, double rate})
-                  >
+                  final List<({double amt, String desc, int qty, double rate})>
                   entries = [];
                   bool? invoiceIsDiff = oldInvoiceData == null ? null : false;
                   int classNum = 0;
@@ -84,7 +85,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                       desc: ClassData.fromJson(
                         (await classesCache.get(entry.key)).data()!,
                       ).name,
-                      qty: entry.value as double,
+                      qty: entry.value,
                       rate: rate,
                     );
                     if (oldInvoiceData != null) {
@@ -100,7 +101,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     entryCounter += 1;
                   }
                   if (invoiceIsDiff != null && !invoiceIsDiff) continue;
-
+                  numUpdated += 1;
                   final docRef = firestore
                       .collection('global')
                       .doc('archives')
@@ -149,79 +150,17 @@ class InvoicingPageState extends State<InvoicingPage> {
                 }
               }
             } else {
-              /* 
-              for (final teacherEntry in teachersCache.registry.entries) {
-                final teacherData = TeacherData.fromJson(
-                  teacherEntry.value.data()!,
-                );
-                Map<int, int> numSessionsForMonths = {};
-                for (int i = 0; i < teacherData.classIds.length; i++) {
-                  final String clId = teacherData.classIds[i];
-                  final classData = ClassData.fromJson(
-                    (await classesCache.get(clId)).data()!,
-                  );
-
-                  for (final attEntry in classData.attendance.entries) {
-                    final List<
-                      ({double amt, String desc, double qty, double rate})
-                    >
-                    entries = [];
-                    int monthIndex =
-                        (DateTime.parse(
-                              attEntry.key,
-                            ).difference(DateTime(2026, 01, 01)).inDays %
-                            30) -
-                        1;
-
-                    if (!numSessionsForMonths.containsKey(monthIndex)) {
-                      numSessionsForMonths[monthIndex] = 0;
-                    } else {
-                      numSessionsForMonths[monthIndex];
-                    }
-
-                    final newInvoice = TeacherInvoiceData(
-                      invoiceDateFormatted: DateTime.now()
-                          .toTimestampStringShort(),
-                      address: 'studentData.address',
-                      amtDue: entries.fold((0), (a, b) => a + b.amt),
-                      paidDateFormatted: 'PENDING',
-                      entries: entries,
-                      invoiceId: 'docRef.id',
-                      teacherName: teacherData.name,
-                      adminName: TeacherData.fromJson(
-                        (await firestore
-                                .collection('users')
-                                .doc(auth.currentUser!.uid)
-                                .get())
-                            .data()!,
-                      ).name,
-                      terms: 'Custom',
-                    );
-
-                    await docRef.set(newInvoice.toJson());
-                    final List<String?> newInvIds = studentData.invoiceIds;
-                    newInvIds[t] = docRef.id;
-                    await firestore
-                        .collection('users')
-                        .doc(teacherEntry.key)
-                        .update(
-                          StudentData(
-                            role: studentData.role,
-                            name: studentData.name,
-                            email: studentData.email,
-                            invoiceIds: newInvIds,
-                            studentContactNo: studentData.studentContactNo,
-                            parentContactNo: studentData.parentContactNo,
-                            parentName: studentData.parentName,
-                            sessionCounts: studentData.sessionCounts,
-                          ).toJson(),
-                        );
-                  }
-                }
-              }
-             */
+              await fetchUpdatedTeacherInvoices(forceAll: true);
             }
+
             setState(() {});
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                SnackBar(content: Text('$numUpdated invoices were updated.')),
+              );
+            }
           },
         ),
       ],
@@ -265,74 +204,93 @@ class InvoicingPageState extends State<InvoicingPage> {
   Widget generateTabView(String viewType) {
     return FutureBuilderTemplate(
       future: () async {
-        globalState ??= GlobalState.fromJson(
-          (await firestore.collection('global').doc('state').get()).data()!,
-        );
         if (viewType == 'student') {
-          if (!studentCache._hasInitAll) {
-            await studentCache.initAll(
-              query: firestore
-                  .collection('users')
-                  .where('role', isEqualTo: 'student'),
-            );
-          }
-          if (!studentInvoicesCache._hasInitAll) {
-            await studentInvoicesCache.initAll(
-              query: firestore
-                  .collection('global')
-                  .doc('archives')
-                  .collection('invoices')
-                  .where('invoiceType', isEqualTo: 'student'),
-            );
-          }
+          globalState ??= GlobalState.fromJson(
+            (await firestore.collection('global').doc('state').get()).data()!,
+          );
+          await studentCache.initAll(
+            query: firestore
+                .collection('users')
+                .where('role', isEqualTo: 'student'),
+          );
+          await studentInvoicesCache.initAll(
+            query: firestore
+                .collection('global')
+                .doc('archives')
+                .collection('invoices')
+                .where('invoiceType', isEqualTo: 'student'),
+          );
           return studentCache.registry;
         } else {
-          if (!teachersCache._hasInitAll) {
-            await teachersCache.initAll(
-              query: firestore
-                  .collection('users')
-                  .where('role', isEqualTo: 'teacher'),
-            );
-          }
-          if (!teachersInvoiceCache._hasInitAll) {
-            await teachersInvoiceCache.initAll(
-              query: firestore
-                  .collection('global')
-                  .doc('archives')
-                  .collection('invoices')
-                  .where('invoiceType', isEqualTo: 'teacher'),
-            );
-          }
+          await classesCache.initAll(
+            collection: firestore.collection('classes'),
+          );
+          await teachersCache.initAll(
+            query: firestore
+                .collection('users')
+                .where('role', isEqualTo: 'teacher'),
+          );
+          await teachersInvoiceCache.initAll(
+            query: firestore
+                .collection('global')
+                .doc('archives')
+                .collection('invoices')
+                .where('invoiceType', isEqualTo: 'teacher'),
+          );
+          if (sessionsMap.isEmpty) await fetchUpdatedTeacherInvoices();
           return teachersCache.registry;
         }
       }(),
-      builder: (context, _) => DataTable(
-        columns: [
-          DataColumn(
-            columnWidth: FixedColumnWidth(
-              280,
-            ),
-            label: Text(
-              'Name',
-              style: body2.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          for (final term in globalState!.terms)
-            DataColumn(
-              label: Text(
-                term.termName,
-                style: body2.copyWith(
-                  fontWeight: FontWeight.bold,
+      builder: (context, _) => DataTable2(
+        fixedLeftColumns: 1,
+        columns: viewType == 'student'
+            ? [
+                DataColumn2(
+                  fixedWidth: 280,
+                  label: Text(
+                    'Name',
+                    style: body2.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
+                for (final term in globalState!.terms)
+                  DataColumn2(
+                    label: Text(
+                      term.termName,
+                      style: body2.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ]
+            : [
+                DataColumn2(
+                  fixedWidth: 160,
+                  label: Text(
+                    'Name',
+                    style: body2.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                for (final monthId in generateMonthIds())
+                  DataColumn2(
+                    minWidth: 180,
+                    label: Center(
+                      child: Text(
+                        "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
+                        style: body2.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
         rows: [
           if (viewType == 'student')
             for (final student in studentCache.registry.entries)
-              DataRow(
+              DataRow2(
                 cells: [
                   DataCell(
                     Text(
@@ -349,7 +307,7 @@ class InvoicingPageState extends State<InvoicingPage> {
               ),
           if (viewType == 'teacher')
             for (final teacher in teachersCache.registry.entries)
-              DataRow(
+              DataRow2(
                 cells: [
                   DataCell(
                     Text(
@@ -360,7 +318,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     ),
                   ),
                   ...generateCellsForInvoices(
-                    teacherData: TeacherData.fromJson(teacher.value.data()!),
+                    teacherData: teacher.value,
                   ),
                 ],
               ),
@@ -369,125 +327,258 @@ class InvoicingPageState extends State<InvoicingPage> {
     );
   }
 
+  List<String> generateMonthIds() {
+    int currentYear = DateTime.now().year;
+    int startYear = 2026;
+    final List<String> res = [];
+    void generateForYear(int year) {
+      for (int i = 1; i < 13; i++) {
+        res.add("$i-$year");
+      }
+    }
+
+    for (int i = startYear; i <= currentYear; i++) {
+      generateForYear(i);
+    }
+    return res;
+  }
+
   List<DataCell> generateCellsForInvoices({
     StudentData? studentData,
-    TeacherData? teacherData,
+    DocumentSnapshot<JSON>? teacherData,
   }) {
     final List<DataCell> res = [];
-    for (int i = 0; i < globalState!.terms.length; i++) {
-      res.add(
-        DataCell(
-          studentData != null
-              ? (studentData.invoiceIds.isNotEmpty &&
-                        studentData.invoiceIds[i] != null
-                    ? FutureBuilderTemplate(
-                        future: () async {
-                          return StudentInvoiceData.fromJson(
-                            (await firestore
-                                    .collection('global')
-                                    .doc('archives')
-                                    .collection('invoices')
-                                    .doc(studentData.invoiceIds[i])
-                                    .get())
-                                .data()!,
-                          ).amtPayable;
-                        }(),
-                        builder: (_, snapshot) => SizedBox(
-                          width: 200,
-                          height: 80,
-                          child: Row(
-                            children: [
-                              if (studentData.invoiceIds.isNotEmpty &&
-                                  studentData.invoiceIds[i] != null)
-                                AxisButton(
-                                  width: 60,
-                                  child: Icon(Icons.edit),
-                                  onPressed: () async {
-                                    final studentInvData =
-                                        StudentInvoiceData.fromJson(
-                                          (await firestore
-                                                  .collection('global')
-                                                  .doc('archives')
-                                                  .collection('invoices')
-                                                  .doc(
-                                                    studentData.invoiceIds[i],
-                                                  )
-                                                  .get())
-                                              .data()!,
-                                        );
+    if (studentData != null) {
+      for (int i = 0; i < globalState!.terms.length; i++) {
+        res.add(
+          DataCell(
+            studentData.invoiceIds.isNotEmpty &&
+                    studentData.invoiceIds[i] != null
+                ? FutureBuilderTemplate(
+                    future: () async {
+                      return StudentInvoiceData.fromJson(
+                        (await firestore
+                                .collection('global')
+                                .doc('archives')
+                                .collection('invoices')
+                                .doc(studentData.invoiceIds[i])
+                                .get())
+                            .data()!,
+                      ).amtPayable;
+                    }(),
+                    builder: (_, snapshot) => SizedBox(
+                      width: 200,
+                      height: 80,
+                      child: Row(
+                        children: [
+                          if (studentData.invoiceIds.isNotEmpty &&
+                              studentData.invoiceIds[i] != null)
+                            AxisButton(
+                              width: 60,
+                              child: Icon(Icons.edit),
+                              onPressed: () async {
+                                final studentInvData =
+                                    StudentInvoiceData.fromJson(
+                                      (await firestore
+                                              .collection('global')
+                                              .doc('archives')
+                                              .collection('invoices')
+                                              .doc(
+                                                studentData.invoiceIds[i],
+                                              )
+                                              .get())
+                                          .data()!,
+                                    );
 
-                                    if (context.mounted) {
-                                      await showDialog(
-                                        context: context,
-                                        builder: (_) => EditableInvoiceDialog(
-                                          studentInvoiceData: studentInvData,
-                                          teacherInvoiceData: null,
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                              const SizedBox(width: 10),
-                              Text(
-                                "\$${snapshot.data!.toStringAsFixed(2)}",
-                                style: body2,
+                                if (context.mounted) {
+                                  await showDialog(
+                                    context: context,
+                                    builder: (_) => EditableInvoiceDialog(
+                                      studentInvoiceData: studentInvData,
+                                      teacherInvoiceData: null,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          const SizedBox(width: 10),
+                          Text(
+                            "\$${snapshot.data!.toStringAsFixed(2)}",
+                            style: body2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Text(''),
+            onTap: () async {
+              final studentInvData = StudentInvoiceData.fromJson(
+                (await firestore
+                        .collection('global')
+                        .doc('archives')
+                        .collection('invoices')
+                        .doc(studentData.invoiceIds[i])
+                        .get())
+                    .data()!,
+              );
+
+              if (context.mounted) {
+                await showDialog(
+                  context: context,
+                  builder: (_) => Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      height: MediaQuery.of(context).size.height * 0.85,
+                      child: InvoiceWidget(
+                        studentInvoiceData: studentInvData,
+                        teacherInvoiceData: null,
+                        total: studentInvData.amtPayable,
+                      ),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        );
+      }
+    } else {
+      final mIds = generateMonthIds();
+      for (final String monthId in mIds) {
+        res.add(
+          DataCell(
+            teacherData != null &&
+                    sessionsMap.isNotEmpty &&
+                    sessionsMap[teacherData.id]!.containsKey(monthId)
+                ? SizedBox(
+                    width: 200,
+                    height: 80,
+                    child: Row(
+                      children: [
+                        AxisButton(
+                          width: 60,
+                          child: Icon(Icons.edit),
+                          onPressed: () async {
+                            /* 
+                              final studentInvData =
+                                  StudentInvoiceData.fromJson(
+                                    (await firestore
+                                            .collection('global')
+                                            .doc('archives')
+                                            .collection('invoices')
+                                            .doc(
+                                              studentData.invoiceIds[i],
+                                            )
+                                            .get())
+                                        .data()!,
+                                  );
+
+                              if (context.mounted) {
+                                await showDialog(
+                                  context: context,
+                                  builder: (_) => EditableInvoiceDialog(
+                                    studentInvoiceData: studentInvData,
+                                    teacherInvoiceData: null,
+                                  ),
+                                );
+                              } */
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        RichText(
+                          text: TextSpan(
+                            text:
+                                "${sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)} sessions\n",
+                            style: body2.copyWith(
+                              fontSize: body2.fontSize! - 4,
+                              color: body2.color?.withValues(alpha: 0.7),
+                            ),
+                            children: [
+                              TextSpan(
+                                text:
+                                    "\$${TeacherPayout(classToNumSessionsMap: sessionsMap[teacherData.id]![monthId]!).calculateFinalPayout(sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)).toStringAsFixed(2)}",
                               ),
                             ],
                           ),
                         ),
-                      )
-                    : Text(''))
-              : Text('T'),
-          /* (teacherData!.invoiceIds.containsKey(i) ? 'Y' : '')            style: body2.copyWith(
-              fontWeight: FontWeight.bold,
-            ), */
-          onTap: (studentData == null && teacherData == null)
-              ? null
-              : () async {
-                  final studentInvData = studentData != null
-                      ? StudentInvoiceData.fromJson(
-                          (await firestore
-                                  .collection('global')
-                                  .doc('archives')
-                                  .collection('invoices')
-                                  .doc(studentData.invoiceIds[i])
-                                  .get())
-                              .data()!,
-                        )
-                      : null;
-                  final teacherInvData = teacherData != null
-                      ? TeacherInvoiceData.fromJson(
-                          (await firestore
-                                  .collection('global')
-                                  .doc('archives')
-                                  .collection('invoices')
-                                  .doc(teacherData.invoiceIds[i])
-                                  .get())
-                              .data()!,
-                        )
-                      : null;
-                  if (context.mounted) {
-                    await showDialog(
-                      context: context,
-                      builder: (_) => Center(
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.7,
-                          height: MediaQuery.of(context).size.height * 0.85,
-                          child: InvoiceWidget(
-                            studentInvoiceData: studentInvData,
-                            teacherInvoiceData: teacherInvData,
-                            total:
-                                studentInvData?.amtPayable ??
-                                teacherInvData!.amtDue,
-                          ),
-                        ),
+                      ],
+                    ),
+                  )
+                : Text(''),
+            onTap: () async {
+              /* final studentInvData = StudentInvoiceData.fromJson(
+                (await firestore
+                        .collection('global')
+                        .doc('archives')
+                        .collection('invoices')
+                        .doc(studentData.invoiceIds[i])
+                        .get())
+                    .data()!,
+              );
+              final teacherInvData = teacherData != null
+                  ? TeacherInvoiceData.fromJson(
+                      (await firestore
+                              .collection('global')
+                              .doc('archives')
+                              .collection('invoices')
+                              .doc(teacherData.invoiceIds[i])
+                              .get())
+                          .data()!,
+                    )
+                  : null;
+              if (context.mounted) {
+                await showDialog(
+                  context: context,
+                  builder: (_) => Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      height: MediaQuery.of(context).size.height * 0.85,
+                      child: InvoiceWidget(
+                        studentInvoiceData: studentInvData,
+                        teacherInvoiceData: teacherInvData,
+                        total: studentInvData.amtPayable,
                       ),
-                    );
-                  }
-                },
-        ),
-      );
+                    ),
+                  ),
+                );
+              } */
+            },
+          ),
+        );
+      }
     }
+
     return res;
+  }
+
+  Future<void> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {
+    final Map<String, Map<String, Map<String, int>>> newSessions = {};
+    final mIds = generateMonthIds();
+    for (final teacherEntry in teachersCache.registry.entries) {
+      final teacherData = TeacherData.fromJson(
+        teacherEntry.value.data()!,
+      );
+      newSessions[teacherEntry.key] = {for (final m in mIds) m: {}};
+      for (int i = 0; i < teacherData.classIds.length; i++) {
+        final String clId = teacherData.classIds[i];
+        final classData = ClassData.fromJson(
+          (await classesCache.get(clId)).data()!,
+        );
+
+        for (final attEntry in classData.attendance.entries) {
+          if (attEntry.value.isEmpty) continue;
+          final String monthId = attEntry.key.split('-').sublist(1).join('-');
+          if (!newSessions[teacherEntry.key]![monthId]!.containsKey(clId)) {
+            newSessions[teacherEntry.key]![monthId]![clId] = 0;
+          }
+          newSessions[teacherEntry.key]![monthId]![clId] =
+              newSessions[teacherEntry.key]![monthId]![clId]! +
+              attEntry.value.values.where((a) => a.isPresent).length;
+        }
+      }
+    }
+    sessionsMap
+      ..clear()
+      ..addAll(newSessions);
   }
 }
