@@ -1,6 +1,8 @@
 part of axis_dashboard;
 
 class ClassCreationDialog extends StatelessWidget {
+  ClassCreationDialog({super.key});
+
   String className = '';
   String teacherId = '';
   @override

@@ -48,6 +48,7 @@ class InvoicingPageState extends State<InvoicingPage> {
       pageTitle: 'Billings',
       actions: [
         AxisButton.text(
+          icon: Icons.refresh,
           label: 'Refresh Invoices',
           onPressed: () async {
             int numUpdated = 0;
@@ -176,9 +177,30 @@ class InvoicingPageState extends State<InvoicingPage> {
                   currentTabIndex = index;
                   setState(() {});
                 },
-                tabs: const [
-                  Text('Students'),
-                  Text('Teachers'),
+                indicatorColor: AxisColors.lilacPurple20,
+                tabs: [
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Text(
+                      'Students',
+                      style: heading3.copyWith(
+                        color: currentTabIndex == 0
+                            ? AxisColors.lilacPurple20
+                            : AxisColors.lilacPurple50,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Text(
+                      'Teachers',
+                      style: heading3.copyWith(
+                        color: currentTabIndex == 1
+                            ? AxisColors.lilacPurple20
+                            : AxisColors.lilacPurple50,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               SizedBox(
@@ -246,20 +268,24 @@ class InvoicingPageState extends State<InvoicingPage> {
         columns: viewType == 'student'
             ? [
                 DataColumn2(
-                  fixedWidth: 280,
+                  fixedWidth: 160,
                   label: Text(
                     'Name',
                     style: body2.copyWith(
                       fontWeight: FontWeight.bold,
+                      fontSize: body2.fontSize! + 8,
                     ),
                   ),
                 ),
                 for (final term in globalState!.terms)
                   DataColumn2(
-                    label: Text(
-                      term.termName,
-                      style: body2.copyWith(
-                        fontWeight: FontWeight.bold,
+                    label: Center(
+                      child: Text(
+                        term.termName,
+                        style: body2.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: body2.fontSize! + 8,
+                        ),
                       ),
                     ),
                   ),
@@ -271,17 +297,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                     'Name',
                     style: body2.copyWith(
                       fontWeight: FontWeight.bold,
+                      fontSize: body2.fontSize! + 8,
                     ),
                   ),
                 ),
                 for (final monthId in generateMonthIds())
                   DataColumn2(
-                    minWidth: 180,
+                    minWidth: 240,
                     label: Center(
                       child: Text(
                         "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
                         style: body2.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: body2.fontSize! + 8,
                         ),
                       ),
                     ),
@@ -366,47 +394,51 @@ class InvoicingPageState extends State<InvoicingPage> {
                             .data()!,
                       ).amtPayable;
                     }(),
-                    builder: (_, snapshot) => SizedBox(
-                      width: 200,
-                      height: 80,
-                      child: Row(
-                        children: [
-                          if (studentData.invoiceIds.isNotEmpty &&
-                              studentData.invoiceIds[i] != null)
-                            AxisButton(
-                              width: 60,
-                              child: Icon(Icons.edit),
-                              onPressed: () async {
-                                final studentInvData =
-                                    StudentInvoiceData.fromJson(
-                                      (await firestore
-                                              .collection('global')
-                                              .doc('archives')
-                                              .collection('invoices')
-                                              .doc(
-                                                studentData.invoiceIds[i],
-                                              )
-                                              .get())
-                                          .data()!,
-                                    );
-
-                                if (context.mounted) {
-                                  await showDialog(
-                                    context: context,
-                                    builder: (_) => EditableInvoiceDialog(
-                                      studentInvoiceData: studentInvData,
-                                      teacherInvoiceData: null,
-                                    ),
-                                  );
-                                }
-                              },
+                    builder: (_, snapshot) => Center(
+                      child: SizedBox(
+                        width: 200,
+                        height: 80,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 10),
+                            Text(
+                              "\$${snapshot.data!.toStringAsFixed(2)}",
+                              style: body2,
                             ),
-                          const SizedBox(width: 10),
-                          Text(
-                            "\$${snapshot.data!.toStringAsFixed(2)}",
-                            style: body2,
-                          ),
-                        ],
+                            const Spacer(),
+                            if (studentData.invoiceIds.isNotEmpty &&
+                                studentData.invoiceIds[i] != null)
+                              AxisButton.text(
+                                width: 100,
+                                icon: Icons.edit,
+                                label: 'Edit',
+                                onPressed: () async {
+                                  final studentInvData =
+                                      StudentInvoiceData.fromJson(
+                                        (await firestore
+                                                .collection('global')
+                                                .doc('archives')
+                                                .collection('invoices')
+                                                .doc(
+                                                  studentData.invoiceIds[i],
+                                                )
+                                                .get())
+                                            .data()!,
+                                      );
+
+                                  if (context.mounted) {
+                                    await showDialog(
+                                      context: context,
+                                      builder: (_) => EditableInvoiceDialog(
+                                        studentInvoiceData: studentInvData,
+                                        teacherInvoiceData: null,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   )
@@ -450,58 +482,38 @@ class InvoicingPageState extends State<InvoicingPage> {
             teacherData != null &&
                     sessionsMap.isNotEmpty &&
                     sessionsMap[teacherData.id]!.containsKey(monthId)
-                ? SizedBox(
-                    width: 200,
-                    height: 80,
-                    child: Row(
-                      children: [
-                        AxisButton(
-                          width: 60,
-                          child: Icon(Icons.edit),
-                          onPressed: () async {
-                            /* 
-                              final studentInvData =
-                                  StudentInvoiceData.fromJson(
-                                    (await firestore
-                                            .collection('global')
-                                            .doc('archives')
-                                            .collection('invoices')
-                                            .doc(
-                                              studentData.invoiceIds[i],
-                                            )
-                                            .get())
-                                        .data()!,
-                                  );
-
-                              if (context.mounted) {
-                                await showDialog(
-                                  context: context,
-                                  builder: (_) => EditableInvoiceDialog(
-                                    studentInvoiceData: studentInvData,
-                                    teacherInvoiceData: null,
-                                  ),
-                                );
-                              } */
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        RichText(
-                          text: TextSpan(
-                            text:
-                                "${sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)} sessions\n",
-                            style: body2.copyWith(
-                              fontSize: body2.fontSize! - 4,
-                              color: body2.color?.withValues(alpha: 0.7),
-                            ),
-                            children: [
-                              TextSpan(
-                                text:
-                                    "\$${TeacherPayout(classToNumSessionsMap: sessionsMap[teacherData.id]![monthId]!).calculateFinalPayout(sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)).toStringAsFixed(2)}",
+                ? Center(
+                    child: SizedBox(
+                      width: 180,
+                      height: 80,
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 10),
+                          RichText(
+                            text: TextSpan(
+                              text:
+                                  "${sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)} sessions\n",
+                              style: body2.copyWith(
+                                fontSize: body2.fontSize! - 4,
+                                color: body2.color?.withValues(alpha: 0.7),
                               ),
-                            ],
+                              children: [
+                                TextSpan(
+                                  text:
+                                      "\$${TeacherPayout(classToNumSessionsMap: sessionsMap[teacherData.id]![monthId]!).calculateFinalPayout(sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)).toStringAsFixed(2)}",
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                          const Spacer(),
+                          AxisButton.text(
+                            width: 105,
+                            icon: Icons.send,
+                            label: 'Send',
+                            onPressed: () async {},
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 : Text(''),

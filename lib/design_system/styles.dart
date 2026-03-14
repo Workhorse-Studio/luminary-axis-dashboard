@@ -21,3 +21,8 @@ final BoxDecoration dialogForegroundDecoration = BoxDecoration(
   borderRadius: BorderRadius.circular(10),
   border: Border.all(color: AxisColors.blackPurple20),
 );
+
+Widget axisIcon(IconData iconData) => Icon(
+  iconData,
+  color: AxisColors.blackPurple30.withValues(alpha: 0.4),
+);

@@ -21,14 +21,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
       filterISCMenuController = TextEditingController(),
       filterFSCMenuController = TextEditingController(),
       allocateAllSessionsController = TextEditingController();
-  /* final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
-    (termName) async => (await firestore
-        .collection('global')
-        .doc('state')
-        .collection('allocations')
-        .doc(termName)
-        .get()),
-  ); */
+
   final TextEditingController termNameController = TextEditingController();
 
   final GenericCache<DocumentSnapshot<JSON>> classesCache = GenericCache(
@@ -794,9 +787,19 @@ class TermDetailsPageState extends State<TermDetailsPage> {
     leadingIcon: controller.value.text != 'None' ? Icon(Icons.check) : null,
     controller: controller,
     inputDecorationTheme: InputDecorationTheme(
-      border: InputBorder.none,
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(
+          color: AxisColors.blackPurple30.withValues(alpha: 0.8),
+        ),
+      ),
+      border: OutlineInputBorder(
+        borderSide: BorderSide(
+          color: AxisColors.blackPurple30.withValues(alpha: 0.8),
+        ),
+      ),
       contentPadding: EdgeInsets.only(left: 20),
     ),
+    textStyle: body2,
     menuStyle: MenuStyle(
       side: WidgetStatePropertyAll(
         BorderSide(color: AxisColors.blackPurple20),
