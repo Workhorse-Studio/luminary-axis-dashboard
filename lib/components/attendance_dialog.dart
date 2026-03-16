@@ -36,21 +36,23 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   .doc(widget.classId)
                   .get();
               ClassData classData = ClassData.fromJson(classDoc.data()!);
-              final studentsData =
-                  (await firestore
-                          .collection('users')
-                          .where(
-                            FieldPath.documentId,
-                            whereIn: classData.studentIds,
-                          )
-                          .get())
-                      .docs
-                      .map(
-                        (doc) => (
-                          data: StudentData.fromJson(doc.data()),
-                          id: doc.id,
-                        ),
-                      );
+              final studentsData = classData.studentIds.isEmpty
+                  ? const <({StudentData data, String id})>[]
+                  : (await firestore
+                            .collection('users')
+                            .where(
+                              FieldPath.documentId,
+                              whereIn: classData.studentIds,
+                            )
+                            .get())
+                        .docs
+                        .map(
+                          (doc) => (
+                            data: StudentData.fromJson(doc.data()),
+                            id: doc.id,
+                          ),
+                        )
+                        .toList();
 
               if (!classData.attendance.containsKey(todayId)) {
                 await firestore

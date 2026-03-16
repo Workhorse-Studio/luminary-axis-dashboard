@@ -173,7 +173,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
             (widget.termReports == null && classesData.isEmpty)) {
           return Center(
             child: Text(
-              'No term reports to show.',
+              'No attendance information to show.',
               style: heading3,
             ),
           );

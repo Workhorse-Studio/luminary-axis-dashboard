@@ -44,7 +44,7 @@ class SyllabusPageState extends State<SyllabusPage> {
 
             final classIds = TeacherData.fromJson(teacherData!).classIds;
             return classIds.isEmpty
-                ? const []
+                ? const <(String, ClassData)>[]
                 : (await firestore
                           .collection('classes')
                           .where(
@@ -61,10 +61,7 @@ class SyllabusPageState extends State<SyllabusPage> {
                 ? ListView(
                     children: [
                       const SizedBox(height: 30),
-                      Text(
-                        'Classes',
-                        style: heading1,
-                      ),
+
                       for (final cl in snapshot.data!) ...[
                         const SizedBox(height: 30),
                         Center(
@@ -89,6 +86,9 @@ class SyllabusPageState extends State<SyllabusPage> {
                                       '${now.day}-${now.month}-${now.year}';
 
                                   final newAttendance = cl.$2.attendance;
+                                  if (!newAttendance.containsKey(todayId)) {
+                                    newAttendance[todayId] = {};
+                                  }
                                   for (final r in result.entries) {
                                     newAttendance[todayId]![r.key] = r.value;
                                   }

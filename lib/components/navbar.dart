@@ -62,7 +62,11 @@ class NavbarState extends State<Navbar> {
               ),
               const SizedBox(height: 30),
               for (final r in Routes.values)
-                if (!((const [Routes.login, Routes.dev]).contains(r)) &&
+                if (!((const [
+                      Routes.login,
+                      Routes.dev,
+                      Routes.students,
+                    ]).contains(r)) &&
                     hasRolesForRoute(r))
                   Padding(
                     padding: EdgeInsetsGeometry.only(

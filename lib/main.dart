@@ -103,7 +103,7 @@ enum Routes {
   syllabus(
     '/syllabus',
     'Attendance',
-    ['teacher'],
+    ['teacher', 'admin'],
     Icons.checklist,
   ),
   students(
