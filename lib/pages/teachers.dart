@@ -59,7 +59,7 @@ class TeachersPageState extends State<TeachersPage> {
           termEntries.add((termsData[i].termName, i));
         }
         return Navbar(
-          pageTitle: 'Billing',
+          pageTitle: 'Teachers',
           actions: [
             AxisDropdownButton(
               width: 140,
@@ -83,31 +83,36 @@ class TeachersPageState extends State<TeachersPage> {
                       FutureBuilderTemplate(
                         future: () async {
                           int numSessions = 0;
+                          int numClasses = 0;
                           final tData = TeacherData.fromJson(tDoc.data());
                           final List<TermReportV2> reports = [];
                           for (final clId in tData.classIds) {
+                            numClasses += 1;
+                            numSessions +=
+                                ClassData.fromJson(
+                                  (await firestore
+                                          .collection('classes')
+                                          .doc(clId)
+                                          .get())
+                                      .data()!,
+                                ).attendance.values.fold(
+                                  0,
+                                  (a, e) =>
+                                      a +
+                                      e.values
+                                          .where(
+                                            (attendance) =>
+                                                attendance.isPresent,
+                                          )
+                                          .length,
+                                );
                             final report = await reportCache.get(
                               '$clId;${termsData[currentTermIndex].termStartDate};${termsData[currentTermIndex].termEndDate}',
                             );
                             reports.add(report);
-                            for (final row in report.data.skip(1)) {
-                              numSessions += row
-                                  .where(
-                                    (cell) =>
-                                        (cell is String) &&
-                                        cell != '' &&
-                                        cell != 'X',
-                                  )
-                                  .length;
-                            }
                           }
-                          final double billableAmt =
-                              TeacherPayout(
-                                classToNumSessionsMap: {},
-                              ).calculateFinalPayout(
-                                numSessions,
-                              );
-                          return (numSessions, billableAmt, reports);
+
+                          return (numSessions, reports, numClasses);
                         }(),
                         builder: (context, snapshot) => AxisCard(
                           header: TeacherData.fromJson(tDoc.data()).name,
@@ -119,12 +124,12 @@ class TeachersPageState extends State<TeachersPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Sessions in period: ${snapshot.data!.$1}",
+                                  "Sessions (Cumulative): ${snapshot.data!.$1}",
                                   style: heading3,
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  "Billable Amount: ${snapshot.data!.$2}",
+                                  "No. of classes taught: ${snapshot.data!.$3}",
                                   style: heading3,
                                 ),
                                 const SizedBox(height: 30),
@@ -150,7 +155,7 @@ class TeachersPageState extends State<TeachersPage> {
                                             child: TermReportWidget(
                                               teacherId: '',
                                               reportCache: reportCache,
-                                              termReports: snapshot.data!.$3,
+                                              termReports: snapshot.data!.$2,
                                             ),
                                           ),
                                         ),
