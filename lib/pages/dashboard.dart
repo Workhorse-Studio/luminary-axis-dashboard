@@ -94,8 +94,7 @@ class DashboardPageState extends State<DashboardPage> {
                                 )
                               : globalState;
 
-                          currentTerm = gs!.terms.last;
-                          return currentTerm;
+                          return currentTerm = gs!.terms[gs.currentTermNum];
                         }(),
                         builder: (context, snapshot) =>
                             (currentTerm.hasEndDateSet &&
