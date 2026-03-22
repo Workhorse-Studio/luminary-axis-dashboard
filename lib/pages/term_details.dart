@@ -187,9 +187,13 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                 final tmp = globalState!.terms;
                 tmp[currentTabIndex] = newTerm;
 
-                await firestore.collection('global').doc('state').set({
+                await firestore.collection('global').doc('state').update({
                   'terms': tmp.map((t) => t.toJson()),
                 });
+                globalState = GlobalState.fromJson(
+                  (await firestore.collection('global').doc('state').get())
+                      .data()!,
+                );
 
                 await allocsColl
                     .doc(newTermName)
