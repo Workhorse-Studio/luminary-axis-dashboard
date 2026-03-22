@@ -8,10 +8,10 @@ Future<void> withdrawStudentFromClass({
     (await firestore.collection('users').doc(studentId).get()).data()!,
   );
 
-  await firestore.collection('users').doc(studentId).update({
+  /*   await firestore.collection('users').doc(studentId).update({
     'sessionCounts': stData.sessionCounts..[termNum].remove(classId),
   });
-
+ */
   final clData = ClassData.fromJson(
     (await firestore.collection('classes').doc(classId).get()).data()!,
   );

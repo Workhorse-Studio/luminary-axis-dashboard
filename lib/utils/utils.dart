@@ -34,6 +34,25 @@ class GenericCache<T> {
   }
 }
 
+int monthKeyToTermIndex(GlobalState gs, String monthKey) {
+  final tmp = monthKey.split('-').reversed.toList();
+  tmp[1] = tmp[1].padLeft(2, '0');
+  tmp[2] = tmp[2].padLeft(2, '0');
+  final String reversedMonthKey = tmp.join('-');
+  final dt = DateTime.parse(reversedMonthKey);
+  int counter = 0;
+  for (final term in gs.terms) {
+    if (term.termEndDate >= dt.millisecondsSinceEpoch) {
+      return counter;
+    } else {
+      counter += 1;
+    }
+  }
+  return gs.terms.isEmpty
+      ? throw Exception('Month key to term index failed')
+      : gs.terms.length - 1;
+}
+
 bool hasRolesForRoute(Routes route) =>
     route.requiredRoles.isEmpty ||
     route.requiredRoles.contains(role) ||

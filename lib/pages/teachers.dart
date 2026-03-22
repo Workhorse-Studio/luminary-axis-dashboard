@@ -11,25 +11,22 @@ class TeachersPageState extends State<TeachersPage> {
   bool hasLoaded = false;
   late List<TermData> termsData;
   late List<QueryDocumentSnapshot<JSON>> teachersData;
+  final GenericCache<DocumentSnapshot<JSON>> studentCache = GenericCache(
+    (studentId) async =>
+        await firestore.collection('users').doc(studentId).get(),
+  );
+  final GenericCache<DocumentSnapshot<JSON>> classesCache = GenericCache(
+    (classId) async => await firestore.collection('classes').doc(classId).get(),
+  );
+  late GlobalState globalState;
 
   late int currentTermIndex;
 
-  // final Map<String, int> teachersSessionsCounts = {};
-  bool showTermReport = false;
-
-  final GenericCache<TermReportV2> reportCache = GenericCache((key) async {
-    final List<String> args = key.split(';');
-    final TermReportV2 tr = TermReportV2();
-    await tr.generateTermReport(
-      args[0],
-      int.parse(args[1]),
-      int.parse(args[2]),
-    );
-    return tr;
-  });
-
   Future<void> loadData() async {
     if (hasLoaded) return;
+    globalState = GlobalState.fromJson(
+      (await firestore.collection('global').doc('state').get()).data()!,
+    );
     teachersData =
         (await (firestore
                     .collection('users')
@@ -39,10 +36,11 @@ class TeachersPageState extends State<TeachersPage> {
                     ))
                 .get())
             .docs;
-    termsData = GlobalState.fromJson(
-      (await firestore.collection('global').doc('state').get()).data()!,
-    ).terms;
-    currentTermIndex = termsData.length - 1;
+    termsData = globalState.terms;
+    currentTermIndex = monthKeyToTermIndex(
+      globalState,
+      DateTime.now().toTimestampStringShort(),
+    );
     hasLoaded = true;
   }
 
@@ -50,6 +48,14 @@ class TeachersPageState extends State<TeachersPage> {
   Widget build(BuildContext context) {
     return FutureBuilderTemplate(
       future: () async {
+        globalState = GlobalState.fromJson(
+          (await firestore.collection('global').doc('state').get()).data()!,
+        );
+        await studentAttendanceStore.ensureInit(
+          classesCache: classesCache,
+          studentCache: studentCache,
+          globalState: globalState,
+        );
         await loadData();
         return 1;
       }(),
@@ -63,8 +69,6 @@ class TeachersPageState extends State<TeachersPage> {
           actions: [
             AxisDropdownButton(
               width: 140,
-              initalLabel: termsData[currentTermIndex].termName,
-              initialSelection: currentTermIndex,
               entries: termEntries,
               onSelected: (newData) => setState(() {
                 if (newData != null) currentTermIndex = newData;
@@ -79,97 +83,95 @@ class TeachersPageState extends State<TeachersPage> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-                    for (final tDoc in teachersData) ...[
-                      FutureBuilderTemplate(
-                        future: () async {
-                          int numSessions = 0;
-                          int numClasses = 0;
-                          final tData = TeacherData.fromJson(tDoc.data());
-                          final List<TermReportV2> reports = [];
-                          for (final clId in tData.classIds) {
-                            numClasses += 1;
-                            numSessions +=
-                                ClassData.fromJson(
-                                  (await firestore
-                                          .collection('classes')
-                                          .doc(clId)
-                                          .get())
-                                      .data()!,
-                                ).attendance.values.fold(
-                                  0,
-                                  (a, e) =>
-                                      a +
-                                      e.values
-                                          .where(
-                                            (attendance) =>
-                                                attendance.isPresent,
-                                          )
-                                          .length,
-                                );
-                            final report = await reportCache.get(
-                              '$clId;${termsData[currentTermIndex].termStartDate};${termsData[currentTermIndex].termEndDate}',
+                    if (currentTermIndex >=
+                        studentAttendanceStore.sessionsPerTerm.length)
+                      Text(
+                        'No term reports to show for this term.',
+                        style: body2,
+                      ),
+                    if (currentTermIndex <
+                        studentAttendanceStore.sessionsPerTerm.length)
+                      for (final tDoc in teachersData) ...[
+                        FutureBuilderTemplate(
+                          future: () async {
+                            await studentAttendanceStore.ensureInit(
+                              classesCache: classesCache,
+                              studentCache: studentCache,
+                              globalState: globalState,
                             );
-                            reports.add(report);
-                          }
-
-                          return (numSessions, reports, numClasses);
-                        }(),
-                        builder: (context, snapshot) => AxisCard(
-                          header: TeacherData.fromJson(tDoc.data()).name,
-                          width: 600,
-                          height: 320,
-                          child: Padding(
-                            padding: const EdgeInsets.all(40),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Sessions (Cumulative): ${snapshot.data!.$1}",
-                                  style: heading3,
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  "No. of classes taught: ${snapshot.data!.$3}",
-                                  style: heading3,
-                                ),
-                                const SizedBox(height: 30),
-                                AxisButton.text(
-                                  label: 'Show Term Report',
-                                  onPressed: () async {
-                                    await showDialog(
-                                      context: context,
-                                      builder: (_) => Center(
-                                        child: SizedBox(
-                                          width:
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.width *
-                                              0.8,
-                                          height:
-                                              MediaQuery.of(
-                                                context,
-                                              ).size.height *
-                                              0.8,
-                                          child: Material(
-                                            color: AxisColors.blackPurple50,
-                                            child: TermReportWidget(
-                                              teacherId: '',
-                                              reportCache: reportCache,
-                                              termReports: snapshot.data!.$2,
+                            return (
+                              [
+                                for (final clEntry
+                                    in studentAttendanceStore
+                                        .sessionsPerTerm[currentTermIndex]
+                                        .entries)
+                                  if (TeacherData.fromJson(
+                                    tDoc.data(),
+                                  ).classIds.contains(clEntry.key))
+                                    clEntry.value.values.fold(
+                                      0,
+                                      (a, b) => a + b,
+                                    ),
+                              ].fold(0, (a, b) => a + b),
+                              TermReportWidget(
+                                teacherId: tDoc.id,
+                                termIndex: currentTermIndex,
+                              ),
+                              TeacherData.fromJson(tDoc.data()).classIds.length,
+                            );
+                          }(),
+                          builder: (context, snapshot) => AxisCard(
+                            header: TeacherData.fromJson(tDoc.data()).name,
+                            width: 600,
+                            height: 320,
+                            child: Padding(
+                              padding: const EdgeInsets.all(40),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Sessions (Cumulative): ${snapshot.data!.$1}",
+                                    style: heading3,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    "No. of classes taught: ${snapshot.data!.$3}",
+                                    style: heading3,
+                                  ),
+                                  const SizedBox(height: 30),
+                                  AxisButton.text(
+                                    label: 'Show Term Report',
+                                    onPressed: () async {
+                                      await showDialog(
+                                        context: context,
+                                        builder: (_) => Center(
+                                          child: SizedBox(
+                                            width:
+                                                MediaQuery.of(
+                                                  context,
+                                                ).size.width *
+                                                0.8,
+                                            height:
+                                                MediaQuery.of(
+                                                  context,
+                                                ).size.height *
+                                                0.8,
+                                            child: Material(
+                                              color: AxisColors.blackPurple50,
+                                              child: snapshot.data!.$2,
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 30),
-                    ],
+                        const SizedBox(height: 30),
+                      ],
                   ],
                 ),
               ),

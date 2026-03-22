@@ -1,6 +1,6 @@
 part of axis_dashboard;
 
-class TermReport {
+/* class TermReport {
   List<List> data = [];
   List<double> progresses = [];
   late (int, int) attendanceDatesIndices;
@@ -63,8 +63,8 @@ class TermReport {
     return data;
   }
 }
-
-class TermReportV2 {
+ */
+/* class TermReportV2 {
   List<List> data = [];
   List<double> progresses = [];
   late (int, int) attendanceDatesIndices;
@@ -160,3 +160,4 @@ class TermReportV2 {
     return data;
   }
 }
+ */

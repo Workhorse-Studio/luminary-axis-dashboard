@@ -1,5 +1,23 @@
 part of axis_dashboard;
 
+enum InvoiceStatus {
+  ready,
+  sent,
+  paid,
+  missed
+  ;
+
+  static InvoiceStatus fromJson(String val) => switch (val) {
+    'ready' => ready,
+    'sent' => sent,
+    'paid' => paid,
+    'missed' => missed,
+    String _ => throw Exception(
+      'Could not parse InvoiceStatus from expression "$val"',
+    ),
+  };
+}
+
 class StudentInvoiceData extends JSONSerialisable {
   final String invoiceType;
   final String invoiceId;
@@ -11,6 +29,7 @@ class StudentInvoiceData extends JSONSerialisable {
   final String terms;
   final String dueDateFormatted;
   final List<({double amt, String desc, int qty, double rate})> entries;
+  final InvoiceStatus invoiceStatus;
 
   const StudentInvoiceData({
     required this.invoiceDateFormatted,
@@ -21,6 +40,7 @@ class StudentInvoiceData extends JSONSerialisable {
     required this.invoiceId,
     required this.parentName,
     required this.studentName,
+    required this.invoiceStatus,
     required this.terms,
   }) : invoiceType = 'student';
 
@@ -31,6 +51,7 @@ class StudentInvoiceData extends JSONSerialisable {
       parentName = json['parentName'] as String,
       studentName = json['studentName'] as String,
       address = json['address'] as String,
+      invoiceStatus = InvoiceStatus.fromJson((json['invoiceStatus'] as String)),
       invoiceDateFormatted = json['invoiceDateFormatted'] as String,
       terms = json['terms'] as String,
       dueDateFormatted = json['dueDateFormatted'] as String,
@@ -57,6 +78,7 @@ class StudentInvoiceData extends JSONSerialisable {
     'invoiceDateFormatted': invoiceDateFormatted,
     'terms': terms,
     'dueDateFormatted': dueDateFormatted,
+    'invoiceStatus': invoiceStatus.name,
     'entries': entries
         .map(
           (e) => {
@@ -78,6 +100,8 @@ class TeacherInvoiceData extends JSONSerialisable {
   final String adminName;
   final String address;
   final String invoiceDateFormatted;
+  final InvoiceStatus invoiceStatus;
+
   final String terms;
   final String paidDateFormatted;
   final List<({double amt, String desc, int qty, double rate})> entries;
@@ -87,6 +111,7 @@ class TeacherInvoiceData extends JSONSerialisable {
     required this.address,
     required this.amtDue,
     required this.paidDateFormatted,
+    required this.invoiceStatus,
     required this.entries,
     required this.invoiceId,
     required this.adminName,
@@ -103,6 +128,8 @@ class TeacherInvoiceData extends JSONSerialisable {
       adminName = json['adminName'] as String,
       address = json['address'] as String,
       invoiceDateFormatted = json['invoiceDateFormatted'] as String,
+      invoiceStatus = InvoiceStatus.fromJson((json['invoiceStatus'] as String)),
+
       terms = json['terms'] as String,
       paidDateFormatted = json['paidDateFormatted'] as String,
       entries = (json['entries'] as List)
@@ -126,6 +153,8 @@ class TeacherInvoiceData extends JSONSerialisable {
     'adminName': adminName,
     'address': address,
     'invoiceDateFormatted': invoiceDateFormatted,
+    'invoiceStatus': invoiceStatus.name,
+
     'terms': terms,
     'paidDateFormatted': paidDateFormatted,
     'entries': entries

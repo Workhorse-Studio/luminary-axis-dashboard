@@ -4,9 +4,6 @@ class StudentData extends JSONSerialisable {
   final String role;
   final String name;
 
-  /// Indexed by termNum, and each item maps a `classId` to a `sessionsCount`
-  final List<Map<String, int>> sessionCounts;
-
   /// Maps a term's index to the invoice ID of the student for that term
   final List<String?> invoiceIds;
   final String studentContactNo;
@@ -22,7 +19,6 @@ class StudentData extends JSONSerialisable {
     required this.studentContactNo,
     required this.parentContactNo,
     required this.parentName,
-    required this.sessionCounts,
   });
 
   StudentData.fromJson(JSON json)
@@ -33,9 +29,6 @@ class StudentData extends JSONSerialisable {
       parentName = json['parentName'] as String,
       parentContactNo = json['parentContactNo'] as String,
 
-      sessionCounts = (json['sessionCounts'] as List)
-          .map((e) => Map<String, int>.from(e))
-          .toList(),
       name = json['name'] as String;
 
   @override
@@ -47,6 +40,5 @@ class StudentData extends JSONSerialisable {
     'studentContactNo': studentContactNo,
     'parentName': parentName,
     'parentContactNo': parentContactNo,
-    'sessionCounts': sessionCounts,
   };
 }

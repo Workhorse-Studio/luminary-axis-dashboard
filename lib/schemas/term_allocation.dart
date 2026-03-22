@@ -1,6 +1,7 @@
 part of axis_dashboard;
 
-/* class TermAllocation extends JSONSerialisable {
+class TermAllocation extends JSONSerialisable {
+  /// Maps a class ID to the student-allocation mappings for that class in the term.
   final Map<String, Map<String, int>> sessions;
 
   TermAllocation({
@@ -15,4 +16,3 @@ part of axis_dashboard;
   @override
   JSON toJson() => sessions;
 }
- */

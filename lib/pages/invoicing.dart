@@ -52,13 +52,43 @@ class InvoicingPageState extends State<InvoicingPage> {
           label: 'Refresh Invoices',
           onPressed: () async {
             int numUpdated = 0;
+
             if (currentTabIndex == 0) {
-              for (final studentEntry in studentCache.registry.entries) {
+              await studentAttendanceStore.ensureInit(
+                globalState: globalState!,
+                classesCache: classesCache,
+                studentCache: studentCache,
+              );
+
+              /* for (final studentEntry in studentCache.registry.entries) {
+                DocumentSnapshot<JSON>? oldInvoiceSnapshot;
+                StudentInvoiceData? oldInvoiceData;
+                final studentData = StudentData.fromJson(
+                  studentEntry.value.data()!,
+                );
+                if (studentData.invoiceIds.isNotEmpty &&
+                    studentData.invoiceIds[] != null) {
+                  oldInvoiceSnapshot = (await firestore
+                      .collection('global')
+                      .doc('archives')
+                      .collection('invoices')
+                      .doc(studentData.invoiceIds[t])
+                      .get());
+                  oldInvoiceData = StudentInvoiceData.fromJson(
+                    oldInvoiceSnapshot.data()!,
+                  );
+                }
+                
+                bool? invoiceIsDiff = oldInvoiceData == null ? null : false;
+                int classNum = 0;
+              } */
+
+              /* for (final studentEntry in studentCache.registry.entries) {
                 final studentData = StudentData.fromJson(
                   studentEntry.value.data()!,
                 );
 
-                for (int t = 0; t < studentData.sessionCounts.length; t++) {
+                for (int t = 0; t < globalState!.terms.length; t++) {
                   DocumentSnapshot<JSON>? oldInvoiceSnapshot;
                   StudentInvoiceData? oldInvoiceData;
                   if (studentData.invoiceIds.isNotEmpty &&
@@ -117,6 +147,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                         .add(const Duration(days: 7))
                         .toTimestampStringShort(),
                     entries: entries,
+                    invoiceStatus: InvoiceStatus.ready,
                     invoiceId: docRef.id,
                     parentName: studentData.parentName,
                     studentName: studentData.name,
@@ -145,11 +176,11 @@ class InvoicingPageState extends State<InvoicingPage> {
                           studentContactNo: studentData.studentContactNo,
                           parentContactNo: studentData.parentContactNo,
                           parentName: studentData.parentName,
-                          sessionCounts: studentData.sessionCounts,
                         ).toJson(),
                       );
                 }
               }
+            */
             } else {
               await fetchUpdatedTeacherInvoices(forceAll: true);
             }
@@ -241,6 +272,11 @@ class InvoicingPageState extends State<InvoicingPage> {
                 .doc('archives')
                 .collection('invoices')
                 .where('invoiceType', isEqualTo: 'student'),
+          );
+          await studentAttendanceStore.ensureInit(
+            globalState: globalState!,
+            classesCache: classesCache,
+            studentCache: studentCache,
           );
           return studentCache.registry;
         } else {

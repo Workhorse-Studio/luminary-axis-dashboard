@@ -82,18 +82,32 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                   const SizedBox(height: 20),
                   FutureBuilderTemplate(
                     future: () async {
-                      final sd = StudentData.fromJson(studentData.data()!);
-
-                      return sd.sessionCounts.isNotEmpty
-                          ? (await firestore
-                                    .collection('classes')
-                                    .where(
-                                      FieldPath.documentId,
-                                      whereIn: sd.sessionCounts[termNum].keys,
-                                    )
-                                    .get())
-                                .docs
-                          : const <QueryDocumentSnapshot<JSON>>[];
+                      final gs = GlobalState.fromJson(
+                        (await firestore
+                                .collection('global')
+                                .doc('state')
+                                .get())
+                            .data()!,
+                      );
+                      final td = TermAllocation.fromJson(
+                        (await firestore
+                                .collection('global')
+                                .doc('state')
+                                .collection('allocations')
+                                .doc(gs.terms[gs.currentTermNum].termName)
+                                .get())
+                            .data()!,
+                      );
+                      return await Future.wait(
+                        td.sessions.entries
+                            .where((e) => e.value.containsKey(studentData.id))
+                            .map(
+                              (e) async => await firestore
+                                  .collection('classes')
+                                  .doc(e.key)
+                                  .get(),
+                            ),
+                      );
                     }(),
 
                     builder: (context, snapshot) => Column(
@@ -103,7 +117,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                           for (final clDoc in snapshot.data!) ...[
                             RichText(
                               text: TextSpan(
-                                text: ClassData.fromJson(clDoc.data()).name,
+                                text: ClassData.fromJson(clDoc.data()!).name,
                                 style: heading3,
                                 children: [
                                   TextSpan(
@@ -124,7 +138,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                       ],
                     ),
                   ),
-                  Text(
+                  /* Text(
                     'Latest Invoice',
                     style: heading1,
                   ),
@@ -148,7 +162,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                     ],
                     total: 1140,
                   ), */
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 20), */
                   const SizedBox(height: 30),
                 ],
               ),

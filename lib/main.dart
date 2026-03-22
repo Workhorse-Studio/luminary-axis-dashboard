@@ -34,6 +34,7 @@ part './components/class_creation_dialog.dart';
 part './components/teacher_creation_dialog.dart';
 part './components/invoice.dart';
 part './components/editable_invoice_dialog.dart';
+part './components/term_report_widget.dart';
 
 part './design_system/colors.dart';
 part './design_system/text_styles.dart';
@@ -53,6 +54,7 @@ part './schemas/term_allocation.dart';
 part './schemas/term_data.dart';
 part './schemas/invoice_data.dart';
 
+part './operations/compute_student_attendance.dart';
 part './operations/generate_term_report.dart';
 part './operations/calculate_teacher_payout.dart';
 part './operations/onboard_student.dart';
@@ -68,6 +70,7 @@ part './firebase/auth.dart';
 late String role = '';
 bool isAdmin = false;
 late int termNum;
+final StudentAttendanceStore studentAttendanceStore = StudentAttendanceStore();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -180,10 +183,10 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
             redirectOnIncorrectRole: Routes.login,
             child: const DashboardPage(),
           ),
-          Routes.students.slug: (_) => ProtectedPage(
+          /* Routes.students.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,
             child: StudentsPage(),
-          ),
+          ), */
           Routes.syllabus.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,
             child: SyllabusPage(),

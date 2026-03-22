@@ -13,6 +13,10 @@ class TermDetailsPageState extends State<TermDetailsPage> {
   int currentTabIndex = 0;
   GlobalState? globalState;
   bool sortASC = false, sortRSC = false;
+  final CollectionReference<JSON> allocsColl = firestore
+      .collection('global')
+      .doc('state')
+      .collection('allocations');
   final Map<String, TextEditingController> controllers = {};
   final Map<String, String> classIdToTeacherNameMap = {};
   final TextEditingController filterStudentMenuController =
@@ -32,6 +36,14 @@ class TermDetailsPageState extends State<TermDetailsPage> {
     (studentId) async =>
         (await firestore.collection('users').doc(studentId).get()),
   );
+  final GenericCache<DocumentSnapshot<JSON>> allocationsCache = GenericCache(
+    (id) async => (await firestore
+        .collection('global')
+        .doc('state')
+        .collection('allocations')
+        .doc(id)
+        .get()),
+  );
   List<(DocumentSnapshot<JSON>, String)> visibleRows = [];
   List<Widget> tabViews = [];
 
@@ -45,6 +57,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
         globalState ??= GlobalState.fromJson(
           (await firestore.collection('global').doc('state').get()).data()!,
         );
+        await allocationsCache.initAll(collection: allocsColl);
         await classesCache.initAll(collection: firestore.collection('classes'));
         await studentsCache.initAll(
           query: firestore
@@ -171,9 +184,21 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   termName: newTermName,
                   termStartDate: oldTerm.termStartDate,
                 );
+                final tmp = globalState!.terms;
+                tmp[currentTabIndex] = newTerm;
+
                 await firestore.collection('global').doc('state').set({
-                  'terms': globalState!.terms..[currentTabIndex] = newTerm,
+                  'terms': tmp.map((t) => t.toJson()),
                 });
+
+                await allocsColl
+                    .doc(newTermName)
+                    .set(
+                      (allocationsCache.registry[newTermName] =
+                              await allocationsCache.get(oldTerm.termName))
+                          .data()!,
+                    );
+                allocationsCache.registry.remove(oldTerm.termName);
 
                 setState(() {});
               },
@@ -213,31 +238,13 @@ class TermDetailsPageState extends State<TermDetailsPage> {
 
               String termName = recursivelyNameNewTerm('Term ${termNum + 2}');
               await studentsCache.initAll();
-              for (final studentEntry in studentsCache.registry.entries) {
-                final student = StudentData.fromJson(
-                  studentEntry.value.data()!,
-                );
-                await firestore
-                    .collection('users')
-                    .doc(studentEntry.key)
-                    .update(
-                      StudentData(
-                        role: student.role,
-                        name: student.name,
-                        email: student.email,
-                        studentContactNo: student.studentContactNo,
-                        parentContactNo: student.parentContactNo,
-                        parentName: student.parentName,
-                        invoiceIds: student.invoiceIds,
-                        sessionCounts: student.sessionCounts
-                          ..add({
-                            for (final clId in student.sessionCounts[0].keys)
-                              clId: 0,
-                          }),
-                      ).toJson(),
-                    );
-                await studentsCache.get(studentEntry.key, bypassCache: true);
-              }
+              await allocsColl
+                  .doc(termName)
+                  .set(
+                    (await allocationsCache.get(
+                      globalState!.terms[currentTabIndex].termName,
+                    )).data()!,
+                  );
 
               await firestore.collection('global').doc('state').update({
                 'terms': [
@@ -309,7 +316,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
+                        SizedBox(
                           width: 230,
                           child: TextField(
                             controller: allocateAllSessionsController,
@@ -358,38 +365,46 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                       "This action will allocate $sc sessions for every student visible in the current view (${visibleRows.length} students). Are you sure you want to continue?",
                                 ),
                               );
+                              final allocData = TermAllocation.fromJson(
+                                (await allocationsCache.get(
+                                  globalState!.terms[currentTabIndex].termName,
+                                )).data()!,
+                              );
                               if (res) {
-                                for (final sd in visibleRows) {
-                                  final oldData = StudentData.fromJson(
-                                    sd.$1.data()!,
+                                final visibleIds = visibleRows.map((r) => r.$2);
+                                for (final clEntry
+                                    in allocData.sessions.entries) {
+                                  final affectedKeys = clEntry.value.keys.where(
+                                    (e) => visibleIds.contains(e),
                                   );
-                                  final newSessionCounts =
-                                      oldData.sessionCounts;
-                                  newSessionCounts[currentTabIndex][sd.$2] = sc;
-                                  await firestore
-                                      .collection('users')
-                                      .doc(sd.$1.id)
-                                      .set(
-                                        StudentData(
-                                          role: oldData.role,
-                                          name: oldData.name,
-                                          email: oldData.email,
-                                          studentContactNo:
-                                              oldData.studentContactNo,
-                                          parentContactNo:
-                                              oldData.parentContactNo,
-                                          invoiceIds: oldData.invoiceIds,
-                                          parentName: oldData.parentName,
-                                          sessionCounts: newSessionCounts,
-                                        ).toJson(),
-                                      );
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(
-                                      context,
-                                    ).showSnackBar(
-                                      SnackBar(content: Text(msg)),
-                                    );
+                                  for (final k in affectedKeys) {
+                                    allocData.sessions[clEntry.key]![k] = sc;
                                   }
+                                }
+
+                                await allocsColl
+                                    .doc(
+                                      globalState!
+                                          .terms[currentTabIndex]
+                                          .termName,
+                                    )
+                                    .set(allocData.toJson());
+                                allocationsCache.registry[globalState!
+                                    .terms[currentTabIndex]
+                                    .termName] = await allocsColl
+                                    .doc(
+                                      globalState!
+                                          .terms[currentTabIndex]
+                                          .termName,
+                                    )
+                                    .get();
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(
+                                    SnackBar(content: Text(msg)),
+                                  );
                                 }
                               } else {
                                 msg = 'Action cancelled.';
@@ -426,11 +441,20 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   height: MediaQuery.of(context).size.height - 190,
                   child: Align(
                     alignment: Alignment.topLeft,
-                    child: TabBarView(
-                      key: ValueKey(
-                        '${filterClassMenuController.text}-${filterStudentMenuController.text}',
+                    child: FutureBuilderTemplate(
+                      future: () async {
+                        return TermAllocation.fromJson(
+                          (await allocationsCache.get(
+                            globalState!.terms[currentTabIndex].termName,
+                          )).data()!,
+                        );
+                      }(),
+                      builder: (context, snapshot) => TabBarView(
+                        key: ValueKey(
+                          '${filterClassMenuController.text}-${filterStudentMenuController.text}',
+                        ),
+                        children: rebuildTabViews(snapshot.data!),
                       ),
-                      children: rebuildTabViews(),
                     ),
                   ),
                 ),
@@ -442,7 +466,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
     );
   }
 
-  List<Widget> rebuildTabViews() {
+  List<Widget> rebuildTabViews(TermAllocation allocData) {
     tabViews.clear();
     for (int i = 0; i < globalState!.terms.length; i++) {
       tabViews.add(
@@ -523,15 +547,17 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     //  numEntriesAdded += 1;
                     visibleRows.add((sd, cd.id));
 
-                    final rowKey = "${entry.key}-$stId";
+                    final String rowData =
+                        "${allocData.sessions[cd.id]?[sd.id] ?? '-'}";
+                    final rowKey = "${entry.key}-$stId-$rowData";
+
                     if (!controllers.containsKey(rowKey)) {
                       controllers[rowKey] = TextEditingController(
-                        text: studentData.sessionCounts[i][entry.key]
-                            .toString(),
+                        text: rowData,
                       );
                     }
                     final r = DataRow(
-                      color: studentData.sessionCounts[i][entry.key] != -1
+                      color: rowData != '-'
                           ? null
                           : WidgetStatePropertyAll(
                               Colors.yellow.withValues(
@@ -568,32 +594,23 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                               );
                               if (controllers[rowKey]!.text.isEmpty) {
                                 msg = 'Action canclled.';
-                                controllers[rowKey]!.text = studentData
-                                    .sessionCounts[currentTabIndex][entry.key]
-                                    .toString();
+                                controllers[rowKey]!.text = rowData;
                               } else if (newInt != null) {
-                                await firestore
-                                    .collection('users')
-                                    .doc(stId)
-                                    .update(
-                                      StudentData(
-                                        role: studentData.role,
-                                        name: studentData.name,
-                                        email: studentData.email,
-                                        studentContactNo:
-                                            studentData.studentContactNo,
-                                        parentContactNo:
-                                            studentData.parentContactNo,
-                                        parentName: studentData.parentName,
-                                        invoiceIds: studentData.invoiceIds,
-                                        sessionCounts: studentData.sessionCounts
-                                          ..[i][entry.key] = newInt,
-                                      ).toJson(),
-                                    );
+                                await allocsColl
+                                    .doc(
+                                      globalState!
+                                          .terms[currentTabIndex]
+                                          .termName,
+                                    )
+                                    .update({'${cd.id}.${sd.id}': newInt});
+                                await allocationsCache.get(
+                                  globalState!.terms[currentTabIndex].termName,
+                                  bypassCache: true,
+                                );
 
                                 msg = 'Updated session count successfully!';
 
-                                //                setState(() {});
+                                setState(() {});
                               } else {
                                 msg =
                                     'Invalid input provided, where only a number was expected. Try again.';

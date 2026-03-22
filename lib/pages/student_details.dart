@@ -1,6 +1,6 @@
 part of axis_dashboard;
 
-class StudentDetailsPage extends StatefulWidget {
+/* class StudentDetailsPage extends StatefulWidget {
   const StudentDetailsPage({super.key});
 
   @override
@@ -572,3 +572,4 @@ class StudentDetailsPageState extends State<StudentDetailsPage> {
             .first;
   }
 }
+ */

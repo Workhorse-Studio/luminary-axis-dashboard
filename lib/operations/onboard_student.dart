@@ -13,13 +13,6 @@ Future<String> onboardStudent(OnboardingStudentData obData) async {
     parentContactNo: obData.parentContactNo,
     parentName: obData.parentContactNo,
     invoiceIds: [],
-
-    sessionCounts: List.generate(
-      gs.terms.length,
-      (_) => {
-        obData.classId: 0,
-      },
-    ),
   );
   return (await firestore.collection('users').add(data.toJson())).id;
 }
