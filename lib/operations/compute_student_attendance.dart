@@ -87,7 +87,6 @@ class StudentAttendanceStore {
         }
       }
     }
-    print(termReports);
 
     for (final attendanceData in sessionsPerTerm) {
       final Map<String, StudentInvoiceData> currentTermInvoices = {};

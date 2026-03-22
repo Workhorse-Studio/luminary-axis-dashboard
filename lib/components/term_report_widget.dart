@@ -1,8 +1,8 @@
 part of axis_dashboard;
 
 class TermReportWidget extends StatefulWidget {
-  final String? teacherId;
-  final int? termIndex;
+  final String teacherId;
+  final int termIndex;
 
   const TermReportWidget({
     required this.teacherId,
@@ -22,7 +22,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
   final GenericCache<DocumentSnapshot<JSON>> classesCache = GenericCache(
     (classId) async => await firestore.collection('classes').doc(classId).get(),
   );
-  TeacherData? teacherData;
+  late TeacherData teacherData;
   GlobalState? globalState;
 
   @override
@@ -32,12 +32,10 @@ class TermReportWidgetState extends State<TermReportWidget> {
         globalState ??= GlobalState.fromJson(
           (await firestore.collection('global').doc('state').get()).data()!,
         );
-        if (widget.teacherId != null) {
-          teacherData = TeacherData.fromJson(
-            (await firestore.collection('users').doc(widget.teacherId!).get())
-                .data()!,
-          );
-        }
+        teacherData = TeacherData.fromJson(
+          (await firestore.collection('users').doc(widget.teacherId!).get())
+              .data()!,
+        );
         await studentAttendanceStore.ensureInit(
           globalState: globalState!,
           classesCache: classesCache,
@@ -46,7 +44,6 @@ class TermReportWidgetState extends State<TermReportWidget> {
         return 0;
       }(),
       builder: (context, snapshot) {
-        print('Y');
         final List<Widget> widgets = [];
 
         bool createWidgetsForReport(int termIndex) {
@@ -153,7 +150,117 @@ class TermReportWidgetState extends State<TermReportWidget> {
           return empty;
         }
 
-        createWidgetsForReport(widget.termIndex ?? globalState!.currentTermNum);
+        Future<({List<DataRow> rows, String className, int colCount})>
+        generateReportContent(String classId) async {
+          final List<DataRow> rows = [];
+          final cd = ClassData.fromJson(
+            (await classesCache.get(classId)).data()!,
+          );
+          final Map<String, List<String>> studentRecords = {};
+
+          for (final attEntry in cd.attendance.entries) {
+            if (monthKeyToTermIndex(globalState!, attEntry.key) == termNum) {
+              for (final students in attEntry.value.entries) {
+                studentRecords.ensureKey(students.key, list: <String>[]);
+                studentRecords[students.key]!.add(
+                  students.value.isPresent
+                      ? attEntry.key.substring(0, attEntry.key.length - 5)
+                      : 'X',
+                );
+              }
+            }
+          }
+
+          final int maxSessionsNum = studentRecords.values.fold(
+            0,
+            (a, b) => max(a, b.length),
+          );
+
+          for (final studentEntry in studentRecords.entries) {
+            final List<DataCell> fillerCells = [];
+
+            if (studentEntry.value.length < maxSessionsNum) {
+              for (
+                int i = 0;
+                i < maxSessionsNum - studentEntry.value.length;
+                i++
+              ) {
+                fillerCells.add(
+                  DataCell(
+                    Text(
+                      ' ',
+                      style: body2,
+                    ),
+                  ),
+                );
+              }
+            }
+
+            rows.add(
+              DataRow(
+                cells: [
+                  DataCell(
+                    Row(
+                      children: [
+                        FutureBuilderTemplate(
+                          future: (() async => (StudentData.fromJson(
+                            (await studentCache.get(
+                              studentEntry.key,
+                            )).data()!,
+                          )).name)(),
+                          builder: (_, snapshot) => Text(
+                            "${snapshot.data}",
+                            style: body2,
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: LinearProgressIndicator(
+                            value: 0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      classId.substring(0, 4),
+                      style: body2,
+                    ),
+                  ),
+                  ...fillerCells,
+                  for (final str in studentEntry.value)
+                    DataCell(
+                      Text(
+                        str,
+                        style: body2,
+                      ),
+                    ),
+                  DataCell(
+                    Text(
+                      '0',
+                      style: body2,
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      '0',
+                      style: body2,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          return (
+            rows: rows,
+            className: cd.name,
+            colCount: maxSessionsNum,
+          );
+        }
+
+        // createWidgetsForReport(widget.termIndex);
         /* if (createWidgetsForReport(
           widget.termIndex ?? globalState!.currentTermNum,
         )) {
@@ -166,38 +273,63 @@ class TermReportWidgetState extends State<TermReportWidget> {
         } */
         return Padding(
           padding: const EdgeInsets.only(left: 40, right: 40),
-          child: teacherData == null
-              ? SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 40),
-                      ...widgets,
-                      const SizedBox(height: 80),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    const SizedBox(height: 40),
+          child: Column(
+            children: [
+              const SizedBox(height: 40),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 80,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsetsGeometry.only(left: 40),
-                          child: Text(
-                            teacherData!.name,
-                            style: heading1,
-                          ),
-                        ),
+              SizedBox(
+                width: double.infinity,
+                height: 80,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsetsGeometry.only(left: 40),
+                    child: Text(
+                      teacherData.name,
+                      style: heading1,
+                    ),
+                  ),
+                ),
+              ),
+              for (final clId in teacherData.classIds)
+                FutureBuilderTemplate(
+                  future: generateReportContent(clId),
+                  builder: (context, snapshot) => AxisCard(
+                    header: snapshot.data!.className,
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    height: null,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: [
+                          for (final c in [
+                            'Name',
+                            'Level',
+                            ...List<String>.generate(
+                              snapshot.data!.colCount,
+                              (_) => 'Date',
+                            ),
+                            'Initial Count',
+                            'Final Count',
+                          ])
+                            DataColumn(
+                              columnWidth: IntrinsicColumnWidth(flex: 1),
+                              label: Text(
+                                c.toString(),
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                        rows: snapshot.data!.rows,
                       ),
                     ),
-                    ...widgets,
-                    const SizedBox(height: 80),
-                  ],
+                  ),
                 ),
+              const SizedBox(height: 80),
+            ],
+          ),
         );
       },
     );
