@@ -18,6 +18,9 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
   final Map<String, bool> isClassSelected = {};
 
   TextEditingController teacherNameController = TextEditingController(text: '');
+  TextEditingController teacherEmailController = TextEditingController(
+    text: '',
+  );
   DocumentSnapshot<JSON>? teacherData;
   bool hasInit = false;
 
@@ -26,7 +29,7 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
     return Center(
       child: Container(
         width: 500,
-        height: MediaQuery.of(context).size.height * 0.6,
+        height: MediaQuery.of(context).size.height * 0.72,
         foregroundDecoration: dialogForegroundDecoration,
         child: Scaffold(
           backgroundColor: AxisColors.blackPurple50,
@@ -70,78 +73,94 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                   }
                   return hasInit;
                 }(),
-                builder: (context, snapshot) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Teacher Name',
-                      style: heading3,
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: teacherNameController,
-                      style: body2,
-                    ),
-                    const SizedBox(height: 30),
+                builder: (context, snapshot) => SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Teacher Name',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: teacherNameController,
+                        style: body2,
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Teacher Email',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: teacherEmailController,
+                        style: body2,
+                      ),
+                      const SizedBox(height: 30),
 
-                    Text(
-                      'Classes Assigned',
-                      style: heading3,
-                    ),
-                    const SizedBox(height: 6),
-                    ...[
-                      for (final classEntry
-                          in classesCache.registry.entries) ...[
-                        Row(
-                          children: [
-                            Checkbox(
-                              key: ValueKey(isClassSelected[classEntry.key]),
-                              value: isClassSelected[classEntry.key],
-                              onChanged: (isSelected) async {
-                                if (isSelected != null) {
-                                  setState(() {
-                                    isClassSelected[classEntry.key] =
-                                        isSelected;
-                                  });
-                                }
-                              },
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              ClassData.fromJson(classEntry.value.data()!).name,
-                              style: body2,
-                            ),
-                          ],
-                        ),
+                      Text(
+                        'Classes Assigned',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 6),
+                      ...[
+                        for (final classEntry
+                            in classesCache.registry.entries) ...[
+                          Row(
+                            children: [
+                              Checkbox(
+                                key: ValueKey(isClassSelected[classEntry.key]),
+                                value: isClassSelected[classEntry.key],
+                                onChanged: (isSelected) async {
+                                  if (isSelected != null) {
+                                    setState(() {
+                                      isClassSelected[classEntry.key] =
+                                          isSelected;
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                ClassData.fromJson(
+                                  classEntry.value.data()!,
+                                ).name,
+                                style: body2,
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
+                      const SizedBox(height: 30),
+                      const SizedBox(height: 50),
+                      AxisButton.text(
+                        label: 'Save',
+                        onPressed: () async {
+                          if (teacherNameController.text != '' &&
+                              teacherEmailController.text != '') {
+                            Navigator.of(context).pop(
+                              TeacherData(
+                                name: teacherNameController.text,
+                                role: 'teacher',
+                                email: teacherEmailController.text,
+                                classIds: isClassSelected.entries
+                                    .where((e) => e.value)
+                                    .map((e) => e.key)
+                                    .toList(),
+                                invoiceIds: teacherData != null
+                                    ? TeacherData.fromJson(
+                                        teacherData!.data()!,
+                                      ).invoiceIds
+                                    : {},
+                              ),
+                            );
+                          } else {
+                            Navigator.of(context).pop(null);
+                          }
+                        },
+                      ),
                     ],
-                    const SizedBox(height: 30),
-                    const SizedBox(height: 50),
-                    AxisButton.text(
-                      label: 'Save',
-                      onPressed: () async {
-                        if (teacherNameController.text != '') {
-                          Navigator.of(context).pop(
-                            TeacherData(
-                              name: teacherNameController.text,
-                              role: 'teacher',
-                              classIds: isClassSelected.entries
-                                  .where((e) => e.value)
-                                  .map((e) => e.key)
-                                  .toList(),
-                              invoiceIds: teacherData != null
-                                  ? TeacherData.fromJson(
-                                      teacherData!.data()!,
-                                    ).invoiceIds
-                                  : {},
-                            ),
-                          );
-                        } else {
-                          Navigator.of(context).pop(null);
-                        }
-                      },
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
