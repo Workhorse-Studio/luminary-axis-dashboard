@@ -45,11 +45,42 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   Widget? shownFrame;
 
+  int year = DateTime.now().year;
+
   @override
   Widget build(BuildContext context) {
     return Navbar(
       pageTitle: 'Billings',
       actions: [
+        if (currentTabIndex == 1) ...[
+          AxisButton(
+            width: 60,
+            height: 60,
+            onPressed: () => setState(() {
+              year -= 1;
+            }),
+            child: Icon(
+              Icons.chevron_left,
+              size: 40,
+            ),
+          ),
+          Text(
+            "$year",
+            style: heading3,
+          ),
+          AxisButton(
+            width: 60,
+            height: 60,
+            onPressed: () => setState(() {
+              year += 1;
+            }),
+            child: Icon(
+              Icons.chevron_right,
+              size: 40,
+            ),
+          ),
+        ],
+        const SizedBox(width: 40),
         AxisButton.text(
           icon: Icons.refresh,
           label: 'Refresh Invoices',
@@ -404,8 +435,6 @@ class InvoicingPageState extends State<InvoicingPage> {
   }
 
   List<String> generateMonthIds() {
-    int currentYear = DateTime.now().year;
-    int startYear = 2026;
     final List<String> res = [];
     void generateForYear(int year) {
       for (int i = 1; i < 13; i++) {
@@ -413,9 +442,8 @@ class InvoicingPageState extends State<InvoicingPage> {
       }
     }
 
-    for (int i = startYear; i <= currentYear; i++) {
-      generateForYear(i);
-    }
+    generateForYear(year);
+
     return res;
   }
 
