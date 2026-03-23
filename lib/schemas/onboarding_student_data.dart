@@ -5,8 +5,7 @@ class OnboardingStudentData extends JSONSerialisable {
   final String studentContactNo;
   final String parentName;
   final String parentContactNo;
-  final String teacherId;
-  final String classId;
+  final Map<String, String> classIdToTeacherId;
   final String email;
 
   const OnboardingStudentData({
@@ -14,9 +13,8 @@ class OnboardingStudentData extends JSONSerialisable {
     required this.studentName,
     required this.parentContactNo,
     required this.parentName,
-    required this.teacherId,
     required this.email,
-    required this.classId,
+    required this.classIdToTeacherId,
   });
 
   OnboardingStudentData.fromJson(JSON json)
@@ -25,8 +23,9 @@ class OnboardingStudentData extends JSONSerialisable {
       parentName = json['parentName'] as String,
       email = json['email'] as String,
       parentContactNo = json['parentContactNo'] as String,
-      teacherId = json['teacherId'] as String,
-      classId = json['classId'] as String;
+      classIdToTeacherId = (json['classIdToTeacherId'] as Map).map(
+        (k, v) => MapEntry(k as String, v as String),
+      );
 
   @override
   JSON toJson() => {
@@ -35,7 +34,6 @@ class OnboardingStudentData extends JSONSerialisable {
     'parentName': parentName,
     'email': email,
     'parentContactNo': parentContactNo,
-    'teacherId': teacherId,
-    'classId': classId,
+    'classIdToTeacherId': classIdToTeacherId,
   };
 }

@@ -10,8 +10,13 @@ class OnboardingPage extends StatefulWidget {
 class OnboardingPageState extends State<OnboardingPage> {
   List<QueryDocumentSnapshot<JSON>> classesDocs = [];
   List<QueryDocumentSnapshot<JSON>> teachersDocs = [];
-  QueryDocumentSnapshot<JSON>? selectedTeacher;
-  QueryDocumentSnapshot<JSON>? selectedClass;
+  List<
+    ({
+      QueryDocumentSnapshot<JSON> teacherData,
+      QueryDocumentSnapshot<JSON> classData,
+    })
+  >
+  selections = [];
 
   final TextEditingController nameController = TextEditingController(),
       hpController = TextEditingController(),
@@ -132,72 +137,56 @@ class OnboardingPageState extends State<OnboardingPage> {
                   ),
                   const SizedBox(height: 15),
                   Text(
-                    "Select your teacher",
+                    "Select your classes",
                     style: heading3.copyWith(
                       color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  RadioGroup<QueryDocumentSnapshot<JSON>>(
-                    groupValue: selectedTeacher,
-                    onChanged: (selected) => setState(() {
-                      selected != null ? selectedTeacher = selected : null;
-                    }),
-                    child: Column(
-                      children: [
-                        for (final td in teachersDocs)
-                          Row(
-                            children: [
-                              Radio(
-                                value: td,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                TeacherData.fromJson(td.data()).name,
-                                style: body2,
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
 
-                  const SizedBox(height: 15),
-                  Text(
-                    'Select your class',
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  RadioGroup(
-                    groupValue: selectedClass,
-                    onChanged: (selected) => selected != null
-                        ? setState(() {
-                            selectedClass = selected;
-                          })
-                        : null,
-                    child: Column(
-                      children: [
-                        for (final cl in classesDocs) ...[
-                          const SizedBox(height: 5),
+                  ...[
+                    for (final tData in teachersDocs) ...[
+                      for (final cData in classesDocs.where(
+                        (cd) => TeacherData.fromJson(
+                          tData.data(),
+                        ).classIds.contains(cd.id),
+                      ))
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: selections.any(
+                                (s) =>
+                                    s.classData.id == cData.id &&
+                                    s.teacherData.id == tData.id,
+                              ),
+                              onChanged: (sel) {
+                                if (sel != null) {
+                                  if (sel) {
+                                    selections.add((
+                                      classData: cData,
+                                      teacherData: tData,
+                                    ));
+                                  } else {
+                                    selections.removeWhere(
+                                      (s) =>
+                                          s.classData.id == cData.id &&
+                                          s.teacherData.id == tData.id,
+                                    );
+                                  }
+                                  setState(() {});
+                                }
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "${ClassData.fromJson(cData.data()).name} by ${TeacherData.fromJson(tData.data()).name}",
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ],
 
-                          Row(
-                            children: [
-                              Radio(
-                                value: cl,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                ClassData.fromJson(cl.data()).name,
-                                style: body2,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 15),
 
                   const SizedBox(height: 30),
@@ -209,8 +198,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                           hpController.text != '' &&
                           parentsHpController.text != '' &&
                           parentsNameController.text != '' &&
-                          selectedClass != null &&
-                          selectedTeacher != null) {
+                          selections.isNotEmpty) {
                         await firestore
                             .collection('global')
                             .doc('state')
@@ -222,8 +210,10 @@ class OnboardingPageState extends State<OnboardingPage> {
                                 email: emailController.text,
                                 parentContactNo: parentsNameController.text,
                                 parentName: parentsHpController.text,
-                                teacherId: selectedTeacher!.id,
-                                classId: selectedClass!.id,
+                                classIdToTeacherId: {
+                                  for (final sel in selections)
+                                    sel.classData.id: sel.teacherData.id,
+                                },
                               ).toJson(),
                             );
                         msg =

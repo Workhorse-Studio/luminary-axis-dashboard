@@ -180,50 +180,29 @@ class DashboardPageState extends State<DashboardPage> {
                                                     const SizedBox(height: 10),
                                                     FutureBuilderTemplate(
                                                       future: () async {
-                                                        return (await firestore
-                                                                .collection(
-                                                                  'classes',
-                                                                )
-                                                                .doc(
-                                                                  OnboardingStudentData.fromJson(
-                                                                    poDoc
-                                                                        .data(),
-                                                                  ).classId,
-                                                                )
-                                                                .get())
-                                                            .data()!;
+                                                        final obData =
+                                                            OnboardingStudentData.fromJson(
+                                                              poDoc.data(),
+                                                            );
+
+                                                        return [
+                                                          for (final entry
+                                                              in obData
+                                                                  .classIdToTeacherId
+                                                                  .entries)
+                                                            "${ClassData.fromJson((await classesCache.get(entry.key)).data()!).name} by ${TeacherData.fromJson((await teachersCache.get(entry.value)).data()!).name}",
+                                                        ].join(', ');
                                                       }(),
                                                       builder:
                                                           (
                                                             context,
                                                             snapshot,
                                                           ) => Text(
-                                                            ClassData.fromJson(
-                                                              snapshot.data!,
-                                                            ).name,
+                                                            snapshot.data!,
                                                             style: heading3,
                                                           ),
                                                     ),
                                                     const SizedBox(height: 10),
-                                                    FutureBuilderTemplate(
-                                                      future: () async {
-                                                        return (await teachersCache.get(
-                                                          OnboardingStudentData.fromJson(
-                                                            poDoc.data(),
-                                                          ).teacherId,
-                                                        )).data()!;
-                                                      }(),
-                                                      builder:
-                                                          (
-                                                            context,
-                                                            snapshot,
-                                                          ) => Text(
-                                                            TeacherData.fromJson(
-                                                              snapshot.data!,
-                                                            ).name,
-                                                            style: heading3,
-                                                          ),
-                                                    ),
 
                                                     const SizedBox(height: 20),
                                                     AxisButton.text(
