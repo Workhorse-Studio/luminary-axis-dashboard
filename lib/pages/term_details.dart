@@ -250,7 +250,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     ).studentIds)
                       if (!StudentData.fromJson(
                         (await studentsCache.get(studentId)).data()!,
-                      ).withdrawn)
+                      ).withdrawn[cl.key]!)
                         studentId: -1,
                   },
               };
@@ -555,7 +555,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         filterStudentMenuController.text != studentData.name) {
                       continue;
                     }
-                    if (studentData.withdrawn) continue;
+                    if (studentData.withdrawn[cd.id]!) continue;
                     //  numEntriesAdded += 1;
                     visibleRows.add((sd, cd.id));
 

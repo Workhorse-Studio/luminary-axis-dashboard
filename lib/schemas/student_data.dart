@@ -10,7 +10,7 @@ class StudentData extends JSONSerialisable {
   final String parentName;
   final String parentContactNo;
   final String email;
-  final bool withdrawn;
+  final Map<String, bool> withdrawn;
 
   const StudentData({
     required this.role,
@@ -30,7 +30,9 @@ class StudentData extends JSONSerialisable {
       email = json['email'] as String,
       parentName = json['parentName'] as String,
       parentContactNo = json['parentContactNo'] as String,
-      withdrawn = json['withdrawn'] as bool,
+      withdrawn = (json['withdrawn'] as Map).map(
+        (k, v) => MapEntry(k as String, v as bool),
+      ),
       name = json['name'] as String;
 
   @override
