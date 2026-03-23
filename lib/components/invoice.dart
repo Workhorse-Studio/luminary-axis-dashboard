@@ -126,6 +126,13 @@ class InvoiceWidget extends StatelessWidget {
                             body3.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
+                      if (teacherInvoiceData != null)
+                        Text(
+                          teacherInvoiceData!.teacherName,
+                          style: handleFonts(
+                            body3.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       const SizedBox(height: 5),
                       if (studentInvoiceData != null)
                         Text(
@@ -184,6 +191,15 @@ class InvoiceWidget extends StatelessWidget {
                             ),
                           ),
                         ),
+                      if (teacherInvoiceData != null)
+                        Text(
+                          '# ${teacherInvoiceData!.invoiceId}',
+                          style: handleFonts(
+                            heading3.copyWith(
+                              color: AxisColors.blackPurple50,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 40),
                       Text(
                         'Balance Due',
@@ -202,12 +218,36 @@ class InvoiceWidget extends StatelessWidget {
                             ),
                           ),
                         ),
+                      if (teacherInvoiceData != null)
+                        Text(
+                          'SGD ${teacherInvoiceData!.amtDue.toStringAsFixed(2)}',
+                          style: handleFonts(
+                            body3.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 100),
                       if (studentInvoiceData != null) ...[
                         for (final line in [
                           'Invoice Date: ${studentInvoiceData!.invoiceDateFormatted.padLeft(40, ' ')}',
                           'Terms:    ${studentInvoiceData!.terms.padLeft(40, ' ')}',
                           'Due Date: ${studentInvoiceData!.dueDateFormatted.padLeft(40, ' ')}',
+                        ]) ...[
+                          Text(
+                            line,
+                            style: handleFonts(body3),
+                            textAlign: TextAlign.right,
+                          ),
+                          const SizedBox(height: 5),
+                        ],
+                      ],
+                      if (teacherInvoiceData != null) ...[
+                        for (final line in [
+                          'Invoice Date: ${teacherInvoiceData!.invoiceDateFormatted.padLeft(40, ' ')}',
+                          'Terms:    ${teacherInvoiceData!.terms.padLeft(40, ' ')}',
+                          'Paid Date: ${teacherInvoiceData!.paidDateFormatted.padLeft(40, ' ')}',
                         ]) ...[
                           Text(
                             line,

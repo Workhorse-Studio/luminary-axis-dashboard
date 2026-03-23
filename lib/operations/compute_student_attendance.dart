@@ -3,6 +3,8 @@ part of axis_dashboard;
 class StudentAttendanceStore {
   /// [ { studentId: { classId: sessionsAttended } } ], with array indexed by term num
   final List<Map<String, Map<String, int>>> sessionsPerTerm = [];
+
+  /// [ { studentId: InvoiceData } ], with array indexed by term num
   final List<Map<String, StudentInvoiceData>> invoicesData = [];
 
   /// [ { studentId: { classId: [ attendedDate / null ] } } ]

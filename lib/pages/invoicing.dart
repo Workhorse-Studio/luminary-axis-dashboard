@@ -63,6 +63,12 @@ class InvoicingPageState extends State<InvoicingPage> {
                 studentCache: studentCache,
               );
 
+              await studentAttendanceStore.run(
+                globalState: globalState!,
+                classesCache: classesCache,
+                studentCache: studentCache,
+              );
+
               /* for (final studentEntry in studentCache.registry.entries) {
                 DocumentSnapshot<JSON>? oldInvoiceSnapshot;
                 StudentInvoiceData? oldInvoiceData;
@@ -184,6 +190,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 }
               }
             */
+              setState(() {});
             } else {
               await fetchUpdatedTeacherInvoices(forceAll: true);
             }
@@ -370,7 +377,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     ),
                   ),
                   ...generateCellsForInvoices(
-                    studentData: StudentData.fromJson(student.value.data()!),
+                    studentData: student.value,
                   ),
                 ],
               ),
@@ -413,7 +420,7 @@ class InvoicingPageState extends State<InvoicingPage> {
   }
 
   List<DataCell> generateCellsForInvoices({
-    StudentData? studentData,
+    DocumentSnapshot<JSON>? studentData,
     DocumentSnapshot<JSON>? teacherData,
   }) {
     final List<DataCell> res = [];
@@ -421,188 +428,164 @@ class InvoicingPageState extends State<InvoicingPage> {
       for (int i = 0; i < globalState!.terms.length; i++) {
         res.add(
           DataCell(
-            studentData.invoiceIds.isNotEmpty &&
-                    studentData.invoiceIds[i] != null
-                ? FutureBuilderTemplate(
-                    future: () async {
-                      return (
-                        amt: StudentInvoiceData.fromJson(
-                          (await firestore
-                                  .collection('global')
-                                  .doc('archives')
-                                  .collection('invoices')
-                                  .doc(studentData.invoiceIds[i])
-                                  .get())
-                              .data()!,
-                        ).amtPayable,
-                        invoice: StudentInvoiceData.fromJson(
-                          (await firestore
+            Center(
+              child: SizedBox(
+                width: 380,
+                height: 80,
+                child: Row(
+                  children:
+                      studentAttendanceStore.invoicesData[i].containsKey(
+                        studentData.id,
+                      )
+                      ? [
+                          const SizedBox(width: 10),
+                          Text(
+                            "\$${studentAttendanceStore.invoicesData[i][studentData.id]!.amtPayable.toStringAsFixed(2)}",
+                            style: body2,
+                          ),
+                          const Spacer(),
+                          AxisButton.text(
+                            width: 100,
+                            icon: Icons.edit,
+                            label: 'Edit',
+                            onPressed: () async {
+                              final studentInvData = studentAttendanceStore
+                                  .invoicesData[i][studentData.id]!;
+
+                              if (context.mounted) {
+                                await showDialog(
+                                  context: context,
+                                  builder: (_) => EditableInvoiceDialog(
+                                    studentInvoiceData: studentInvData,
+                                    teacherInvoiceData: null,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+
+                          AxisButton(
+                            width: 80,
+                            height: 30,
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(4),
+                                color: (switch (studentAttendanceStore
+                                    .invoicesData[i][studentData.id]!
+                                    .invoiceStatus) {
+                                  InvoiceStatus.ready => Colors.amber,
+                                  InvoiceStatus.paid => Colors.green,
+                                  InvoiceStatus.missed => Colors.red,
+                                  InvoiceStatus.sent => Colors.blue,
+                                }).withValues(alpha: 0.4),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  studentAttendanceStore
+                                      .invoicesData[i][studentData.id]!
+                                      .invoiceStatus
+                                      .name,
+                                  style: body2.copyWith(
+                                    color: AxisColors.blackPurple50,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          AxisButton.text(
+                            width: 100,
+                            icon: Icons.send,
+                            label: 'Send',
+                            onPressed: () async {
+                              final ExportDelegate exportDelegate =
+                                  ExportDelegate();
+                              shownFrame = pdf.ExportFrame(
+                                frameId: studentAttendanceStore
+                                    .invoicesData[i][studentData.id]!
+                                    .invoiceId,
+                                exportDelegate: exportDelegate,
+                                child: InvoiceWidget(
+                                  showFonts: false,
+                                  studentInvoiceData: studentAttendanceStore
+                                      .invoicesData[i][studentData.id]!,
+                                  teacherInvoiceData: null,
+                                  total: studentAttendanceStore
+                                      .invoicesData[i][studentData.id]!
+                                      .amtPayable,
+                                ),
+                              );
+
+                              setState(() {});
+
+                              await WidgetsBinding.instance.endOfFrame;
+
+                              // export the frame to a PDF Document
+                              final pdfDoc = await exportDelegate
+                                  .exportToPdfDocument(
+                                    studentAttendanceStore
+                                        .invoicesData[i][studentData.id]!
+                                        .invoiceId,
+                                  );
+                              final file = web.File(
+                                [
+                                  (await pdfDoc.document.save()).buffer.toJS
+                                      as JSAny,
+                                ].toJS,
+                                'invoice.pdf',
+                              );
+                              final message = Message()
+                                ..from = Address(
+                                  'siddharth.chitikela@gmail.com',
+                                )
+                                ..recipients = [
+                                  'siddharth.personal0@gmail.com',
+                                ]
+                                ..subject = 'Hello!'
+                                ..text = 'Test 1\n2\n3'
+                              /* ..attachments.add(
+                                      FileAttachment(file),
+                                    ) */
+                              ;
+
+                              try {
+                                // Send the message
+                                final sendReport = await send(
+                                  message,
+                                  gmail(
+                                    'siddharth.chitikela@gmail.com',
+                                    appPassword,
+                                  ),
+                                );
+                                print(
+                                  'Message sent: ' + sendReport.toString(),
+                                );
+                              } on MailerException catch (e) {
+                                print(
+                                  'Message not sent. \n${e.toString()}',
+                                );
+                                for (var problem in e.problems) {
+                                  print(
+                                    'Problem: ${problem.code}: ${problem.msg}',
+                                  );
+                                }
+                              }
+                              await firestore
                                   .collection('global')
                                   .doc('archives')
                                   .collection('invoices')
                                   .doc(
-                                    studentData.invoiceIds[i],
+                                    studentAttendanceStore
+                                        .invoicesData[i][studentData.id]!
+                                        .invoiceId,
                                   )
-                                  .get())
-                              .data()!,
-                        ),
-                      );
-                    }(),
-                    builder: (_, snapshot) => Center(
-                      child: SizedBox(
-                        width: 380,
-                        height: 80,
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 10),
-                            Text(
-                              "\$${snapshot.data!.amt.toStringAsFixed(2)}",
-                              style: body2,
-                            ),
-                            const Spacer(),
-                            if (studentData.invoiceIds.isNotEmpty &&
-                                studentData.invoiceIds[i] != null) ...[
-                              AxisButton.text(
-                                width: 100,
-                                icon: Icons.edit,
-                                label: 'Edit',
-                                onPressed: () async {
-                                  final studentInvData =
-                                      StudentInvoiceData.fromJson(
-                                        (await firestore
-                                                .collection('global')
-                                                .doc('archives')
-                                                .collection('invoices')
-                                                .doc(
-                                                  studentData.invoiceIds[i],
-                                                )
-                                                .get())
-                                            .data()!,
-                                      );
-
-                                  if (context.mounted) {
-                                    await showDialog(
-                                      context: context,
-                                      builder: (_) => EditableInvoiceDialog(
-                                        studentInvoiceData: studentInvData,
-                                        teacherInvoiceData: null,
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-
-                              AxisButton(
-                                width: 80,
-                                height: 30,
-                                child: Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(4),
-                                    color: (switch (snapshot
-                                        .data!
-                                        .invoice
-                                        .invoiceStatus) {
-                                      InvoiceStatus.ready => Colors.amber,
-                                      InvoiceStatus.paid => Colors.green,
-                                      InvoiceStatus.missed => Colors.red,
-                                      InvoiceStatus.sent => Colors.blue,
-                                    }).withValues(alpha: 0.4),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      snapshot.data!.invoice.invoiceStatus.name,
-                                      style: body2.copyWith(
-                                        color: AxisColors.blackPurple50,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              AxisButton.text(
-                                width: 100,
-                                icon: Icons.send,
-                                label: 'Send',
-                                onPressed: () async {
-                                  final ExportDelegate exportDelegate =
-                                      ExportDelegate();
-                                  shownFrame = pdf.ExportFrame(
-                                    frameId: snapshot.data!.invoice.invoiceId,
-                                    exportDelegate: exportDelegate,
-                                    child: InvoiceWidget(
-                                      showFonts: false,
-                                      studentInvoiceData:
-                                          snapshot.data!.invoice,
-                                      teacherInvoiceData: null,
-                                      total: snapshot.data!.invoice.amtPayable,
-                                    ),
-                                  );
-
-                                  setState(() {});
-
-                                  await WidgetsBinding.instance.endOfFrame;
-
-                                  // export the frame to a PDF Document
-                                  final pdfDoc = await exportDelegate
-                                      .exportToPdfDocument(
-                                        snapshot.data!.invoice.invoiceId,
-                                      );
-                                  final file = web.File(
-                                    [
-                                      (await pdfDoc.document.save()).buffer.toJS
-                                          as JSAny,
-                                    ].toJS,
-                                    'invoice.pdf',
-                                  );
-                                  final message = Message()
-                                    ..from = Address(
-                                      'siddharth.chitikela@gmail.com',
-                                    )
-                                    ..recipients = [
-                                      'siddharth.personal0@gmail.com',
-                                    ]
-                                    ..subject = 'Hello!'
-                                    ..text = 'Test 1\n2\n3'
-                                  /* ..attachments.add(
-                                      FileAttachment(file),
-                                    ) */
-                                  ;
-
-                                  try {
-                                    // Send the message
-                                    final sendReport = await send(
-                                      message,
-                                      gmail(
-                                        'siddharth.chitikela@gmail.com',
-                                        appPassword,
-                                      ),
-                                    );
-                                    print(
-                                      'Message sent: ' + sendReport.toString(),
-                                    );
-                                  } on MailerException catch (e) {
-                                    print(
-                                      'Message not sent. \n${e.toString()}',
-                                    );
-                                    for (var problem in e.problems) {
-                                      print(
-                                        'Problem: ${problem.code}: ${problem.msg}',
-                                      );
-                                    }
-                                  }
-                                  await firestore
-                                      .collection('global')
-                                      .doc('archives')
-                                      .collection('invoices')
-                                      .doc(snapshot.data!.invoice.invoiceId)
-                                      .update({
-                                        'invoiceStatus':
-                                            InvoiceStatus.sent.name,
-                                      });
-                                  shownFrame = null;
-                                  setState(() {});
-                                  /* final blob = web.Blob(
+                                  .update({
+                                    'invoiceStatus': InvoiceStatus.sent.name,
+                                  });
+                              shownFrame = null;
+                              setState(() {});
+                              /* final blob = web.Blob(
                                     [
                                       (await pdf.document.save()).buffer.toJS
                                           as JSAny,
@@ -619,46 +602,44 @@ class InvoicingPageState extends State<InvoicingPage> {
                                     ..download = 'invoice.pdf';
                                   web.document.body!.append(anchor);
                                   anchor.click(); */
-                                },
-                              ),
-                              Offstage(
-                                child: frames[snapshot.data!.invoice.invoiceId],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                : Text(''),
-            onTap: () async {
-              final studentInvData = StudentInvoiceData.fromJson(
-                (await firestore
-                        .collection('global')
-                        .doc('archives')
-                        .collection('invoices')
-                        .doc(studentData.invoiceIds[i])
-                        .get())
-                    .data()!,
-              );
+                            },
+                          ),
+                        ]
+                      : [
+                          Text(
+                            'No Invoice',
+                            style: body2,
+                          ),
+                        ],
+                ),
+              ),
+            ),
+            onTap:
+                studentAttendanceStore.invoicesData[i].containsKey(
+                  studentData.id,
+                )
+                ? () async {
+                    final studentInvData =
+                        studentAttendanceStore.invoicesData[i][studentData.id]!;
 
-              if (context.mounted) {
-                await showDialog(
-                  context: context,
-                  builder: (_) => Center(
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.7,
-                      height: MediaQuery.of(context).size.height * 0.85,
-                      child: InvoiceWidget(
-                        studentInvoiceData: studentInvData,
-                        teacherInvoiceData: null,
-                        total: studentInvData.amtPayable,
-                      ),
-                    ),
-                  ),
-                );
-              }
-            },
+                    if (context.mounted) {
+                      await showDialog(
+                        context: context,
+                        builder: (_) => Center(
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.7,
+                            height: MediaQuery.of(context).size.height * 0.85,
+                            child: InvoiceWidget(
+                              studentInvoiceData: studentInvData,
+                              teacherInvoiceData: null,
+                              total: studentInvData.amtPayable,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                : null,
           ),
         );
       }
@@ -688,7 +669,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                               children: [
                                 TextSpan(
                                   text:
-                                      "\$${TeacherPayout(classToNumSessionsMap: sessionsMap[teacherData.id]![monthId]!).calculateFinalPayout(sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)).toStringAsFixed(2)}",
+                                      "\$${TeacherPayout.calculateFinalPayout(sessionsMap[teacherData.id]![monthId]!.values.fold(0, (a, b) => a + b)).toStringAsFixed(2)}",
                                 ),
                               ],
                             ),
@@ -706,26 +687,20 @@ class InvoicingPageState extends State<InvoicingPage> {
                   )
                 : Text(''),
             onTap: () async {
-              /* final studentInvData = StudentInvoiceData.fromJson(
+              final teacherInvData = TeacherInvoiceData.fromJson(
                 (await firestore
                         .collection('global')
                         .doc('archives')
                         .collection('invoices')
-                        .doc(studentData.invoiceIds[i])
+                        .doc(
+                          TeacherData.fromJson(
+                            teacherData!.data()!,
+                          ).invoiceIds[monthId],
+                        )
                         .get())
                     .data()!,
               );
-              final teacherInvData = teacherData != null
-                  ? TeacherInvoiceData.fromJson(
-                      (await firestore
-                              .collection('global')
-                              .doc('archives')
-                              .collection('invoices')
-                              .doc(teacherData.invoiceIds[i])
-                              .get())
-                          .data()!,
-                    )
-                  : null;
+
               if (context.mounted) {
                 await showDialog(
                   context: context,
@@ -734,14 +709,14 @@ class InvoicingPageState extends State<InvoicingPage> {
                       width: MediaQuery.of(context).size.width * 0.7,
                       height: MediaQuery.of(context).size.height * 0.85,
                       child: InvoiceWidget(
-                        studentInvoiceData: studentInvData,
+                        studentInvoiceData: null,
                         teacherInvoiceData: teacherInvData,
-                        total: studentInvData.amtPayable,
+                        total: teacherInvData.amtDue,
                       ),
                     ),
                   ),
                 );
-              } */
+              }
             },
           ),
         );
@@ -775,6 +750,39 @@ class InvoicingPageState extends State<InvoicingPage> {
               newSessions[teacherEntry.key]![monthId]![clId]! +
               attEntry.value.values.where((a) => a.isPresent).length;
         }
+      }
+      for (final monthEntry in newSessions[teacherEntry.key]!.entries) {
+        final docRef = firestore
+            .collection('global')
+            .doc('archives')
+            .collection('invoices')
+            .doc();
+        final int totNumSess = newSessions[teacherEntry.key]!.values.fold(
+          0,
+          (a, b) => a + b.values.fold(0, (c, d) => c + d),
+        );
+        final double rate = TeacherPayout.calculateRate(totNumSess);
+        final double payout = rate * totNumSess;
+        await docRef.set(
+          TeacherInvoiceData(
+            invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
+            address: '',
+            amtDue: payout,
+            paidDateFormatted: '',
+            invoiceStatus: InvoiceStatus.ready,
+            entries: [
+              for (final e in monthEntry.value.entries)
+                (amt: e.value * rate, rate: rate, qty: e.value, desc: e.key),
+            ],
+            invoiceId: docRef.id,
+            adminName: 'Jevan',
+            teacherName: teacherData.name,
+            terms: 'Custom',
+          ).toJson(),
+        );
+        await firestore.collection('users').doc(teacherEntry.key).update({
+          'invoiceIds.${monthEntry.key}': docRef.id,
+        });
       }
     }
     sessionsMap
