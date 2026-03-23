@@ -71,10 +71,10 @@ bool hasRolesForRoute(Routes route) =>
     route.requiredRoles.contains('admin') && isAdmin;
 
 extension DateUtils on DateTime {
-  String toTimestampString() =>
-      "${day.toString().padLeft(2, '0')}-${month.toString().padLeft(2, '0')}-${year.toString()} ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}:${second.toString().padLeft(2, '0')}";
-  String toTimestampStringShort() =>
-      "${day.toString().padLeft(2, '0')}-${month.toString().padLeft(2, '0')}-${year.toString()}";
+  String toTimestampString([bool pad = true]) =>
+      "${day.toString().padLeft(pad ? 2 : 0, '0')}-${month.toString().padLeft(pad ? 2 : 0, '0')}-${year.toString()} ${hour.toString().padLeft(pad ? 2 : 0)}:${minute.toString().padLeft(pad ? 2 : 0, '0')}:${second.toString().padLeft(pad ? 2 : 0)}";
+  String toTimestampStringShort([bool pad = true]) =>
+      "${day.toString().padLeft(pad ? 2 : 0, '0')}-${month.toString().padLeft(pad ? 2 : 0, '0')}-${year.toString()}";
 
   bool isSameDayAs(DateTime other) => DateTime(
     year,

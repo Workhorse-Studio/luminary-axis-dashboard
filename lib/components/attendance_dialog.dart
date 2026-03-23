@@ -16,6 +16,8 @@ class AttendanceDialogState extends State<AttendanceDialog> {
   String className = '';
   final Map<String, AttendanceType> records = {};
   final Map<String, StudentData> studentsDataMap = {};
+  DateTime date = DateTime.now();
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -26,10 +28,10 @@ class AttendanceDialogState extends State<AttendanceDialog> {
         child: Scaffold(
           backgroundColor: AxisColors.blackPurple50,
           body: FutureBuilderTemplate(
+            key: ValueKey(date),
             future: () async {
               if (records.isNotEmpty) return records;
-              final now = DateTime.now();
-              final String todayId = '${now.day}-${now.month}-${now.year}';
+              final String todayId = '${date.day}-${date.month}-${date.year}';
 
               final classDoc = await firestore
                   .collection('classes')
@@ -92,6 +94,27 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                     bottom: 0,
                     child: ListView(
                       children: [
+                        AxisButton.text(
+                          width: 200,
+                          label: date.toTimestampStringShort(),
+                          icon: Icons.edit_calendar,
+                          onPressed: () async {
+                            final dt = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 30 * 12),
+                              ),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 30 * 12),
+                              ),
+                            );
+                            if (dt == null) return;
+                            setState(() {
+                              records.clear();
+                              date = dt;
+                            });
+                          },
+                        ),
                         for (final record in records.entries) ...[
                           Center(
                             child: SizedBox(
@@ -157,7 +180,17 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                         const Spacer(),
                         AxisButton(
                           width: 100,
-                          onPressed: () {
+                          onPressed: () async {
+                            await firestore
+                                .collection('classes')
+                                .doc(widget.classId)
+                                .update({
+                                  'attendance.${date.toTimestampStringShort(false)}':
+                                      records.map(
+                                        (k, v) => MapEntry(k, v.name),
+                                      ),
+                                });
+
                             Navigator.of(ctx).pop(records);
                           },
                           child: Icon(

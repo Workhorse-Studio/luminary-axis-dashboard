@@ -81,25 +81,8 @@ class SyllabusPageState extends State<SyllabusPage> {
                                     );
                                 final String msg;
                                 if (result != null) {
-                                  final now = DateTime.now();
-                                  final String todayId =
-                                      '${now.day}-${now.month}-${now.year}';
-
-                                  final newAttendance = cl.$2.attendance;
-                                  if (!newAttendance.containsKey(todayId)) {
-                                    newAttendance[todayId] = {};
-                                  }
-                                  for (final r in result.entries) {
-                                    newAttendance[todayId]![r.key] = r.value;
-                                  }
-
-                                  await firestore
-                                      .collection('classes')
-                                      .doc(cl.$1)
-                                      .update(
-                                        {'attendance': newAttendance.toJson()},
-                                      );
                                   msg = "Attendance updated successfully!";
+                                  setState(() {});
                                 } else {
                                   msg = "Attendance taking aborted";
                                 }
