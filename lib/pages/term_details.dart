@@ -276,6 +276,32 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                 (await firestore.collection('global').doc('state').get())
                     .data()!,
               );
+              final batch = firestore.batch();
+              for (final studentEntry in studentsCache.registry.entries) {
+                batch.update(
+                  firestore.collection('users').doc(studentEntry.key),
+                  {
+                    'invoiceIds': [
+                      ...StudentData.fromJson(
+                        studentEntry.value.data()!,
+                      ).invoiceIds,
+                      null,
+                    ],
+                  },
+                );
+              }
+              await batch.commit();
+              await studentsCache.initAll(
+                query: firestore
+                    .collection('users')
+                    .where('role', isEqualTo: 'student'),
+                force: true,
+              );
+              await studentAttendanceStore.run(
+                classesCache: classesCache,
+                studentCache: studentsCache,
+                globalState: globalState!,
+              );
               setState(() {});
             },
           ),

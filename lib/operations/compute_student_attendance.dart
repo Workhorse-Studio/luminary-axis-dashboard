@@ -54,6 +54,11 @@ class StudentAttendanceStore {
       termReports.clear();
       invoicesData.clear();
       hasInvoice.clear();
+      for (int i = 0; i < globalState.terms.length; i++) {
+        sessionsPerTerm.add(<String, Map<String, int>>{});
+        termReports.add(<String, Map<String, List<String?>>>{});
+        hasInvoice.add(<String, bool>{});
+      }
     }
 
     for (final clEntry in classesCache.registry.entries) {

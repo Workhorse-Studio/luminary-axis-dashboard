@@ -99,128 +99,6 @@ class InvoicingPageState extends State<InvoicingPage> {
                 classesCache: classesCache,
                 studentCache: studentCache,
               );
-
-              /* for (final studentEntry in studentCache.registry.entries) {
-                DocumentSnapshot<JSON>? oldInvoiceSnapshot;
-                StudentInvoiceData? oldInvoiceData;
-                final studentData = StudentData.fromJson(
-                  studentEntry.value.data()!,
-                );
-                if (studentData.invoiceIds.isNotEmpty &&
-                    studentData.invoiceIds[] != null) {
-                  oldInvoiceSnapshot = (await firestore
-                      .collection('global')
-                      .doc('archives')
-                      .collection('invoices')
-                      .doc(studentData.invoiceIds[t])
-                      .get());
-                  oldInvoiceData = StudentInvoiceData.fromJson(
-                    oldInvoiceSnapshot.data()!,
-                  );
-                }
-                
-                bool? invoiceIsDiff = oldInvoiceData == null ? null : false;
-                int classNum = 0;
-              } */
-
-              /* for (final studentEntry in studentCache.registry.entries) {
-                final studentData = StudentData.fromJson(
-                  studentEntry.value.data()!,
-                );
-
-                for (int t = 0; t < globalState!.terms.length; t++) {
-                  DocumentSnapshot<JSON>? oldInvoiceSnapshot;
-                  StudentInvoiceData? oldInvoiceData;
-                  if (studentData.invoiceIds.isNotEmpty &&
-                      studentData.invoiceIds[t] != null) {
-                    oldInvoiceSnapshot = (await firestore
-                        .collection('global')
-                        .doc('archives')
-                        .collection('invoices')
-                        .doc(studentData.invoiceIds[t])
-                        .get());
-                    oldInvoiceData = StudentInvoiceData.fromJson(
-                      oldInvoiceSnapshot.data()!,
-                    );
-                  }
-                  final List<({double amt, String desc, int qty, double rate})>
-                  entries = [];
-                  bool? invoiceIsDiff = oldInvoiceData == null ? null : false;
-                  int classNum = 0;
-                  int entryCounter = 0;
-                  for (final entry in studentData.sessionCounts[t].entries) {
-                    classNum += 1;
-                    final double rate = classNum >= 3 ? (95 / 2) : 95.00;
-                    final newEntry = (
-                      amt: rate * entry.value,
-                      desc: ClassData.fromJson(
-                        (await classesCache.get(entry.key)).data()!,
-                      ).name,
-                      qty: entry.value,
-                      rate: rate,
-                    );
-                    if (oldInvoiceData != null) {
-                      final oldEntry = oldInvoiceData.entries[entryCounter];
-                      if (oldEntry.amt != newEntry.amt ||
-                          oldEntry.desc != newEntry.desc ||
-                          oldEntry.qty != newEntry.qty ||
-                          oldEntry.rate != newEntry.rate) {
-                        invoiceIsDiff = true;
-                      }
-                    }
-                    entries.add(newEntry);
-                    entryCounter += 1;
-                  }
-                  if (invoiceIsDiff != null && !invoiceIsDiff) continue;
-                  numUpdated += 1;
-                  final docRef = firestore
-                      .collection('global')
-                      .doc('archives')
-                      .collection('invoices')
-                      .doc();
-                  final newInvoice = StudentInvoiceData(
-                    invoiceDateFormatted: DateTime.now()
-                        .toTimestampStringShort(),
-                    address: 'studentData.address',
-                    amtPayable: entries.fold((0), (a, b) => a + b.amt),
-                    dueDateFormatted: DateTime.now()
-                        .add(const Duration(days: 7))
-                        .toTimestampStringShort(),
-                    entries: entries,
-                    invoiceStatus: InvoiceStatus.ready,
-                    invoiceId: docRef.id,
-                    parentName: studentData.parentName,
-                    studentName: studentData.name,
-                    terms: 'Custom',
-                  );
-
-                  if (invoiceIsDiff != null && invoiceIsDiff) {
-                    print('Updating invoice for ${studentData.name}');
-                  } else {
-                    print(
-                      'Creating invoice for ${studentData.name}, Term #${t + 1}',
-                    );
-                  }
-                  await docRef.set(newInvoice.toJson());
-                  final List<String?> newInvIds = studentData.invoiceIds;
-                  newInvIds[t] = docRef.id;
-                  await firestore
-                      .collection('users')
-                      .doc(studentEntry.key)
-                      .update(
-                        StudentData(
-                          role: studentData.role,
-                          name: studentData.name,
-                          email: studentData.email,
-                          invoiceIds: newInvIds,
-                          studentContactNo: studentData.studentContactNo,
-                          parentContactNo: studentData.parentContactNo,
-                          parentName: studentData.parentName,
-                        ).toJson(),
-                      );
-                }
-              }
-            */
               setState(() {});
             } else {
               await fetchUpdatedTeacherInvoices(forceAll: true);
@@ -358,6 +236,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 ),
                 for (final term in globalState!.terms)
                   DataColumn2(
+                    minWidth: 450,
                     label: Center(
                       child: Text(
                         term.termName,
@@ -382,7 +261,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 ),
                 for (final monthId in generateMonthIds())
                   DataColumn2(
-                    minWidth: 420,
+                    minWidth: 230,
                     label: Center(
                       child: Text(
                         "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
@@ -458,9 +337,10 @@ class InvoicingPageState extends State<InvoicingPage> {
           DataCell(
             Center(
               child: SizedBox(
-                width: 380,
+                width: 500,
                 height: 80,
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children:
                       studentAttendanceStore.invoicesData[i].containsKey(
                         studentData.id,
@@ -523,7 +403,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                             ),
                           ),
                           AxisButton.text(
-                            width: 100,
+                            width: 140,
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
