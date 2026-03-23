@@ -10,6 +10,7 @@ class StudentData extends JSONSerialisable {
   final String parentName;
   final String parentContactNo;
   final String email;
+  final bool withdrawn;
 
   const StudentData({
     required this.role,
@@ -19,6 +20,7 @@ class StudentData extends JSONSerialisable {
     required this.studentContactNo,
     required this.parentContactNo,
     required this.parentName,
+    required this.withdrawn,
   });
 
   StudentData.fromJson(JSON json)
@@ -28,7 +30,7 @@ class StudentData extends JSONSerialisable {
       email = json['email'] as String,
       parentName = json['parentName'] as String,
       parentContactNo = json['parentContactNo'] as String,
-
+      withdrawn = json['withdrawn'] as bool,
       name = json['name'] as String;
 
   @override
@@ -40,5 +42,6 @@ class StudentData extends JSONSerialisable {
     'studentContactNo': studentContactNo,
     'parentName': parentName,
     'parentContactNo': parentContactNo,
+    'widthdrawn': withdrawn,
   };
 }

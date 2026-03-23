@@ -13,6 +13,7 @@ Future<String> onboardStudent(OnboardingStudentData obData) async {
     parentContactNo: obData.parentContactNo,
     parentName: obData.parentContactNo,
     invoiceIds: [],
+    withdrawn: false,
   );
   return (await firestore.collection('users').add(data.toJson())).id;
 }

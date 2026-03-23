@@ -242,13 +242,20 @@ class TermDetailsPageState extends State<TermDetailsPage> {
 
               String termName = recursivelyNameNewTerm('Term ${termNum + 2}');
               await studentsCache.initAll();
-              await allocsColl
-                  .doc(termName)
-                  .set(
-                    (await allocationsCache.get(
-                      globalState!.terms[currentTabIndex].termName,
-                    )).data()!,
-                  );
+              final allocs = {
+                for (final cl in classesCache.registry.entries)
+                  cl.key: {
+                    for (final studentId in ClassData.fromJson(
+                      cl.value.data()!,
+                    ).studentIds)
+                      if (!StudentData.fromJson(
+                        (await studentsCache.get(studentId)).data()!,
+                      ).withdrawn)
+                        studentId: -1,
+                  },
+              };
+
+              await allocsColl.doc(termName).set(allocs);
 
               await firestore.collection('global').doc('state').update({
                 'terms': [
@@ -455,7 +462,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                       }(),
                       builder: (context, snapshot) => TabBarView(
                         key: ValueKey(
-                          '${filterClassMenuController.text}-${filterStudentMenuController.text}',
+                          '${filterClassMenuController.text}-${filterStudentMenuController.text}-${snapshot.data!.sessions}',
                         ),
                         children: rebuildTabViews(snapshot.data!),
                       ),
@@ -548,11 +555,14 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         filterStudentMenuController.text != studentData.name) {
                       continue;
                     }
+                    if (studentData.withdrawn) continue;
                     //  numEntriesAdded += 1;
                     visibleRows.add((sd, cd.id));
 
                     final String rowData =
-                        "${allocData.sessions[cd.id]?[sd.id] ?? '-'}";
+                        allocData.sessions[cd.id]![sd.id] == -1
+                        ? 'Unallocated'
+                        : "${allocData.sessions[cd.id]![sd.id]}";
                     final rowKey = "${entry.key}-$stId-$rowData";
 
                     if (!controllers.containsKey(rowKey)) {
@@ -561,7 +571,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                       );
                     }
                     final r = DataRow(
-                      color: rowData != '-'
+                      color: rowData != 'Unallocated'
                           ? null
                           : WidgetStatePropertyAll(
                               Colors.yellow.withValues(
@@ -656,11 +666,13 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         ),
                         DataCell(
                           Text(
-                            "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
-                                  (entry) => entry.value.containsKey(
-                                        stId,
-                                      ) && entry.value[stId]!.isPresent,
-                                ).length}",
+                            controllers[rowKey]!.text == 'Unallocated'
+                                ? ''
+                                : "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
+                                        (entry) => monthKeyToTermIndex(globalState!, entry.key) == currentTabIndex && entry.value.containsKey(
+                                              stId,
+                                            ) && entry.value[stId]!.isPresent,
+                                      ).length}",
                             style: body2,
                           ),
                         ),
