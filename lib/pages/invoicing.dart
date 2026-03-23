@@ -9,6 +9,7 @@ class InvoicingPage extends StatefulWidget {
 
 class InvoicingPageState extends State<InvoicingPage> {
   int currentTabIndex = 0;
+  final Map<String, pdf.ExportFrame> frames = {};
   final GenericCache<DocumentSnapshot<JSON>> studentCache = GenericCache(
     (studentId) async =>
         await firestore.collection('users').doc(studentId).get(),
@@ -339,7 +340,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 ),
                 for (final monthId in generateMonthIds())
                   DataColumn2(
-                    minWidth: 240,
+                    minWidth: 420,
                     label: Center(
                       child: Text(
                         "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
@@ -420,30 +421,43 @@ class InvoicingPageState extends State<InvoicingPage> {
                     studentData.invoiceIds[i] != null
                 ? FutureBuilderTemplate(
                     future: () async {
-                      return StudentInvoiceData.fromJson(
-                        (await firestore
-                                .collection('global')
-                                .doc('archives')
-                                .collection('invoices')
-                                .doc(studentData.invoiceIds[i])
-                                .get())
-                            .data()!,
-                      ).amtPayable;
+                      return (
+                        amt: StudentInvoiceData.fromJson(
+                          (await firestore
+                                  .collection('global')
+                                  .doc('archives')
+                                  .collection('invoices')
+                                  .doc(studentData.invoiceIds[i])
+                                  .get())
+                              .data()!,
+                        ).amtPayable,
+                        invoice: StudentInvoiceData.fromJson(
+                          (await firestore
+                                  .collection('global')
+                                  .doc('archives')
+                                  .collection('invoices')
+                                  .doc(
+                                    studentData.invoiceIds[i],
+                                  )
+                                  .get())
+                              .data()!,
+                        ),
+                      );
                     }(),
                     builder: (_, snapshot) => Center(
                       child: SizedBox(
-                        width: 200,
+                        width: 380,
                         height: 80,
                         child: Row(
                           children: [
                             const SizedBox(width: 10),
                             Text(
-                              "\$${snapshot.data!.toStringAsFixed(2)}",
+                              "\$${snapshot.data!.amt.toStringAsFixed(2)}",
                               style: body2,
                             ),
                             const Spacer(),
                             if (studentData.invoiceIds.isNotEmpty &&
-                                studentData.invoiceIds[i] != null)
+                                studentData.invoiceIds[i] != null) ...[
                               AxisButton.text(
                                 width: 100,
                                 icon: Icons.edit,
@@ -473,6 +487,130 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   }
                                 },
                               ),
+
+                              AxisButton(
+                                width: 80,
+                                height: 30,
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: (switch (snapshot
+                                        .data!
+                                        .invoice
+                                        .invoiceStatus) {
+                                      InvoiceStatus.ready => Colors.amber,
+                                      InvoiceStatus.paid => Colors.green,
+                                      InvoiceStatus.missed => Colors.red,
+                                      InvoiceStatus.sent => Colors.blue,
+                                    }).withValues(alpha: 0.4),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      snapshot.data!.invoice.invoiceStatus.name,
+                                      style: body2.copyWith(
+                                        color: AxisColors.blackPurple50,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              AxisButton.text(
+                                width: 100,
+                                icon: Icons.send,
+                                label: 'Send',
+                                onPressed: () async {
+                                  final ExportDelegate exportDelegate =
+                                      ExportDelegate();
+                                  frames[snapshot
+                                      .data!
+                                      .invoice
+                                      .invoiceId] = pdf.ExportFrame(
+                                    frameId: snapshot.data!.invoice.invoiceId,
+                                    exportDelegate: exportDelegate,
+                                    child: InvoiceWidget(
+                                      studentInvoiceData:
+                                          snapshot.data!.invoice,
+                                      teacherInvoiceData: null,
+                                      total: snapshot.data!.invoice.amtPayable,
+                                    ),
+                                  );
+
+                                  await WidgetsBinding.instance.endOfFrame;
+
+                                  // export the frame to a PDF Document
+                                  final pdfDoc = await exportDelegate
+                                      .exportToPdfDocument(
+                                        snapshot.data!.invoice.invoiceId,
+                                      );
+                                  final file = web.File(
+                                    [
+                                      (await pdfDoc.document.save()).buffer.toJS
+                                          as JSAny,
+                                    ].toJS,
+                                    'invoice.pdf',
+                                  );
+                                  final message = Message()
+                                    ..from = Address(
+                                      'siddharth.chitikela@gmail.com',
+                                    )
+                                    ..recipients = [
+                                      'siddharth.personal0@gmail.com',
+                                    ]
+                                    ..subject = 'Hello!'
+                                    ..text = 'Test 1\n2\n3'
+                                  /* ..attachments.add(
+                                      FileAttachment(file),
+                                    ) */
+                                  ;
+
+                                  try {
+                                    print(appPassword.length);
+                                    // Send the message
+                                    final sendReport = await send(
+                                      message,
+                                      gmail(
+                                        'siddharth.chitikela@gmail.com',
+                                        appPassword,
+                                      ),
+                                    );
+                                    print(
+                                      'Message sent: ' + sendReport.toString(),
+                                    );
+                                  } on MailerException catch (e) {
+                                    print(
+                                      'Message not sent. \n${e.toString()}',
+                                    );
+                                    for (var problem in e.problems) {
+                                      print(
+                                        'Problem: ${problem.code}: ${problem.msg}',
+                                      );
+                                    }
+                                  }
+                                  /* final blob = web.Blob(
+                                    [
+                                      (await pdf.document.save()).buffer.toJS
+                                          as JSAny,
+                                    ].toJS,
+                                    web.BlobPropertyBag(
+                                      type: 'application/pdf',
+                                    ),
+                                  );
+                                  final url = web.URL.createObjectURL(blob);
+                                  //web.document.createElement('a') as
+                                  final anchor = web.HTMLAnchorElement()
+                                    ..href = url
+                                    ..style.display = 'none'
+                                    ..download = 'invoice.pdf';
+                                  web.document.body!.append(anchor);
+                                  anchor.click(); */
+                                },
+                              ),
+                              Offstage(
+                                child: frames[snapshot.data!.invoice.invoiceId],
+                              ),
+                            ],
                           ],
                         ),
                       ),

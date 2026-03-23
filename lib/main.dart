@@ -1,8 +1,12 @@
 library axis_dashboard;
 
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:math';
 
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server/gmail.dart';
+import 'package:web/web.dart' as web;
 import 'package:data_table_2/data_table_2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +15,8 @@ import 'package:firebase_ui_auth/firebase_ui_auth.dart' as auth_ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
+import 'package:flutter_to_pdf/export_delegate.dart';
+import 'package:flutter_to_pdf/export_frame.dart' as pdf;
 import 'options.dart';
 
 part './pages/dashboard.dart';

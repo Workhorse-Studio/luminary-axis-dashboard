@@ -34,6 +34,18 @@ class GenericCache<T> {
   }
 }
 
+const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+Random _rnd = Random();
+
+String generateId() => String.fromCharCodes(
+  Iterable.generate(
+    16,
+    (_) => _chars.codeUnitAt(
+      _rnd.nextInt(_chars.length),
+    ),
+  ),
+);
+
 int monthKeyToTermIndex(GlobalState gs, String monthKey) {
   final tmp = monthKey.split('-').reversed.toList();
   tmp[1] = tmp[1].padLeft(2, '0');
