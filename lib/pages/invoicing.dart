@@ -43,6 +43,8 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   final Map<String, Map<String, Map<String, int>>> sessionsMap = {};
 
+  Widget? shownFrame;
+
   @override
   Widget build(BuildContext context) {
     return Navbar(
@@ -248,6 +250,8 @@ class InvoicingPageState extends State<InvoicingPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 80),
+              if (shownFrame != null) shownFrame!,
             ],
           ),
         ),
@@ -523,19 +527,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                                 onPressed: () async {
                                   final ExportDelegate exportDelegate =
                                       ExportDelegate();
-                                  frames[snapshot
-                                      .data!
-                                      .invoice
-                                      .invoiceId] = pdf.ExportFrame(
+                                  shownFrame = pdf.ExportFrame(
                                     frameId: snapshot.data!.invoice.invoiceId,
                                     exportDelegate: exportDelegate,
                                     child: InvoiceWidget(
+                                      showFonts: false,
                                       studentInvoiceData:
                                           snapshot.data!.invoice,
                                       teacherInvoiceData: null,
                                       total: snapshot.data!.invoice.amtPayable,
                                     ),
                                   );
+
+                                  setState(() {});
 
                                   await WidgetsBinding.instance.endOfFrame;
 
@@ -566,7 +570,6 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   ;
 
                                   try {
-                                    print(appPassword.length);
                                     // Send the message
                                     final sendReport = await send(
                                       message,
@@ -588,6 +591,17 @@ class InvoicingPageState extends State<InvoicingPage> {
                                       );
                                     }
                                   }
+                                  await firestore
+                                      .collection('global')
+                                      .doc('archives')
+                                      .collection('invoices')
+                                      .doc(snapshot.data!.invoice.invoiceId)
+                                      .update({
+                                        'invoiceStatus':
+                                            InvoiceStatus.sent.name,
+                                      });
+                                  shownFrame = null;
+                                  setState(() {});
                                   /* final blob = web.Blob(
                                     [
                                       (await pdf.document.save()).buffer.toJS
