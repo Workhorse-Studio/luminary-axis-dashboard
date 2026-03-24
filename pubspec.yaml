@@ -44,6 +44,7 @@ dependencies:
   data_table_2: ^2.7.2
   web: ^1.1.1
   flutter_to_pdf: ^0.4.1
+  pdf_maker: ^1.1.0
 
 dev_dependencies:
   flutter_test:

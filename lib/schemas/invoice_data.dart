@@ -1,17 +1,30 @@
 part of axis_dashboard;
 
 enum InvoiceStatus {
-  ready,
-  sent,
-  paid,
-  missed
+  pendingBilling('Pending Billing'),
+  pendingPayment('Pending Payment'),
+  pendingLatePayment('Pending Late Payment'),
+  paymentReceived('Payment Received')
   ;
 
+  final String label;
+
+  const InvoiceStatus(this.label);
+
+  /* static InvoiceStatus fromLabel(String val) => switch (val) {
+    'not ready' => pendingBilling,
+    'sent' => pendingPayment,
+    'paid' => paymentReceived,
+    'missed' => pendingLatePayment,
+    String _ => throw Exception(
+      'Could not parse InvoiceStatus from label "$val"',
+    ),
+  }; */
   static InvoiceStatus fromJson(String val) => switch (val) {
-    'ready' => ready,
-    'sent' => sent,
-    'paid' => paid,
-    'missed' => missed,
+    'pendingBilling' => pendingBilling,
+    'pendingPayment' => pendingPayment,
+    'paymentReceived' => paymentReceived,
+    'pendingLatePayment' => pendingLatePayment,
     String _ => throw Exception(
       'Could not parse InvoiceStatus from expression "$val"',
     ),

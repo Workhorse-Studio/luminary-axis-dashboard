@@ -127,7 +127,7 @@ class StudentAttendanceStore {
               .add(const Duration(days: 7))
               .toTimestampStringShort(),
           entries: entries,
-          invoiceStatus: InvoiceStatus.ready,
+          invoiceStatus: InvoiceStatus.pendingPayment,
           invoiceId: docRef.id,
           parentName: sd.parentName,
           studentName: sd.name,
