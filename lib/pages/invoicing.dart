@@ -314,7 +314,9 @@ class InvoicingPageState extends State<InvoicingPage> {
     final List<String> res = [];
     void generateForYear(int year) {
       for (int i = 1; i < 13; i++) {
-        res.add("$i-$year");
+        if (year <= DateTime.now().year && i <= DateTime.now().month) {
+          res.add("$i-$year");
+        }
       }
     }
 
@@ -334,7 +336,7 @@ class InvoicingPageState extends State<InvoicingPage> {
           DataCell(
             Center(
               child: SizedBox(
-                width: 800,
+                width: 740,
                 height: 80,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -369,7 +371,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                             },
                           ),
                           AxisDropdownButton<InvoiceStatus>(
-                            width: 300,
+                            width: 240,
                             entries: [
                               for (final status in InvoiceStatus.values)
                                 (status.label, status),
@@ -625,6 +627,21 @@ class InvoicingPageState extends State<InvoicingPage> {
             .update({
               'invoiceStatus': InvoiceStatus.pendingPayment.name,
             });
+        studentAttendanceStore.invoicesData[i][studentData.id] =
+            StudentInvoiceData.fromJson(
+              (await firestore
+                      .collection('global')
+                      .doc('archives')
+                      .collection('invoices')
+                      .doc(
+                        studentAttendanceStore
+                            .invoicesData[i][studentData.id]!
+                            .invoiceId,
+                      )
+                      .get())
+                  .data()!,
+            );
+        setState(() {});
       } else {
         msg = 'LAD server encountered an issue while sending the invoice.';
       }
@@ -642,6 +659,7 @@ class InvoicingPageState extends State<InvoicingPage> {
         teacherEntry.value.data()!,
       );
       newSessions[teacherEntry.key] = {for (final m in mIds) m: {}};
+
       for (int i = 0; i < teacherData.classIds.length; i++) {
         final String clId = teacherData.classIds[i];
         final classData = ClassData.fromJson(
@@ -660,17 +678,34 @@ class InvoicingPageState extends State<InvoicingPage> {
         }
       }
       for (final monthEntry in newSessions[teacherEntry.key]!.entries) {
-        final docRef = firestore
-            .collection('global')
-            .doc('archives')
-            .collection('invoices')
-            .doc();
         final int totNumSess = newSessions[teacherEntry.key]!.values.fold(
           0,
           (a, b) => a + b.values.fold(0, (c, d) => c + d),
         );
         final double rate = TeacherPayout.calculateRate(totNumSess);
         final double payout = rate * totNumSess;
+        final DocumentReference<JSON> docRef;
+
+        if (teacherData.invoiceIds.containsKey(monthEntry.key)) {
+          docRef = firestore
+              .collection('global')
+              .doc('archives')
+              .collection('invoices')
+              .doc(teacherData.invoiceIds[monthEntry.key]);
+        } else {
+          docRef = firestore
+              .collection('global')
+              .doc('archives')
+              .collection('invoices')
+              .doc();
+          await teacherEntry.value.reference.update({
+            'invoiceIds.${monthEntry.key}': docRef.id,
+          });
+          teachersCache.registry[teacherEntry.key] = await teacherEntry
+              .value
+              .reference
+              .get();
+        }
         await docRef.set(
           TeacherInvoiceData(
             invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
@@ -688,9 +723,6 @@ class InvoicingPageState extends State<InvoicingPage> {
             terms: 'Custom',
           ).toJson(),
         );
-        await firestore.collection('users').doc(teacherEntry.key).update({
-          'invoiceIds.${monthEntry.key}': docRef.id,
-        });
       }
     }
     sessionsMap

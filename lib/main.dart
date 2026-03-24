@@ -94,6 +94,31 @@ void main() async {
       );
       isAdmin = true;
     }
+    Future<void> clearInvoicesProc() async {
+      print('x');
+      final students =
+          (await firestore
+                  .collection('users')
+                  .where('role', isEqualTo: 'student')
+                  .get())
+              .docs;
+      final teachers =
+          (await firestore
+                  .collection('users')
+                  .where('role', whereIn: ['admin', 'teacher'])
+                  .get())
+              .docs;
+      for (final student in students) {
+        await student.reference.update({
+          'invoiceIds': [null, null, null],
+        });
+      }
+      for (final teacher in teachers) {
+        await teacher.reference.update({'invoiceIds': {}});
+      }
+    }
+
+    // await clearInvoicesProc();
   } catch (e, st) {
     print(e);
     print(st);
