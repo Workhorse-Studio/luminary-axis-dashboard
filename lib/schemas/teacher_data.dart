@@ -30,5 +30,6 @@ class TeacherData extends JSONSerialisable {
     'role': role,
     'invoiceIds': invoiceIds,
     'classes': classIds,
+    'email': email,
   };
 }

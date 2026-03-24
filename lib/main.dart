@@ -4,8 +4,6 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:math';
 
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server/gmail.dart';
 import 'package:web/web.dart' as web;
 import 'package:data_table_2/data_table_2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

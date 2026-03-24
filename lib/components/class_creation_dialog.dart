@@ -73,7 +73,7 @@ class ClassCreationDialog extends StatelessWidget {
                   AxisButton.text(
                     label: 'Save',
                     onPressed: () {
-                      if (teacherId != '' && className != '') {
+                      if (className != '') {
                         Navigator.of(context).pop((
                           ClassData(
                             name: className,

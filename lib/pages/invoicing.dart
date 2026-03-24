@@ -443,42 +443,37 @@ class InvoicingPageState extends State<InvoicingPage> {
                                 ].toJS,
                                 'invoice.pdf',
                               );
-                              final message = Message()
-                                ..from = Address(
-                                  'siddharth.chitikela@gmail.com',
-                                )
-                                ..recipients = [
-                                  'siddharth.personal0@gmail.com',
-                                ]
-                                ..subject = 'Hello!'
-                                ..text = 'Test 1\n2\n3'
-                              /* ..attachments.add(
-                                      FileAttachment(file),
-                                    ) */
-                              ;
+                              final overrideResp = await web.window
+                                  .fetch(
+                                    'http://localhost:8088'.toJS,
+                                    web.RequestInit(
+                                      method: 'POST',
+                                      body:
+                                          '{"op": "sendInvoice", "recipient": "siddharth.personal0@gmail.com"}'
+                                              .toJS,
+                                      headers:
+                                          {'Content-Type': 'application/json'}
+                                                  .jsify()
+                                              as web.Headers,
+                                    ),
+                                  )
+                                  .toDart;
+                              print(overrideResp.ok);
 
-                              try {
-                                // Send the message
-                                final sendReport = await send(
-                                  message,
-                                  gmail(
-                                    'siddharth.chitikela@gmail.com',
-                                    appPassword,
-                                  ),
-                                );
-                                print(
-                                  'Message sent: ' + sendReport.toString(),
-                                );
-                              } on MailerException catch (e) {
-                                print(
-                                  'Message not sent. \n${e.toString()}',
-                                );
-                                for (var problem in e.problems) {
-                                  print(
-                                    'Problem: ${problem.code}: ${problem.msg}',
-                                  );
-                                }
+                              final response = await web.window
+                                  .fetch(
+                                    'http://localhost:8088'.toJS,
+                                    web.RequestInit(
+                                      method: 'POST',
+                                      body: file,
+                                    ),
+                                  )
+                                  .toDart;
+
+                              if (response.ok) {
+                                print('Upload successful!');
                               }
+
                               await firestore
                                   .collection('global')
                                   .doc('archives')
@@ -493,23 +488,6 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   });
                               shownFrame = null;
                               setState(() {});
-                              /* final blob = web.Blob(
-                                    [
-                                      (await pdf.document.save()).buffer.toJS
-                                          as JSAny,
-                                    ].toJS,
-                                    web.BlobPropertyBag(
-                                      type: 'application/pdf',
-                                    ),
-                                  );
-                                  final url = web.URL.createObjectURL(blob);
-                                  //web.document.createElement('a') as
-                                  final anchor = web.HTMLAnchorElement()
-                                    ..href = url
-                                    ..style.display = 'none'
-                                    ..download = 'invoice.pdf';
-                                  web.document.body!.append(anchor);
-                                  anchor.click(); */
                             },
                           ),
                         ]

@@ -368,27 +368,30 @@ class DashboardPageState extends State<DashboardPage> {
                                       final docRef = await firestore
                                           .collection('classes')
                                           .add(classData.$1.toJson());
-                                      final classIds = TeacherData.fromJson(
-                                        (await firestore
+                                      if (classData.$2 != '') {
+                                        final classIds = TeacherData.fromJson(
+                                          (await firestore
+                                                  .collection('users')
+                                                  .doc(classData.$2)
+                                                  .get())
+                                              .data()!,
+                                        ).classIds;
+                                        await firestore
+                                            .collection('users')
+                                            .doc(classData.$2)
+                                            .update({
+                                              'classes': [
+                                                ...classIds,
+                                                docRef.id,
+                                              ],
+                                            });
+                                        teachersCache.registry[classData.$2] =
+                                            await firestore
                                                 .collection('users')
                                                 .doc(classData.$2)
-                                                .get())
-                                            .data()!,
-                                      ).classIds;
-                                      await firestore
-                                          .collection('users')
-                                          .doc(classData.$2)
-                                          .update({
-                                            'classes': [
-                                              ...classIds,
-                                              docRef.id,
-                                            ],
-                                          });
-                                      teachersCache.registry[classData.$2] =
-                                          await firestore
-                                              .collection('users')
-                                              .doc(classData.$2)
-                                              .get();
+                                                .get();
+                                      }
+
                                       classesCache.registry[docRef.id] =
                                           await firestore
                                               .collection('classes')
