@@ -564,6 +564,7 @@ class InvoicingPageState extends State<InvoicingPage> {
     InvoiceWidget widget,
     BuildContext context,
   ) async {
+    await precacheImage(AssetImage('images/axis_logo.png'), context);
     final bytes = await m.PDFMaker().createPDF(
       IWBlankPage(child: widget),
       setup: m.PageSetup(
@@ -581,21 +582,7 @@ class InvoicingPageState extends State<InvoicingPage> {
       ].toJS,
       'invoice.pdf',
     );
-    final blob = web.Blob(
-      [
-        bytes.buffer.toJS as JSAny,
-      ].toJS,
-      web.BlobPropertyBag(
-        type: 'application/pdf',
-      ),
-    );
-    final url = web.URL.createObjectURL(blob);
-    final anchor = web.HTMLAnchorElement()
-      ..href = url
-      ..style.display = 'none'
-      ..download = 'pdf.pdf';
-    web.document.body!.append(anchor);
-    anchor.click();
+
     final overrideResp = await web.window
         .fetch(
           'http://localhost:8088'.toJS,
@@ -723,6 +710,7 @@ class IWBlankPage extends m.BlankPage {
   Widget createPageContent(BuildContext context) {
     return Center(
       child: SizedBox(
+        width: MediaQuery.of(context).size.width,
         child: child,
       ),
     );
