@@ -1,6 +1,26 @@
 part of axis_dashboard;
 
 class StudentAttendanceStore {
+  static bool invoicePayloadMatches(
+    StudentInvoiceData a,
+    StudentInvoiceData b,
+  ) {
+    if (a.amtPayable != b.amtPayable) return false;
+    if (a.entries.length != b.entries.length) return false;
+    for (int i = 0; i < a.entries.length; i++) {
+      final x = a.entries[i], y = b.entries[i];
+      if (x.desc != y.desc ||
+          x.qty != y.qty ||
+          x.rate != y.rate ||
+          x.amt != y.amt) {
+        return false;
+      }
+    }
+    return a.studentName == b.studentName &&
+        a.parentName == b.parentName &&
+        a.terms == b.terms;
+  }
+
   /// [ { studentId: { classId: sessionsAttended } } ], with array indexed by term num
   final List<Map<String, Map<String, int>>> sessionsPerTerm = [];
 
@@ -94,10 +114,22 @@ class StudentAttendanceStore {
         }
       }
     }
-
-    for (final attendanceData in sessionsPerTerm) {
+    for (int t = 0; t < sessionsPerTerm.length; t++) {
+      final attendanceData = sessionsPerTerm[t];
       final Map<String, StudentInvoiceData> currentTermInvoices = {};
       for (final studentEntry in attendanceData.entries) {
+        DocumentSnapshot<JSON>? existingInvoice;
+        final sd = StudentData.fromJson(
+          (await studentCache.get(studentEntry.key)).data()!,
+        );
+        if (sd.invoiceIds.length > t && sd.invoiceIds[t] != null) {
+          existingInvoice = await firestore
+              .collection('global')
+              .doc('archives')
+              .collection('invoices')
+              .doc(sd.invoiceIds[t])
+              .get();
+        }
         final List<({double amt, String desc, int qty, double rate})> entries =
             [];
         final double rate = studentEntry.value.length >= 3 ? (95 / 2) : 95.00;
@@ -111,15 +143,14 @@ class StudentAttendanceStore {
             amt: rate * classEntry.value,
           ));
         }
-        final sd = StudentData.fromJson(
-          (await studentCache.get(studentEntry.key)).data()!,
-        );
+
+        /// Save or Update
         final docRef = firestore
             .collection('global')
             .doc('archives')
             .collection('invoices')
             .doc();
-        currentTermInvoices[studentEntry.key] = StudentInvoiceData(
+        final candidate = StudentInvoiceData(
           invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
           address: '',
           amtPayable: entries.fold((0), (a, b) => a + b.amt),
@@ -133,9 +164,41 @@ class StudentAttendanceStore {
           studentName: sd.name,
           terms: 'Custom',
         );
+
+        bool refsUpdated = false;
+        if (existingInvoice != null) {
+          if (invoicePayloadMatches(
+            StudentInvoiceData.fromJson(existingInvoice.data()!),
+            candidate,
+          )) {
+            // Do nothing
+            currentTermInvoices[studentEntry.key] = StudentInvoiceData.fromJson(
+              existingInvoice.data()!,
+            );
+            print('matching');
+            continue;
+          } else {
+            print('updating link');
+            // Create new invoice (done above) and link student's data to that
+            await firestore.collection('users').doc(studentEntry.key).update({
+              'invoiceIds': sd.invoiceIds..[t] = docRef.id,
+            });
+            refsUpdated = true;
+          }
+        }
+
+        currentTermInvoices[studentEntry.key] = candidate;
         await docRef.set(
           currentTermInvoices[studentEntry.key]!.toJson(),
         );
+        if (!refsUpdated) {
+          await firestore.collection('users').doc(studentEntry.key).update({
+            'invoiceIds': sd.invoiceIds
+              ..ensureLength(t, map: null)
+              ..[t] = docRef.id,
+          });
+        }
+        await studentCache.get(studentEntry.key, bypassCache: true);
       }
       invoicesData.add(currentTermInvoices);
     }

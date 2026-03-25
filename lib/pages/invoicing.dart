@@ -258,7 +258,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 ),
                 for (final monthId in generateMonthIds())
                   DataColumn2(
-                    minWidth: 230,
+                    minWidth: 530,
                     label: Center(
                       child: Text(
                         "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
@@ -372,6 +372,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                           ),
                           AxisDropdownButton<InvoiceStatus>(
                             width: 240,
+                            seaprateInitialSelectionEntry: false,
                             entries: [
                               for (final status in InvoiceStatus.values)
                                 (status.label, status),
@@ -410,9 +411,8 @@ class InvoicingPageState extends State<InvoicingPage> {
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
-                              await sendInvoiceEmail(
-                                i,
-                                studentData,
+                              if (await sendInvoiceEmail(
+                                StudentData.fromJson(studentData.data()!).email,
                                 InvoiceWidget(
                                   showFonts: false,
                                   studentInvoiceData: studentAttendanceStore
@@ -423,7 +423,38 @@ class InvoicingPageState extends State<InvoicingPage> {
                                       .amtPayable,
                                 ),
                                 context,
-                              );
+                              )) {
+                                await firestore
+                                    .collection('global')
+                                    .doc('archives')
+                                    .collection('invoices')
+                                    .doc(
+                                      studentAttendanceStore
+                                          .invoicesData[i][studentData.id]!
+                                          .invoiceId,
+                                    )
+                                    .update({
+                                      'invoiceStatus':
+                                          InvoiceStatus.pendingPayment.name,
+                                    });
+                                studentAttendanceStore
+                                        .invoicesData[i][studentData.id] =
+                                    StudentInvoiceData.fromJson(
+                                      (await firestore
+                                              .collection('global')
+                                              .doc('archives')
+                                              .collection('invoices')
+                                              .doc(
+                                                studentAttendanceStore
+                                                    .invoicesData[i][studentData
+                                                        .id]!
+                                                    .invoiceId,
+                                              )
+                                              .get())
+                                          .data()!,
+                                    );
+                                setState(() {});
+                              }
                             },
                           ),
                         ]
@@ -475,7 +506,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     sessionsMap[teacherData.id]!.containsKey(monthId)
                 ? Center(
                     child: SizedBox(
-                      width: 180,
+                      width: 480,
                       height: 80,
                       child: Row(
                         children: [
@@ -496,12 +527,84 @@ class InvoicingPageState extends State<InvoicingPage> {
                               ],
                             ),
                           ),
+                          const SizedBox(width: 20),
+                          FutureBuilderTemplate(
+                            future: () async {
+                              final doc = (await firestore
+                                  .collection('global')
+                                  .doc('archives')
+                                  .collection('invoices')
+                                  .doc(
+                                    TeacherData.fromJson(
+                                      teacherData.data()!,
+                                    ).invoiceIds[monthId],
+                                  )
+                                  .get());
+                              return (
+                                doc,
+                                TeacherInvoiceData.fromJson(doc.data()!),
+                              );
+                            }(),
+                            builder: (context, snapshot) =>
+                                AxisDropdownButton<InvoiceStatus>(
+                                  width: 240,
+                                  entries: [
+                                    for (final status in InvoiceStatus.values)
+                                      (status.label, status),
+                                  ],
+                                  seaprateInitialSelectionEntry: false,
+                                  initalLabel:
+                                      snapshot.data!.$2.invoiceStatus.label,
+                                  initialSelection:
+                                      snapshot.data!.$2.invoiceStatus,
+                                  onSelected: (invoiceStatus) async {
+                                    if (invoiceStatus != null) {
+                                      await snapshot.data!.$1.reference.update({
+                                        'invoiceStatus': invoiceStatus.name,
+                                      });
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Status updated!'),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                          ),
                           const Spacer(),
                           AxisButton.text(
-                            width: 105,
+                            width: 140,
                             icon: Icons.send,
                             label: 'Send',
-                            onPressed: () async {},
+                            onPressed: () async {
+                              final invData = TeacherInvoiceData.fromJson(
+                                (await firestore
+                                        .collection('global')
+                                        .doc('archives')
+                                        .collection('invoices')
+                                        .doc(
+                                          TeacherData.fromJson(
+                                            teacherData.data()!,
+                                          ).invoiceIds[monthId],
+                                        )
+                                        .get())
+                                    .data()!,
+                              );
+                              await sendInvoiceEmail(
+                                TeacherData.fromJson(teacherData.data()!).email,
+                                InvoiceWidget(
+                                  showFonts: false,
+                                  studentInvoiceData: null,
+                                  teacherInvoiceData: invData,
+                                  total: invData.amtDue,
+                                ),
+                                context,
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -560,9 +663,8 @@ class InvoicingPageState extends State<InvoicingPage> {
     });
   }
 
-  Future<void> sendInvoiceEmail(
-    int i,
-    DocumentSnapshot<JSON> studentData,
+  Future<bool> sendInvoiceEmail(
+    String recipientAddress,
     InvoiceWidget widget,
     BuildContext context,
   ) async {
@@ -591,8 +693,7 @@ class InvoicingPageState extends State<InvoicingPage> {
           web.RequestInit(
             method: 'POST',
             body:
-                '{"op": "sendInvoice", "recipient": "siddharth.personal0@gmail.com"}'
-                    .toJS,
+                '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
             headers:
                 {
                       'Content-Type': 'application/json',
@@ -604,6 +705,7 @@ class InvoicingPageState extends State<InvoicingPage> {
     final String msg;
     if (!overrideResp.ok) {
       msg = 'Pre-flight request to LAD server failed.';
+      return false;
     } else {
       final response = await web.window
           .fetch(
@@ -617,37 +719,15 @@ class InvoicingPageState extends State<InvoicingPage> {
 
       if (response.ok) {
         msg = 'Invoice sent successfully!';
-        await firestore
-            .collection('global')
-            .doc('archives')
-            .collection('invoices')
-            .doc(
-              studentAttendanceStore.invoicesData[i][studentData.id]!.invoiceId,
-            )
-            .update({
-              'invoiceStatus': InvoiceStatus.pendingPayment.name,
-            });
-        studentAttendanceStore.invoicesData[i][studentData.id] =
-            StudentInvoiceData.fromJson(
-              (await firestore
-                      .collection('global')
-                      .doc('archives')
-                      .collection('invoices')
-                      .doc(
-                        studentAttendanceStore
-                            .invoicesData[i][studentData.id]!
-                            .invoiceId,
-                      )
-                      .get())
-                  .data()!,
-            );
-        setState(() {});
       } else {
         msg = 'LAD server encountered an issue while sending the invoice.';
       }
-    }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
+      }
+      return response.ok;
     }
   }
 

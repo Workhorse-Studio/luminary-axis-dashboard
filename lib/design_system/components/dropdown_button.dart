@@ -7,6 +7,7 @@ class AxisDropdownButton<T> extends StatefulWidget {
   final List<(String, T)> entries;
   final void Function(T? newData)? onSelected;
   final Color Function(T data)? customBgColoring;
+  final bool seaprateInitialSelectionEntry;
 
   const AxisDropdownButton({
     required this.width,
@@ -15,6 +16,7 @@ class AxisDropdownButton<T> extends StatefulWidget {
     this.customBgColoring,
     this.initialSelection,
     this.initalLabel,
+    this.seaprateInitialSelectionEntry = true,
 
     super.key,
   });
@@ -61,7 +63,9 @@ class AxisDropdownButtonState<T> extends State<AxisDropdownButton<T>> {
           textStyle: buttonLabel,
           initialSelection: widget.initialSelection,
           dropdownMenuEntries: [
-            if (widget.initalLabel != null && widget.initialSelection != null)
+            if (widget.initalLabel != null &&
+                widget.initialSelection != null &&
+                widget.seaprateInitialSelectionEntry)
               DropdownMenuEntry(
                 value: widget.initialSelection!,
                 style: menuEntryStyle.copyWith(
