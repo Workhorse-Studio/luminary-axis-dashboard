@@ -268,91 +268,76 @@ class DashboardPageState extends State<DashboardPage> {
                               children: [
                                 for (final clEntry
                                     in classesCache.registry.entries)
-                                  Container(
+                                  AxisCard(
+                                    header: ClassData.fromJson(
+                                      clEntry.value.data()!,
+                                    ).name,
                                     width: 300,
-                                    decoration: BoxDecoration(
-                                      color: AxisColors.blackPurple30
-                                          .withValues(alpha: 0.4),
-                                      border: Border.all(
-                                        color: AxisColors.blackPurple30,
-                                      ),
-                                      borderRadius: BorderRadius.circular(
-                                        10,
-                                      ),
-                                    ),
+                                    height: 190,
                                     child: Padding(
                                       padding: const EdgeInsets.all(20),
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            ClassData.fromJson(
-                                              clEntry.value.data()!,
-                                            ).name,
-                                            style: heading2,
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Teacher',
+                                                style: body2,
+                                              ),
+                                              const Spacer(),
+                                              Text(
+                                                TeacherData.fromJson(
+                                                  teachersCache.registry.entries
+                                                          .where(
+                                                            (e) =>
+                                                                TeacherData.fromJson(
+                                                                      e.value
+                                                                          .data()!,
+                                                                    ).classIds
+                                                                    .contains(
+                                                                      clEntry
+                                                                          .key,
+                                                                    ),
+                                                          )
+                                                          .firstOrNull
+                                                          ?.value
+                                                          .data() ??
+                                                      TeacherData(
+                                                        name: 'No teacher',
+                                                        role: 'teacher',
+                                                        classIds: [clEntry.key],
+                                                        email: '',
+                                                        invoiceIds: const {},
+                                                      ).toJson(),
+                                                ).name,
+                                                style: body2,
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ],
                                           ),
-
-                                          if (ClassData.fromJson(
-                                            clEntry.value.data()!,
-                                          ).studentIds.isEmpty)
-                                            Text(
-                                              'No students',
-                                              style: body2,
-                                            ),
-                                          for (final studId
-                                              in ClassData.fromJson(
-                                                clEntry.value.data()!,
-                                              ).studentIds) ...[
-                                            const SizedBox(height: 20),
-                                            Container(
-                                              width: double.infinity,
-                                              height: 40,
-
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                      5,
-                                                    ),
-                                                border: Border.all(
-                                                  color:
-                                                      AxisColors.blackPurple30,
-                                                ),
-                                                color: AxisColors.blackPurple30
-                                                    .withValues(alpha: 0.6),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Students',
+                                                style: body2,
                                               ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(
-                                                  10,
-                                                ),
-                                                child: FutureBuilderTemplate(
-                                                  future: () async {
-                                                    return StudentData.fromJson(
-                                                      (await firestore
-                                                              .collection(
-                                                                'users',
-                                                              )
-                                                              .doc(studId)
-                                                              .get())
-                                                          .data()!,
-                                                    );
-                                                  }(),
-                                                  builder:
-                                                      (
-                                                        context,
-                                                        snapshot,
-                                                      ) => Text(
-                                                        snapshot.data!.name,
-                                                        style: body2,
-                                                      ),
-                                                ),
+                                              const Spacer(),
+                                              Text(
+                                                ClassData.fromJson(
+                                                  clEntry.value.data()!,
+                                                ).studentIds.length.toString(),
+                                                style: body2,
+                                                textAlign: TextAlign.right,
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
                                         ],
                                       ),
                                     ),
                                   ),
+
                                 AxisButton.text(
                                   label: 'Add New Class',
                                   width: 160,

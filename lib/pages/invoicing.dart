@@ -66,17 +66,22 @@ class InvoicingPageState extends State<InvoicingPage> {
             "$year",
             style: heading3,
           ),
-          AxisButton(
-            width: 60,
-            height: 60,
-            onPressed: () => setState(() {
-              year += 1;
-            }),
-            child: Icon(
-              Icons.chevron_right,
-              size: 40,
-            ),
-          ),
+          (DateTime.now().year > year)
+              ? AxisButton(
+                  width: 60,
+                  height: 60,
+                  onPressed: () => setState(() {
+                    year += 1;
+                  }),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 40,
+                  ),
+                )
+              : const SizedBox(
+                  width: 60,
+                  height: 60,
+                ),
         ],
         const SizedBox(width: 40),
         AxisButton.text(
