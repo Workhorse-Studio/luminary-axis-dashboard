@@ -22,6 +22,10 @@ class OnboardingPageState extends State<OnboardingPage> {
       hpController = TextEditingController(),
       parentsNameController = TextEditingController(),
       parentsHpController = TextEditingController(),
+      schoolController = TextEditingController(),
+      addressController = TextEditingController(),
+      postalCodeController = TextEditingController(),
+      subjectCombi = TextEditingController(),
       emailController = TextEditingController(),
       teachersNameController = TextEditingController();
 
@@ -137,6 +141,54 @@ class OnboardingPageState extends State<OnboardingPage> {
                   ),
                   const SizedBox(height: 15),
                   Text(
+                    "School Name",
+                    style: heading3.copyWith(
+                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: schoolController,
+                    style: body2,
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    "Full Address",
+                    style: heading3.copyWith(
+                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: addressController,
+                    style: body2,
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    "Postal Code",
+                    style: heading3.copyWith(
+                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: postalCodeController,
+                    style: body2,
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    "Subject Combination",
+                    style: heading3.copyWith(
+                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: subjectCombi,
+                    style: body2,
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
                     "Select your classes",
                     style: heading3.copyWith(
                       color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
@@ -210,6 +262,10 @@ class OnboardingPageState extends State<OnboardingPage> {
                                 email: emailController.text,
                                 parentContactNo: parentsNameController.text,
                                 parentName: parentsHpController.text,
+                                school: schoolController.text,
+                                address: addressController.text,
+                                postalCode: postalCodeController.text,
+                                subjectCombi: subjectCombi.text,
                                 classIdToTeacherId: {
                                   for (final sel in selections)
                                     sel.classData.id: sel.teacherData.id,

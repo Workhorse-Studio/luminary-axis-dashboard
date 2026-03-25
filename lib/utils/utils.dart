@@ -52,6 +52,7 @@ Future<({bool ok, JSON? body})> makeRequest({
           method: 'POST',
           body: body,
           headers: headers.jsify() as web.Headers,
+          credentials: 'omit',
         ),
       )
       .toDart;

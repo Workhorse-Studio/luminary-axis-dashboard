@@ -8,6 +8,10 @@ Future<String> onboardStudent(OnboardingStudentData obData) async {
     studentContactNo: obData.studentContactNo,
     parentContactNo: obData.parentContactNo,
     parentName: obData.parentContactNo,
+    school: obData.school,
+    postalCode: obData.postalCode,
+    address: obData.address,
+    subjectCombi: obData.subjectCombi,
     invoiceIds: [],
     withdrawn: {for (final k in obData.classIdToTeacherId.keys) k: true},
   );

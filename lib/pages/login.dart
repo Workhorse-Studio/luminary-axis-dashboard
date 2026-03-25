@@ -23,7 +23,6 @@ class LoginPage extends StatelessWidget {
               if (userData != null) {
                 role = userData['role'];
                 isAdmin = role == 'admin';
-                if (isAdmin) role = 'teacher';
                 termNum = GlobalState.fromJson(
                   (await firestore.collection('global').doc('state').get())
                       .data()!,

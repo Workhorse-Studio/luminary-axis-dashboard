@@ -337,71 +337,70 @@ class DashboardPageState extends State<DashboardPage> {
                                       ),
                                     ),
                                   ),
-
-                                AxisButton.text(
-                                  label: 'Add New Class',
-                                  width: 160,
-                                  isHighlighted: true,
-                                  onPressed: () async {
-                                    final (ClassData, String)? classData =
-                                        await showDialog(
-                                          context: context,
-                                          builder: (_) => ClassCreationDialog(),
-                                        );
-                                    final String msg;
-                                    if (classData != null) {
-                                      final docRef = await firestore
-                                          .collection('classes')
-                                          .add(classData.$1.toJson());
-                                      if (classData.$2 != '') {
-                                        final classIds = TeacherData.fromJson(
-                                          (await firestore
-                                                  .collection('users')
-                                                  .doc(classData.$2)
-                                                  .get())
-                                              .data()!,
-                                        ).classIds;
-                                        await firestore
-                                            .collection('users')
-                                            .doc(classData.$2)
-                                            .update({
-                                              'classes': [
-                                                ...classIds,
-                                                docRef.id,
-                                              ],
-                                            });
-                                        teachersCache.registry[classData.$2] =
-                                            await firestore
-                                                .collection('users')
-                                                .doc(classData.$2)
-                                                .get();
-                                      }
-
-                                      classesCache.registry[docRef.id] =
-                                          await firestore
-                                              .collection('classes')
-                                              .doc(docRef.id)
-                                              .get();
-
-                                      msg = 'Class created successfully!';
-                                    } else {
-                                      msg = 'No new class created';
-                                    }
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(msg),
-                                        ),
-                                      );
-                                    }
-                                    setState(() {});
-                                  },
-                                ),
-                                const SizedBox(height: 40),
                               ],
                             ),
+
+                      AxisButton.text(
+                        label: 'Add New Class',
+                        width: 160,
+                        isHighlighted: true,
+                        onPressed: () async {
+                          final (ClassData, String)? classData =
+                              await showDialog(
+                                context: context,
+                                builder: (_) => ClassCreationDialog(),
+                              );
+                          final String msg;
+                          if (classData != null) {
+                            final docRef = await firestore
+                                .collection('classes')
+                                .add(classData.$1.toJson());
+                            if (classData.$2 != '') {
+                              final classIds = TeacherData.fromJson(
+                                (await firestore
+                                        .collection('users')
+                                        .doc(classData.$2)
+                                        .get())
+                                    .data()!,
+                              ).classIds;
+                              await firestore
+                                  .collection('users')
+                                  .doc(classData.$2)
+                                  .update({
+                                    'classes': [
+                                      ...classIds,
+                                      docRef.id,
+                                    ],
+                                  });
+                              teachersCache.registry[classData.$2] =
+                                  await firestore
+                                      .collection('users')
+                                      .doc(classData.$2)
+                                      .get();
+                            }
+
+                            classesCache.registry[docRef.id] = await firestore
+                                .collection('classes')
+                                .doc(docRef.id)
+                                .get();
+
+                            msg = 'Class created successfully!';
+                          } else {
+                            msg = 'No new class created';
+                          }
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(
+                              SnackBar(
+                                content: Text(msg),
+                              ),
+                            );
+                          }
+                          setState(() {});
+                        },
+                      ),
+                      const SizedBox(height: 40),
                       const SizedBox(height: 60),
                       Text('Teachers', style: heading1),
                       const SizedBox(height: 10),
@@ -569,63 +568,61 @@ class DashboardPageState extends State<DashboardPage> {
                                       ),
                                     ),
                                   ),
-                                AxisButton.text(
-                                  label: 'Add New Teacher',
-                                  width: 180,
-                                  isHighlighted: true,
-                                  onPressed: () async {
-                                    final TeacherData? tData = await showDialog(
-                                      context: context,
-                                      builder: (_) => TeacherCreationDialog(
-                                        teacherId: null,
-                                      ),
-                                    );
-                                    final String msg;
-                                    if (tData != null) {
-                                      final res = await makeRequest(
-                                        body: jsonEncode({
-                                          'op': 'registerTeacher',
-                                          'name': tData.name,
-                                          'email': tData.email,
-                                        }).toJS,
-                                      );
-                                      print([res.ok, res.body]);
-                                      if (res.ok) {
-                                        if (res.body != null &&
-                                            res.body!.containsKey('uid')) {
-                                          msg =
-                                              'New teacher added successfully!';
-                                          final docRef = firestore
-                                              .collection('users')
-                                              .doc(res.body!['uid'] as String);
-                                          await docRef.set(tData.toJson());
-                                          teachersCache.registry[docRef.id] =
-                                              await docRef.get();
-                                          setState(() {});
-                                        } else {
-                                          msg =
-                                              'Something went wrong on the client-side when setting teacher data.';
-                                        }
-                                      } else {
-                                        msg =
-                                            'An error occurred on the server-side when creating the teacher account.';
-                                      }
-                                    } else {
-                                      msg = 'Action cancelled.';
-                                    }
-
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text(msg)),
-                                      );
-                                    }
-                                  },
-                                ),
-                                const SizedBox(height: 40),
                               ],
                             ),
+                      AxisButton.text(
+                        label: 'Add New Teacher',
+                        width: 180,
+                        isHighlighted: true,
+                        onPressed: () async {
+                          final TeacherData? tData = await showDialog(
+                            context: context,
+                            builder: (_) => TeacherCreationDialog(
+                              teacherId: null,
+                            ),
+                          );
+                          final String msg;
+                          if (tData != null) {
+                            final res = await makeRequest(
+                              body: jsonEncode({
+                                'op': 'registerTeacher',
+                                'name': tData.name,
+                                'email': tData.email,
+                              }).toJS,
+                            );
+                            if (res.ok) {
+                              if (res.body != null &&
+                                  res.body!.containsKey('uid')) {
+                                msg = 'New teacher added successfully!';
+                                final docRef = firestore
+                                    .collection('users')
+                                    .doc(res.body!['uid'] as String);
+                                await docRef.set(tData.toJson());
+                                teachersCache.registry[docRef.id] = await docRef
+                                    .get();
+                                setState(() {});
+                              } else {
+                                msg =
+                                    'Something went wrong on the client-side when setting teacher data.';
+                              }
+                            } else {
+                              msg =
+                                  'An error occurred on the server-side when creating the teacher account.';
+                            }
+                          } else {
+                            msg = 'Action cancelled.';
+                          }
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(
+                              context,
+                            ).showSnackBar(
+                              SnackBar(content: Text(msg)),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 40),
                     ],
                   ],
                 ),

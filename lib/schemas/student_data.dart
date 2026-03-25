@@ -11,6 +11,10 @@ class StudentData extends JSONSerialisable {
   final String parentContactNo;
   final String email;
   final Map<String, bool> withdrawn;
+  final String address;
+  final String postalCode;
+  final String school;
+  final String subjectCombi;
 
   const StudentData({
     required this.role,
@@ -21,6 +25,10 @@ class StudentData extends JSONSerialisable {
     required this.parentContactNo,
     required this.parentName,
     required this.withdrawn,
+    required this.address,
+    required this.postalCode,
+    required this.school,
+    required this.subjectCombi,
   });
 
   StudentData.fromJson(JSON json)
@@ -30,6 +38,10 @@ class StudentData extends JSONSerialisable {
       email = json['email'] as String,
       parentName = json['parentName'] as String,
       parentContactNo = json['parentContactNo'] as String,
+      address = json['address'] as String,
+      postalCode = json['postalCode'] as String,
+      school = json['school'] as String,
+      subjectCombi = json['subjectCombi'] as String,
       withdrawn = (json['withdrawn'] as Map).map(
         (k, v) => MapEntry(k as String, v as bool),
       ),
@@ -45,5 +57,9 @@ class StudentData extends JSONSerialisable {
     'parentName': parentName,
     'parentContactNo': parentContactNo,
     'widthdrawn': withdrawn,
+    'address': address,
+    'school': school,
+    'postalCode': postalCode,
+    'subjectCombi': subjectCombi,
   };
 }
