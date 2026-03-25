@@ -692,21 +692,10 @@ class InvoicingPageState extends State<InvoicingPage> {
       'invoice.pdf',
     );
 
-    final overrideResp = await web.window
-        .fetch(
-          'http://localhost:8088'.toJS,
-          web.RequestInit(
-            method: 'POST',
-            body:
-                '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
-            headers:
-                {
-                      'Content-Type': 'application/json',
-                    }.jsify()
-                    as web.Headers,
-          ),
-        )
-        .toDart;
+    final overrideResp = await makeRequest(
+      body: '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
+    );
+
     final String msg;
     if (!overrideResp.ok) {
       msg = 'Pre-flight request to LAD server failed.';

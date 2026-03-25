@@ -582,13 +582,32 @@ class DashboardPageState extends State<DashboardPage> {
                                     );
                                     final String msg;
                                     if (tData != null) {
-                                      msg = 'New teacher added successfully!';
-                                      final docRef = await firestore
-                                          .collection('users')
-                                          .add(tData.toJson());
-                                      teachersCache.registry[docRef.id] =
-                                          await docRef.get();
-                                      setState(() {});
+                                      final res = await makeRequest(
+                                        body: jsonEncode({
+                                          'op': 'registerTeacher',
+                                        }).toJS,
+                                      );
+                                      print([res.ok, res.body]);
+                                      if (res.ok) {
+                                        if (res.body != null &&
+                                            res.body!.containsKey('uid')) {
+                                          msg =
+                                              'New teacher added successfully!';
+                                          final docRef = firestore
+                                              .collection('users')
+                                              .doc(res.body!['uid'] as String);
+                                          await docRef.set(tData.toJson());
+                                          teachersCache.registry[docRef.id] =
+                                              await docRef.get();
+                                          setState(() {});
+                                        } else {
+                                          msg =
+                                              'Something went wrong on the client-side when setting teacher data.';
+                                        }
+                                      } else {
+                                        msg =
+                                            'An error occurred on the server-side when creating the teacher account.';
+                                      }
                                     } else {
                                       msg = 'Action cancelled.';
                                     }

@@ -37,6 +37,32 @@ class GenericCache<T> {
 const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
 Random _rnd = Random();
 
+Future<({bool ok, JSON? body})> makeRequest({
+  String url = 'http://localhost:8088',
+  String method = 'POST',
+  required JSAny body,
+  Map<String, String> headers = const {
+    'Content-Type': 'application/json',
+  },
+}) async {
+  final res = await web.window
+      .fetch(
+        url.toJS,
+        web.RequestInit(
+          method: 'POST',
+          body: body,
+          headers: headers.jsify() as web.Headers,
+        ),
+      )
+      .toDart;
+
+  final jsonBody = await res.text().toDart;
+  return (
+    ok: res.ok,
+    body: jsonDecode(jsonBody.toDart) as JSON,
+  );
+}
+
 String generateId() => String.fromCharCodes(
   Iterable.generate(
     16,
