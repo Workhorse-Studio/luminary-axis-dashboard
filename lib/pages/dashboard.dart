@@ -585,6 +585,8 @@ class DashboardPageState extends State<DashboardPage> {
                                       final res = await makeRequest(
                                         body: jsonEncode({
                                           'op': 'registerTeacher',
+                                          'name': tData.name,
+                                          'email': tData.email,
                                         }).toJS,
                                       );
                                       print([res.ok, res.body]);
