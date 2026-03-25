@@ -233,7 +233,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 ),
                 for (final term in globalState!.terms)
                   DataColumn2(
-                    minWidth: 750,
+                    minWidth: 780,
                     label: Center(
                       child: Text(
                         term.termName,
@@ -258,7 +258,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                 ),
                 for (final monthId in generateMonthIds())
                   DataColumn2(
-                    minWidth: 530,
+                    minWidth: 560,
                     label: Center(
                       child: Text(
                         "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
@@ -336,7 +336,7 @@ class InvoicingPageState extends State<InvoicingPage> {
           DataCell(
             Center(
               child: SizedBox(
-                width: 740,
+                width: 770,
                 height: 80,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -371,7 +371,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                             },
                           ),
                           AxisDropdownButton<InvoiceStatus>(
-                            width: 240,
+                            width: 270,
                             seaprateInitialSelectionEntry: false,
                             entries: [
                               for (final status in InvoiceStatus.values)
@@ -506,7 +506,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     sessionsMap[teacherData.id]!.containsKey(monthId)
                 ? Center(
                     child: SizedBox(
-                      width: 480,
+                      width: 510,
                       height: 80,
                       child: Row(
                         children: [
@@ -547,7 +547,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                             }(),
                             builder: (context, snapshot) =>
                                 AxisDropdownButton<InvoiceStatus>(
-                                  width: 240,
+                                  width: 270,
                                   entries: [
                                     for (final status in InvoiceStatus.values)
                                       (status.label, status),
@@ -732,6 +732,26 @@ class InvoicingPageState extends State<InvoicingPage> {
   }
 
   Future<void> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {
+    bool invoicePayloadMatches(
+      TeacherInvoiceData a,
+      TeacherInvoiceData b,
+    ) {
+      if (a.amtDue != b.amtDue) return false;
+      if (a.entries.length != b.entries.length) return false;
+      for (int i = 0; i < a.entries.length; i++) {
+        final x = a.entries[i], y = b.entries[i];
+        if (x.desc != y.desc ||
+            x.qty != y.qty ||
+            x.rate != y.rate ||
+            x.amt != y.amt) {
+          return false;
+        }
+      }
+      return a.teacherName == b.teacherName &&
+          a.adminName == b.adminName &&
+          a.terms == b.terms;
+    }
+
     final Map<String, Map<String, Map<String, int>>> newSessions = {};
     final mIds = generateMonthIds();
     for (final teacherEntry in teachersCache.registry.entries) {
@@ -764,7 +784,26 @@ class InvoicingPageState extends State<InvoicingPage> {
         );
         final double rate = TeacherPayout.calculateRate(totNumSess);
         final double payout = rate * totNumSess;
-        final DocumentReference<JSON> docRef;
+
+        /// Save or Update
+
+        DocumentSnapshot<JSON>? existingInvoice;
+        DocumentReference<JSON> docRef;
+        final candidate = TeacherInvoiceData(
+          invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
+          address: '',
+          amtDue: payout,
+          paidDateFormatted: '',
+          invoiceStatus: InvoiceStatus.pendingBilling,
+          entries: [
+            for (final e in monthEntry.value.entries)
+              (amt: e.value * rate, rate: rate, qty: e.value, desc: e.key),
+          ],
+          invoiceId: '',
+          adminName: 'Jevan',
+          teacherName: teacherData.name,
+          terms: 'Custom',
+        );
 
         if (teacherData.invoiceIds.containsKey(monthEntry.key)) {
           docRef = firestore
@@ -772,37 +811,27 @@ class InvoicingPageState extends State<InvoicingPage> {
               .doc('archives')
               .collection('invoices')
               .doc(teacherData.invoiceIds[monthEntry.key]);
-        } else {
-          docRef = firestore
-              .collection('global')
-              .doc('archives')
-              .collection('invoices')
-              .doc();
-          await teacherEntry.value.reference.update({
-            'invoiceIds.${monthEntry.key}': docRef.id,
-          });
-          teachersCache.registry[teacherEntry.key] = await teacherEntry
-              .value
-              .reference
-              .get();
+          existingInvoice = await docRef.get();
+          final existing = TeacherInvoiceData.fromJson(existingInvoice.data()!);
+          if (invoicePayloadMatches(existing, candidate)) {
+            continue;
+          }
         }
-        await docRef.set(
-          TeacherInvoiceData(
-            invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
-            address: '',
-            amtDue: payout,
-            paidDateFormatted: '',
-            invoiceStatus: InvoiceStatus.pendingBilling,
-            entries: [
-              for (final e in monthEntry.value.entries)
-                (amt: e.value * rate, rate: rate, qty: e.value, desc: e.key),
-            ],
-            invoiceId: docRef.id,
-            adminName: 'Jevan',
-            teacherName: teacherData.name,
-            terms: 'Custom',
-          ).toJson(),
-        );
+        docRef = firestore
+            .collection('global')
+            .doc('archives')
+            .collection('invoices')
+            .doc();
+        await docRef.set(candidate.toJson()..['invoiceId'] = docRef.id);
+
+        await teacherEntry.value.reference.update({
+          'invoiceIds.${monthEntry.key}': docRef.id,
+        });
+
+        teachersCache.registry[teacherEntry.key] = await teacherEntry
+            .value
+            .reference
+            .get();
       }
     }
     sessionsMap

@@ -175,10 +175,8 @@ class StudentAttendanceStore {
             currentTermInvoices[studentEntry.key] = StudentInvoiceData.fromJson(
               existingInvoice.data()!,
             );
-            print('matching');
             continue;
           } else {
-            print('updating link');
             // Create new invoice (done above) and link student's data to that
             await firestore.collection('users').doc(studentEntry.key).update({
               'invoiceIds': sd.invoiceIds..[t] = docRef.id,

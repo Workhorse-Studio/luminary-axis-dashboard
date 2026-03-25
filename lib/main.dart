@@ -95,7 +95,6 @@ void main() async {
       isAdmin = true;
     }
     Future<void> clearInvoicesProc() async {
-      print('x');
       final students =
           (await firestore
                   .collection('users')
