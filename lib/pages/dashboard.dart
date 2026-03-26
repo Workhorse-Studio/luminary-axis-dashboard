@@ -134,11 +134,12 @@ class DashboardPageState extends State<DashboardPage> {
                                   ),
                                 )
                               : SizedBox(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.3,
+                                  width: MediaQuery.of(context).size.width * 8,
                                   child: Align(
                                     alignment: Alignment.topLeft,
                                     child: Wrap(
+                                      spacing: 20,
+                                      runSpacing: 20,
                                       children: [
                                         for (final poDoc in snapshot.data!)
                                           ...generateSeparateOnboardingForEachClass(

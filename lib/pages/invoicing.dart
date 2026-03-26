@@ -791,7 +791,14 @@ class InvoicingPageState extends State<InvoicingPage> {
           invoiceStatus: InvoiceStatus.pendingBilling,
           entries: [
             for (final e in monthEntry.value.entries)
-              (amt: e.value * rate, rate: rate, qty: e.value, desc: e.key),
+              (
+                amt: e.value * rate,
+                rate: rate,
+                qty: e.value,
+                desc: ClassData.fromJson(
+                  (await classesCache.get(e.key)).data()!,
+                ).name,
+              ),
           ],
           invoiceId: '',
           adminName: 'Jevan',

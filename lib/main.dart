@@ -150,7 +150,7 @@ enum Routes {
     '/invoicing',
     'Billings',
     ['admin'],
-    Icons.receipt,
+    Icons.payments,
   ),
   teachers(
     '/teachers',
