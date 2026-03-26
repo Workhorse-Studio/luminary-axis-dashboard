@@ -737,7 +737,7 @@ class DashboardPageState extends State<DashboardPage> {
                             await clRef.reference.update({
                               'students': cd.studentIds..add(uid),
                             });
-                            (await firestore
+                            final termDr = firestore
                                 .collection('global')
                                 .doc('state')
                                 .collection('allocations')
@@ -745,8 +745,14 @@ class DashboardPageState extends State<DashboardPage> {
                                   globalState!
                                       .terms[globalState!.currentTermNum]
                                       .termName,
-                                )
-                                .update({'$clId.$uid': 0}));
+                                );
+                            if ((await termDr.get()).exists) {
+                              await termDr.update({'$clId.$uid': 0});
+                            } else {
+                              await termDr.set({
+                                clId: {uid: 0},
+                              });
+                            }
                             await firestore.collection('users').doc(uid).update(
                               {'withdrawn.$clId': false},
                             );

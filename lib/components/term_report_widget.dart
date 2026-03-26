@@ -224,9 +224,14 @@ class TermReportWidgetState extends State<TermReportWidget> {
                     ),
                   ),
                   DataCell(
-                    Text(
-                      classId.substring(0, 4),
-                      style: body2,
+                    FutureBuilderTemplate(
+                      future: (() async => ClassData.fromJson(
+                        (await classesCache.get(classId)).data()!,
+                      ).name)(),
+                      builder: (_, snapshot) => Text(
+                        snapshot.data!,
+                        style: body2,
+                      ),
                     ),
                   ),
                   ...fillerCells,
