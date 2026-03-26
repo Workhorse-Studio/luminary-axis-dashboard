@@ -8,15 +8,9 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class OnboardingPageState extends State<OnboardingPage> {
-  List<QueryDocumentSnapshot<JSON>> classesDocs = [];
+  List<QueryDocumentSnapshot<JSON>> classTemplateDocs = [];
   List<QueryDocumentSnapshot<JSON>> teachersDocs = [];
-  List<
-    ({
-      QueryDocumentSnapshot<JSON> teacherData,
-      QueryDocumentSnapshot<JSON> classData,
-    })
-  >
-  selections = [];
+  List<QueryDocumentSnapshot<JSON>> selections = [];
 
   final TextEditingController nameController = TextEditingController(),
       hpController = TextEditingController(),
@@ -41,9 +35,9 @@ class OnboardingPageState extends State<OnboardingPage> {
         child: SingleChildScrollView(
           child: FutureBuilderTemplate(
             future: () async {
-              if (classesDocs.isEmpty) {
-                classesDocs =
-                    (await firestore.collection('classes').get()).docs;
+              if (classTemplateDocs.isEmpty) {
+                classTemplateDocs =
+                    (await firestore.collection('templates').get()).docs;
               }
               if (teachersDocs.isEmpty) {
                 teachersDocs =
@@ -53,7 +47,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                             .get())
                         .docs;
               }
-              return classesDocs;
+              return classTemplateDocs;
             }(),
             builder: (context, snapshot) => Theme(
               data: ThemeData(
@@ -196,48 +190,31 @@ class OnboardingPageState extends State<OnboardingPage> {
                   ),
                   const SizedBox(height: 10),
 
-                  ...[
-                    for (final tData in teachersDocs) ...[
-                      for (final cData in classesDocs.where(
-                        (cd) => TeacherData.fromJson(
-                          tData.data(),
-                        ).classIds.contains(cd.id),
-                      ))
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: selections.any(
-                                (s) =>
-                                    s.classData.id == cData.id &&
-                                    s.teacherData.id == tData.id,
-                              ),
-                              onChanged: (sel) {
-                                if (sel != null) {
-                                  if (sel) {
-                                    selections.add((
-                                      classData: cData,
-                                      teacherData: tData,
-                                    ));
-                                  } else {
-                                    selections.removeWhere(
-                                      (s) =>
-                                          s.classData.id == cData.id &&
-                                          s.teacherData.id == tData.id,
-                                    );
-                                  }
-                                  setState(() {});
-                                }
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "${ClassData.fromJson(cData.data()).name} by ${TeacherData.fromJson(tData.data()).name}",
-                              style: body2,
-                            ),
-                          ],
+                  for (final cData in classTemplateDocs)
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: selections.any((s) => s.id == cData.id),
+                          onChanged: (sel) {
+                            if (sel != null) {
+                              if (sel) {
+                                selections.add(
+                                  cData,
+                                );
+                              } else {
+                                selections.removeWhere((s) => s.id == cData.id);
+                              }
+                              setState(() {});
+                            }
+                          },
                         ),
-                    ],
-                  ],
+                        const SizedBox(width: 8),
+                        Text(
+                          ClassTemplate.fromJson(cData.data()).className,
+                          style: body2,
+                        ),
+                      ],
+                    ),
 
                   const SizedBox(height: 15),
 
@@ -266,10 +243,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                                 address: addressController.text,
                                 postalCode: postalCodeController.text,
                                 subjectCombi: subjectCombi.text,
-                                classIdToTeacherId: {
-                                  for (final sel in selections)
-                                    sel.classData.id: sel.teacherData.id,
-                                },
+                                classes: selections.map((s) => s.id).toList(),
                               ).toJson(),
                             );
                         msg =

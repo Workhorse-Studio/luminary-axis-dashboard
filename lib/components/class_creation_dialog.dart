@@ -43,46 +43,17 @@ class ClassCreationDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 30),
 
-                  Text(
-                    'Teacher',
-                    style: heading3,
-                  ),
-                  const SizedBox(height: 10),
-                  FutureBuilderTemplate(
-                    future: () async {
-                      return (await firestore
-                              .collection('users')
-                              .where(
-                                'role',
-                                whereIn: const ['teacher', 'admin'],
-                              )
-                              .get())
-                          .docs;
-                    }(),
-                    builder: (_, snapshot) => AxisDropdownButton<String>(
-                      width: 240,
-                      entries: [
-                        for (final tDoc in snapshot.data!)
-                          (TeacherData.fromJson(tDoc.data()).name, tDoc.id),
-                      ],
-                      onSelected: (selection) => teacherId = selection ?? '',
-                    ),
-                  ),
                   const SizedBox(height: 30),
                   const SizedBox(height: 50),
                   AxisButton.text(
                     label: 'Save',
                     onPressed: () {
                       if (className != '') {
-                        Navigator.of(context).pop((
-                          ClassData(
-                            name: className,
-                            studentIds: [],
-                            attendance:
-                                Map<String, Map<String, AttendanceType>>(),
+                        Navigator.of(context).pop(
+                          ClassTemplate(
+                            className: className,
                           ),
-                          teacherId,
-                        ));
+                        );
                       } else {
                         Navigator.of(context).pop(null);
                       }

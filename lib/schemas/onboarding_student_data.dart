@@ -5,12 +5,12 @@ class OnboardingStudentData extends JSONSerialisable {
   final String studentContactNo;
   final String parentName;
   final String parentContactNo;
-  final Map<String, String> classIdToTeacherId;
   final String email;
   final String address;
   final String postalCode;
   final String school;
   final String subjectCombi;
+  final List<String> classes;
 
   const OnboardingStudentData({
     required this.studentContactNo,
@@ -18,11 +18,11 @@ class OnboardingStudentData extends JSONSerialisable {
     required this.parentContactNo,
     required this.parentName,
     required this.email,
-    required this.classIdToTeacherId,
     required this.address,
     required this.postalCode,
     required this.school,
     required this.subjectCombi,
+    required this.classes,
   });
 
   OnboardingStudentData.fromJson(JSON json)
@@ -34,11 +34,8 @@ class OnboardingStudentData extends JSONSerialisable {
       address = json['address'] as String,
       postalCode = json['postalCode'] as String,
       school = json['school'] as String,
-      subjectCombi = json['subjectCombi'] as String,
-      classIdToTeacherId = (json['classIdToTeacherId'] as Map).map(
-        (k, v) => MapEntry(k as String, v as String),
-      );
-
+      classes = (json['classes'] as List).cast(),
+      subjectCombi = json['subjectCombi'] as String;
   @override
   JSON toJson() => {
     'studentName': studentName,
@@ -46,10 +43,10 @@ class OnboardingStudentData extends JSONSerialisable {
     'parentName': parentName,
     'email': email,
     'parentContactNo': parentContactNo,
-    'classIdToTeacherId': classIdToTeacherId,
     'address': address,
     'school': school,
     'postalCode': postalCode,
     'subjectCombi': subjectCombi,
+    'classes': classes,
   };
 }

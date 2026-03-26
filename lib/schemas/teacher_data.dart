@@ -5,6 +5,7 @@ class TeacherData extends JSONSerialisable {
   final List<String> classIds;
   final String name;
   final String email;
+  final List<String> offeredClassTemplates;
 
   /// Maps a month's ID to the invoice ID of the teacher for that term
   final Map<String, String> invoiceIds;
@@ -15,6 +16,7 @@ class TeacherData extends JSONSerialisable {
     required this.classIds,
     required this.email,
     required this.invoiceIds,
+    required this.offeredClassTemplates,
   });
 
   TeacherData.fromJson(JSON json)
@@ -22,6 +24,7 @@ class TeacherData extends JSONSerialisable {
       role = json['role'] as String,
       email = json['email'] as String,
       invoiceIds = (json['invoiceIds'] as Map).cast(),
+      offeredClassTemplates = (json['offeredClassTemplates'] as List).cast(),
       classIds = (json['classes'] as List).cast();
 
   @override
@@ -31,5 +34,6 @@ class TeacherData extends JSONSerialisable {
     'invoiceIds': invoiceIds,
     'classes': classIds,
     'email': email,
+    'offeredClassTemplates': offeredClassTemplates,
   };
 }

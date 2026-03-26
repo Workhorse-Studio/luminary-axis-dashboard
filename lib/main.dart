@@ -59,6 +59,7 @@ part './schemas/onboarding_student_data.dart';
 part './schemas/term_allocation.dart';
 part './schemas/term_data.dart';
 part './schemas/invoice_data.dart';
+part './schemas/class_template.dart';
 
 part './operations/compute_student_attendance.dart';
 part './operations/generate_term_report.dart';

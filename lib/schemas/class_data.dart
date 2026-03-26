@@ -36,17 +36,20 @@ enum AttendanceType {
 class ClassData extends JSONSerialisable {
   final String name;
   final List<String> studentIds;
+  final String templateReference;
   final Map<String, Map<String, AttendanceType>> attendance;
 
   const ClassData({
     required this.name,
     required this.studentIds,
+    required this.templateReference,
     required this.attendance,
   });
 
   ClassData.fromJson(JSON json)
     : name = json['name'] as String,
       studentIds = (json['students'] as List).cast(),
+      templateReference = (json['templateReference'] as String),
       attendance = (json['attendance'] as Map<String, dynamic>).map(
         (key, value) => MapEntry(
           key,
@@ -63,6 +66,7 @@ class ClassData extends JSONSerialisable {
   JSON toJson() => {
     'name': name,
     'students': studentIds,
+    'templateReference': templateReference,
     'attendance': attendance.entries.isEmpty
         ? Map<String, Map<String, AttendanceType>>()
         : {

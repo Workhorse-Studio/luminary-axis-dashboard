@@ -12,9 +12,13 @@ class TeacherCreationDialog extends StatefulWidget {
 }
 
 class TeacherCreationDialogState extends State<TeacherCreationDialog> {
+  final GenericCache<DocumentSnapshot<JSON>> templatesCache = GenericCache(
+    (classId) => firestore.collection('templates').doc(classId).get(),
+  );
   final GenericCache<DocumentSnapshot<JSON>> classesCache = GenericCache(
     (classId) => firestore.collection('classes').doc(classId).get(),
   );
+  final Map<String, bool> isTemplateSelected = {};
   final Map<String, bool> isClassSelected = {};
 
   TextEditingController teacherNameController = TextEditingController(text: '');
@@ -52,6 +56,9 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                 key: ValueKey(widget.teacherId),
                 future: () async {
                   if (!hasInit) {
+                    await templatesCache.initAll(
+                      collection: firestore.collection('templates'),
+                    );
                     await classesCache.initAll(
                       collection: firestore.collection('classes'),
                     );
@@ -67,6 +74,11 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                     for (final k in classesCache.registry.keys) {
                       isClassSelected[k] = teacher != null
                           ? teacher.classIds.contains(k)
+                          : false;
+                    }
+                    for (final k in templatesCache.registry.keys) {
+                      isTemplateSelected[k] = teacher != null
+                          ? teacher.offeredClassTemplates.contains(k)
                           : false;
                     }
                     hasInit = true;
@@ -98,7 +110,7 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                       ),
                       const SizedBox(height: 30),
 
-                      Text(
+                      /* Text(
                         'Classes Assigned',
                         style: heading3,
                       ),
@@ -130,8 +142,43 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                             ],
                           ),
                         ],
-                      ],
+                      ], */
                       const SizedBox(height: 30),
+                      Text(
+                        'Templates Assigned',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 6),
+                      ...[
+                        for (final templateEntry
+                            in templatesCache.registry.entries) ...[
+                          Row(
+                            children: [
+                              Checkbox(
+                                key: ValueKey(
+                                  isTemplateSelected[templateEntry.key],
+                                ),
+                                value: isTemplateSelected[templateEntry.key],
+                                onChanged: (isSelected) async {
+                                  if (isSelected != null) {
+                                    setState(() {
+                                      isTemplateSelected[templateEntry.key] =
+                                          isSelected;
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                ClassTemplate.fromJson(
+                                  templateEntry.value.data()!,
+                                ).className,
+                                style: body2,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                       const SizedBox(height: 50),
                       AxisButton.text(
                         label: 'Save',
@@ -144,6 +191,11 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                                 role: 'teacher',
                                 email: teacherEmailController.text,
                                 classIds: isClassSelected.entries
+                                    .where((e) => e.value)
+                                    .map((e) => e.key)
+                                    .toList(),
+                                offeredClassTemplates: isTemplateSelected
+                                    .entries
                                     .where((e) => e.value)
                                     .map((e) => e.key)
                                     .toList(),

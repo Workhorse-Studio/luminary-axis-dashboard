@@ -19,6 +19,9 @@ class DashboardPageState extends State<DashboardPage> {
     (teacherId) async => firestore.collection('users').doc(teacherId).get(),
   );
 
+  /// { studentId : { classId: teacherId } }
+  final Map<String, Map<String, String?>> assignedTeachers = {};
+
   @override
   Widget build(BuildContext context) {
     return Navbar(
@@ -138,112 +141,8 @@ class DashboardPageState extends State<DashboardPage> {
                                     child: Wrap(
                                       children: [
                                         for (final poDoc in snapshot.data!)
-                                          AxisCard(
-                                            header:
-                                                OnboardingStudentData.fromJson(
-                                                  poDoc.data(),
-                                                ).studentName,
-                                            width: double.infinity,
-                                            height: 360,
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                left: 30,
-                                                right: 30,
-                                                bottom: 30,
-                                              ),
-                                              child: Align(
-                                                alignment: Alignment.topLeft,
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      "Contact: ${OnboardingStudentData.fromJson(
-                                                        poDoc.data(),
-                                                      ).studentContactNo}",
-                                                      style: body2,
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    Text(
-                                                      "Parent: ${OnboardingStudentData.fromJson(
-                                                        poDoc.data(),
-                                                      ).parentName}",
-                                                      style: body2,
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    Text(
-                                                      "Parent's Contact: ${OnboardingStudentData.fromJson(
-                                                        poDoc.data(),
-                                                      ).parentContactNo}",
-                                                      style: body2,
-                                                    ),
-                                                    const SizedBox(height: 10),
-                                                    FutureBuilderTemplate(
-                                                      future: () async {
-                                                        final obData =
-                                                            OnboardingStudentData.fromJson(
-                                                              poDoc.data(),
-                                                            );
-
-                                                        return [
-                                                          for (final entry
-                                                              in obData
-                                                                  .classIdToTeacherId
-                                                                  .entries)
-                                                            "${ClassData.fromJson((await classesCache.get(entry.key)).data()!).name} by ${TeacherData.fromJson((await teachersCache.get(entry.value)).data()!).name}",
-                                                        ].join(', ');
-                                                      }(),
-                                                      builder:
-                                                          (
-                                                            context,
-                                                            snapshot,
-                                                          ) => Text(
-                                                            snapshot.data!,
-                                                            style: heading3,
-                                                          ),
-                                                    ),
-                                                    const SizedBox(height: 10),
-
-                                                    const SizedBox(height: 20),
-                                                    AxisButton.text(
-                                                      label: 'Approve',
-                                                      isHighlighted: true,
-                                                      width: 100,
-                                                      height: 60,
-                                                      onPressed: () async {
-                                                        await onboardStudent(
-                                                          OnboardingStudentData.fromJson(
-                                                            poDoc.data(),
-                                                          ),
-                                                        );
-                                                        await firestore
-                                                            .collection(
-                                                              'global',
-                                                            )
-                                                            .doc('state')
-                                                            .collection(
-                                                              'pendingOnboarding',
-                                                            )
-                                                            .doc(poDoc.id)
-                                                            .delete();
-                                                        setState(() {});
-                                                        if (context.mounted) {
-                                                          ScaffoldMessenger.of(
-                                                            context,
-                                                          ).showSnackBar(
-                                                            SnackBar(
-                                                              content: Text(
-                                                                'Student has been onboarded',
-                                                              ),
-                                                            ),
-                                                          );
-                                                        }
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
+                                          ...generateSeparateOnboardingForEachClass(
+                                            poDoc,
                                           ),
                                       ],
                                     ),
@@ -307,6 +206,8 @@ class DashboardPageState extends State<DashboardPage> {
                                                         role: 'teacher',
                                                         classIds: [clEntry.key],
                                                         email: '',
+                                                        offeredClassTemplates:
+                                                            const [],
                                                         invoiceIds: const {},
                                                       ).toJson(),
                                                 ).name,
@@ -345,44 +246,15 @@ class DashboardPageState extends State<DashboardPage> {
                         width: 160,
                         isHighlighted: true,
                         onPressed: () async {
-                          final (ClassData, String)? classData =
-                              await showDialog(
-                                context: context,
-                                builder: (_) => ClassCreationDialog(),
-                              );
+                          final ClassTemplate? classData = await showDialog(
+                            context: context,
+                            builder: (_) => ClassCreationDialog(),
+                          );
                           final String msg;
                           if (classData != null) {
-                            final docRef = await firestore
-                                .collection('classes')
-                                .add(classData.$1.toJson());
-                            if (classData.$2 != '') {
-                              final classIds = TeacherData.fromJson(
-                                (await firestore
-                                        .collection('users')
-                                        .doc(classData.$2)
-                                        .get())
-                                    .data()!,
-                              ).classIds;
-                              await firestore
-                                  .collection('users')
-                                  .doc(classData.$2)
-                                  .update({
-                                    'classes': [
-                                      ...classIds,
-                                      docRef.id,
-                                    ],
-                                  });
-                              teachersCache.registry[classData.$2] =
-                                  await firestore
-                                      .collection('users')
-                                      .doc(classData.$2)
-                                      .get();
-                            }
-
-                            classesCache.registry[docRef.id] = await firestore
-                                .collection('classes')
-                                .doc(docRef.id)
-                                .get();
+                            await firestore
+                                .collection('templates')
+                                .add(classData.toJson());
 
                             msg = 'Class created successfully!';
                           } else {
@@ -469,6 +341,68 @@ class DashboardPageState extends State<DashboardPage> {
                                                         .collection('users')
                                                         .doc(teacherEntry.key)
                                                         .set(tData.toJson());
+
+                                                    for (final template
+                                                        in tData
+                                                            .offeredClassTemplates) {
+                                                      bool exists = false;
+                                                      for (final clId
+                                                          in tData.classIds) {
+                                                        if (ClassData.fromJson(
+                                                              (await classesCache
+                                                                      .get(
+                                                                        clId,
+                                                                      ))
+                                                                  .data()!,
+                                                            ).templateReference ==
+                                                            template) {
+                                                          exists = true;
+                                                          break;
+                                                        }
+                                                      }
+                                                      if (!exists) {
+                                                        final docRef = await firestore
+                                                            .collection(
+                                                              'classes',
+                                                            )
+                                                            .add(
+                                                              ClassData(
+                                                                name: ClassTemplate.fromJson(
+                                                                  (await (firestore
+                                                                              .collection(
+                                                                                'templates',
+                                                                              )
+                                                                              .doc(
+                                                                                template,
+                                                                              ))
+                                                                          .get())
+                                                                      .data()!,
+                                                                ).className,
+                                                                studentIds:
+                                                                    const [],
+                                                                templateReference:
+                                                                    template,
+                                                                attendance: {},
+                                                              ).toJson(),
+                                                            );
+                                                        await firestore
+                                                            .collection('users')
+                                                            .doc(
+                                                              teacherEntry.key,
+                                                            )
+                                                            .update(
+                                                              {
+                                                                'classes':
+                                                                    tData
+                                                                        .classIds
+                                                                      ..add(
+                                                                        docRef
+                                                                            .id,
+                                                                      ),
+                                                              },
+                                                            );
+                                                      }
+                                                    }
                                                     teachersCache
                                                         .registry[teacherEntry
                                                         .key] = await firestore
@@ -593,10 +527,63 @@ class DashboardPageState extends State<DashboardPage> {
                             if (res.ok) {
                               if (res.body != null &&
                                   res.body!.containsKey('uid')) {
+                                final String uid = res.body!['uid'] as String;
+                                for (final template
+                                    in tData.offeredClassTemplates) {
+                                  bool exists = false;
+                                  for (final clId in tData.classIds) {
+                                    if (ClassData.fromJson(
+                                          (await classesCache.get(
+                                            clId,
+                                          )).data()!,
+                                        ).templateReference ==
+                                        template) {
+                                      exists = true;
+                                      break;
+                                    }
+                                  }
+                                  if (!exists) {
+                                    final docRef = await firestore
+                                        .collection(
+                                          'classes',
+                                        )
+                                        .add(
+                                          ClassData(
+                                            name: ClassTemplate.fromJson(
+                                              (await (firestore
+                                                          .collection(
+                                                            'templates',
+                                                          )
+                                                          .doc(
+                                                            template,
+                                                          ))
+                                                      .get())
+                                                  .data()!,
+                                            ).className,
+                                            studentIds: const [],
+                                            templateReference: template,
+                                            attendance: {},
+                                          ).toJson(),
+                                        );
+                                    await firestore
+                                        .collection('users')
+                                        .doc(
+                                          uid,
+                                        )
+                                        .update(
+                                          {
+                                            'classes': tData.classIds
+                                              ..add(
+                                                docRef.id,
+                                              ),
+                                          },
+                                        );
+                                  }
+                                }
                                 msg = 'New teacher added successfully!';
                                 final docRef = firestore
                                     .collection('users')
-                                    .doc(res.body!['uid'] as String);
+                                    .doc(uid);
                                 await docRef.set(tData.toJson());
                                 teachersCache.registry[docRef.id] = await docRef
                                     .get();
@@ -633,5 +620,178 @@ class DashboardPageState extends State<DashboardPage> {
         },
       ),
     );
+  }
+
+  List<Widget> generateSeparateOnboardingForEachClass(
+    QueryDocumentSnapshot<JSON> poDoc,
+  ) {
+    final List<Widget> cards = [];
+    final obd = OnboardingStudentData.fromJson(
+      poDoc.data(),
+    );
+    for (final tempId in obd.classes) {
+      cards.add(
+        AxisCard(
+          header: obd.studentName,
+          width: double.infinity,
+          height: 380,
+          child: Padding(
+            padding: const EdgeInsets.only(
+              left: 30,
+              right: 30,
+              bottom: 30,
+            ),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FutureBuilderTemplate(
+                    future: (() async => ClassTemplate.fromJson(
+                      (await firestore
+                              .collection('templates')
+                              .doc(tempId)
+                              .get())
+                          .data()!,
+                    ))(),
+                    builder: (_, snapshot) => Text(
+                      snapshot.data!.className,
+                      style: heading3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Contact: ${obd.studentContactNo}",
+                    style: body2,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Parent: ${obd.parentName}",
+                    style: body2,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Parent's Contact: ${obd.parentContactNo}",
+                    style: body2,
+                  ),
+                  const SizedBox(height: 10),
+
+                  AxisDropdownButton(
+                    width: 240,
+                    entries: [
+                      for (final tEntry in teachersCache.registry.entries.where(
+                        (t) =>
+                            TeacherData.fromJson(
+                              t.value.data()!,
+                            ).offeredClassTemplates.contains(
+                              tempId,
+                            ),
+                      ))
+                        (
+                          TeacherData.fromJson(
+                            tEntry.value.data()!,
+                          ).name,
+                          tEntry,
+                        ),
+                    ],
+                    onSelected: (selection) {
+                      if (!assignedTeachers.containsKey(poDoc.id)) {
+                        assignedTeachers[poDoc.id] = {};
+                      }
+                      assignedTeachers[poDoc.id]![tempId] = selection?.key;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+                  AxisButton.text(
+                    label: 'Approve',
+                    isHighlighted: true,
+                    width: 100,
+                    height: 60,
+                    onPressed: () async {
+                      final String msg;
+                      if (assignedTeachers.containsKey(
+                            poDoc.id,
+                          ) &&
+                          assignedTeachers[poDoc.id] != null) {
+                        final uid = await onboardStudent(obd);
+
+                        final td = TeacherData.fromJson(
+                          (await firestore
+                                  .collection(
+                                    'users',
+                                  )
+                                  .doc(
+                                    assignedTeachers[poDoc.id]![tempId],
+                                  )
+                                  .get())
+                              .data()!,
+                        );
+                        bool found = false;
+                        for (final clId in td.classIds) {
+                          final clRef = (await classesCache.get(clId));
+                          final cd = ClassData.fromJson(
+                            clRef.data()!,
+                          );
+                          if (cd.templateReference == tempId) {
+                            await clRef.reference.update({
+                              'students': cd.studentIds..add(uid),
+                            });
+                            found = true;
+                            break;
+                          }
+                        }
+                        final template = ClassTemplate.fromJson(
+                          (await firestore
+                                  .collection('templates')
+                                  .doc(tempId)
+                                  .get())
+                              .data()!,
+                        );
+                        if (!found) {
+                          msg =
+                              'The selected teacher does not teach any ${template.className} classes.';
+                        } else {
+                          await firestore
+                              .collection(
+                                'global',
+                              )
+                              .doc('state')
+                              .collection(
+                                'pendingOnboarding',
+                              )
+                              .doc(poDoc.id)
+                              .delete();
+                          msg = 'Student has been onboarded';
+                        }
+
+                        setState(() {});
+                      } else {
+                        msg =
+                            "Please select a teacher to assign to this student.";
+                      }
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              msg,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return cards;
   }
 }
