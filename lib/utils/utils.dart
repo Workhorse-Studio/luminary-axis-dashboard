@@ -38,7 +38,7 @@ const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
 Random _rnd = Random();
 
 Future<({bool ok, JSON? body})> makeRequest({
-  String url = 'http://localhost:8088',
+  String url = 'https://axis-server-850501828016.asia-southeast1.run.app/api/',
   String method = 'POST',
   required JSAny body,
   Map<String, String> headers = const {
