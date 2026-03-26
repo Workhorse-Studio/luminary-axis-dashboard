@@ -56,7 +56,7 @@ class StudentData extends JSONSerialisable {
     'studentContactNo': studentContactNo,
     'parentName': parentName,
     'parentContactNo': parentContactNo,
-    'widthdrawn': withdrawn,
+    'withdrawn': withdrawn,
     'address': address,
     'school': school,
     'postalCode': postalCode,

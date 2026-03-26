@@ -737,6 +737,20 @@ class DashboardPageState extends State<DashboardPage> {
                             await clRef.reference.update({
                               'students': cd.studentIds..add(uid),
                             });
+                            (await firestore
+                                .collection('global')
+                                .doc('state')
+                                .collection('allocations')
+                                .doc(
+                                  globalState!
+                                      .terms[globalState!.currentTermNum]
+                                      .termName,
+                                )
+                                .update({'$clId.$uid': 0}));
+                            await firestore.collection('users').doc(uid).update(
+                              {'withdrawn.$clId': false},
+                            );
+
                             found = true;
                             break;
                           }

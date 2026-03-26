@@ -1,9 +1,12 @@
 part of axis_dashboard;
 
 Future<String> onboardStudent(OnboardingStudentData obData) async {
-  final int numTerms = GlobalState.fromJson(
+  final gs = GlobalState.fromJson(
     (await firestore.collection('global').doc('state').get()).data()!,
-  ).terms.length;
+  );
+
+  final int numTerms = gs.terms.length;
+
   final data = StudentData(
     role: 'student',
     name: obData.studentName,
@@ -16,7 +19,7 @@ Future<String> onboardStudent(OnboardingStudentData obData) async {
     address: obData.address,
     subjectCombi: obData.subjectCombi,
     invoiceIds: List<String?>.generate(numTerms, (_) => null),
-    withdrawn: {for (final k in obData.classes) k: false},
+    withdrawn: {},
   );
   return (await firestore.collection('users').add(data.toJson())).id;
 }

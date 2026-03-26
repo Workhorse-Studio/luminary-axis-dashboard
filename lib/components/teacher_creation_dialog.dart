@@ -70,6 +70,7 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                           .get();
                       teacher = TeacherData.fromJson(teacherData!.data()!);
                       teacherNameController.text = teacher.name;
+                      teacherEmailController.text = teacher.email;
                     }
                     for (final k in classesCache.registry.keys) {
                       isClassSelected[k] = teacher != null

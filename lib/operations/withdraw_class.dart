@@ -5,6 +5,6 @@ Future<void> withdrawStudentFromClass({
   required String classId,
 }) async {
   await firestore.collection('users').doc(studentId).update({
-    'widthdrawn.$classId': true,
+    'withdrawn.$classId': true,
   });
 }
