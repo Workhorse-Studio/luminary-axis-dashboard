@@ -68,6 +68,7 @@ part './operations/onboard_student.dart';
 part './operations/register_class.dart';
 part './operations/withdraw_class.dart';
 part './operations/reset_term_reports.dart';
+part './operations/load_user.dart';
 
 part './utils/utils.dart';
 

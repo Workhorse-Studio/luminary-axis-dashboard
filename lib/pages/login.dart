@@ -14,23 +14,9 @@ class LoginPage extends StatelessWidget {
               context,
               state,
             ) async {
-              final userData =
-                  (await firestore
-                          .collection('users')
-                          .doc(auth.currentUser!.uid)
-                          .get())
-                      .data();
-              if (userData != null) {
-                role = userData['role'];
-                isAdmin = role == 'admin';
-                termNum = GlobalState.fromJson(
-                  (await firestore.collection('global').doc('state').get())
-                      .data()!,
-                ).currentTermNum;
-                if (context.mounted) {
-                  if (!await Navigator.of(context).maybePop()) {
-                    Navigator.of(context).pushNamed(Routes.dashboard.slug);
-                  }
+              if ((await loadUser()) != null && context.mounted) {
+                if (!await Navigator.of(context).maybePop()) {
+                  Navigator.of(context).pushNamed(Routes.dashboard.slug);
                 }
               }
             }),

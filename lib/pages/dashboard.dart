@@ -571,6 +571,12 @@ class DashboardPageState extends State<DashboardPage> {
                                         .doc(
                                           uid,
                                         )
+                                        .set(tData.toJson());
+                                    await firestore
+                                        .collection('users')
+                                        .doc(
+                                          uid,
+                                        )
                                         .update(
                                           {
                                             'classes': tData.classIds
@@ -585,7 +591,7 @@ class DashboardPageState extends State<DashboardPage> {
                                 final docRef = firestore
                                     .collection('users')
                                     .doc(uid);
-                                await docRef.set(tData.toJson());
+                                await docRef.update(tData.toJson());
                                 teachersCache.registry[docRef.id] = await docRef
                                     .get();
                                 setState(() {});
@@ -634,7 +640,7 @@ class DashboardPageState extends State<DashboardPage> {
       cards.add(
         AxisCard(
           header: obd.studentName,
-          width: double.infinity,
+          width: 450,
           height: 380,
           child: Padding(
             padding: const EdgeInsets.only(
