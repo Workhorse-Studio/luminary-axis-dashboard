@@ -15,37 +15,21 @@ class AxisCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Neumorphic(
-      style: NeumorphicStyle(
-        border: NeumorphicBorder(color: AxisColors.blackPurple20),
-        color: AxisColors.blackPurple30.withValues(alpha: 0.3),
-        shadowLightColor: Colors.transparent,
-      ),
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: Column(
+    return StakentCard(
+       width: width,
+       height: height,
+       padding: EdgeInsets.zero,
+       child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (header != '')
-              SizedBox(
-                width: width,
-                height: 60,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsetsGeometry.only(left: 20),
-                    child: Text(
-                      header,
-                      style: heading2,
-                    ),
-                  ),
+             if (header != '')
+                Padding(
+                   padding: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
+                   child: Text(header, style: StakentTextStyles.headingMedium),
                 ),
-              ),
-            child,
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+             Expanded(child: child),
+          ]
+       )
     );
   }
 }

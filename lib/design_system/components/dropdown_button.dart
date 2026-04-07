@@ -17,7 +17,6 @@ class AxisDropdownButton<T> extends StatefulWidget {
     this.initialSelection,
     this.initalLabel,
     this.seaprateInitialSelectionEntry = true,
-
     super.key,
   });
 
@@ -26,78 +25,77 @@ class AxisDropdownButton<T> extends StatefulWidget {
 }
 
 class AxisDropdownButtonState<T> extends State<AxisDropdownButton<T>> {
-  bool isOpen = false;
   final MenuController menuController = MenuController();
+  T? selectedValue;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedValue = widget.initialSelection;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return NeumorphicButton(
-      style: NeumorphicStyle(
-        boxShape: NeumorphicBoxShape.stadium(),
-        border: NeumorphicBorder(color: AxisColors.blackPurple20),
-        color: AxisColors.blackPurple30.withValues(alpha: 0.3),
-        shadowLightColor: AxisColors.blackPurple20.withValues(alpha: 0.7),
-      ),
-      padding: const EdgeInsets.all(0),
-      onPressed: () {
-        isOpen ? menuController.close() : menuController.open();
-        isOpen = !isOpen;
+    String currentLabel = widget.initalLabel ?? 'Select...';
+    for (final e in widget.entries) {
+      if (e.$2 == selectedValue) {
+        currentLabel = e.$1;
+        break;
+      }
+    }
+
+    return GestureDetector(
+      onTap: () {
+        if (menuController.isOpen) {
+          menuController.close();
+        } else {
+          menuController.open();
+        }
       },
-      child: IgnorePointer(
-        ignoring: true,
-        child: DropdownMenu<T>(
-          width: widget.width,
-          menuController: menuController,
-          inputDecorationTheme: InputDecorationTheme(
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.only(left: 20),
-          ),
-          menuStyle: MenuStyle(
-            side: WidgetStatePropertyAll(
-              BorderSide(color: AxisColors.blackPurple20),
+      child: MenuAnchor(
+        controller: menuController,
+        menuChildren: [
+          if (widget.initalLabel != null && widget.initialSelection != null && widget.seaprateInitialSelectionEntry)
+            MenuItemButton(
+              onPressed: () {
+                setState(() => selectedValue = widget.initialSelection);
+                widget.onSelected?.call(widget.initialSelection);
+              },
+              child: Text(widget.initalLabel!, style: StakentTextStyles.bodyMedium),
             ),
-            backgroundColor: WidgetStatePropertyAll(
-              AxisColors.blackPurple30,
+          for (final e in widget.entries)
+            MenuItemButton(
+              onPressed: () {
+                setState(() => selectedValue = e.$2);
+                widget.onSelected?.call(e.$2);
+              },
+              child: Text(e.$1, style: StakentTextStyles.bodyMedium),
             ),
-          ),
-          textStyle: buttonLabel,
-          initialSelection: widget.initialSelection,
-          dropdownMenuEntries: [
-            if (widget.initalLabel != null &&
-                widget.initialSelection != null &&
-                widget.seaprateInitialSelectionEntry)
-              DropdownMenuEntry(
-                value: widget.initialSelection!,
-                style: menuEntryStyle.copyWith(
-                  backgroundColor: widget.customBgColoring != null
-                      ? WidgetStatePropertyAll(
-                          widget.customBgColoring!.call(
-                            widget.initialSelection!,
-                          ),
-                        )
-                      : null,
-                ),
-                label: widget.initalLabel!,
-              ),
-            ...[
-              for (final e in widget.entries)
-                DropdownMenuEntry(
-                  value: e.$2,
-                  label: e.$1,
-                  style: menuEntryStyle.copyWith(
-                    backgroundColor: widget.customBgColoring != null
-                        ? WidgetStatePropertyAll(
-                            widget.customBgColoring!.call(
-                              e.$2,
-                            ),
-                          )
-                        : null,
+        ],
+        builder: (context, controller, child) {
+          return Container(
+            width: widget.width,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: StakentColors.surfaceInput,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: StakentColors.borderSubtle),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    currentLabel,
+                    style: StakentTextStyles.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-            ],
-          ],
-          onSelected: widget.onSelected,
-        ),
+                Icon(Icons.keyboard_arrow_down, color: StakentColors.textSecondary, size: 20),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

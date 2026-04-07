@@ -17,131 +17,92 @@ class Navbar extends StatefulWidget {
 }
 
 class NavbarState extends State<Navbar> {
-  late final sub;
+  late final StreamSubscription sub;
 
   @override
   void initState() {
     sub = auth.authStateChanges().listen((_) {
-      setState(() {});
+      if (mounted) setState(() {});
     });
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute =
+        ModalRoute.of(context)?.settings.name ?? Routes.dashboard.slug;
+
+    // Generate navigation items for sidebar
+    final navItems = Routes.values
+        .where(
+          (r) =>
+              !const [Routes.login, Routes.dev, Routes.students].contains(r) &&
+              hasRolesForRoute(r),
+        )
+        .map(
+          (r) => NavItem(
+            label: r.label,
+            icon: r.icon,
+            route: r.slug,
+            isNew: r == Routes.invoicing, // Example badge
+          ),
+        )
+        .toList();
+
     return Scaffold(
-      backgroundColor: AxisColors.blackPurple50,
-      body: Builder(builder: widget.body),
-      drawer: Align(
-        alignment: Alignment.topLeft,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.22,
-          decoration: BoxDecoration(
-            color: AxisColors.blackPurple50,
-            border: Border(
-              right: BorderSide(color: AxisColors.blackPurple30Blur),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.only(left: 30),
-                child: Text(
-                  'AXIS',
-                  style: brandTitle,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 30),
-                child: Text(
-                  'EDUCATION CENTRE',
-                  style: brandSubtitle,
-                ),
-              ),
-              const SizedBox(height: 30),
-              for (final r in Routes.values)
-                if (!((const [
-                      Routes.login,
-                      Routes.dev,
-                      Routes.students,
-                    ]).contains(r)) &&
-                    hasRolesForRoute(r))
-                  Padding(
-                    padding: EdgeInsetsGeometry.only(
-                      left: 16,
-                      right: 16,
-                      bottom: 5,
-                      top: 5,
-                    ),
-                    child: AxisButton.text(
-                      label: r.label,
-                      isHighlighted:
-                          r.slug == ModalRoute.of(context)?.settings.name,
-                      width: double.infinity,
-                      icon: r.icon,
-                      onPressed: () => Navigator.of(context).pushNamed(r.slug),
-                    ),
-                  ),
-              const Spacer(),
-              Padding(
-                padding: EdgeInsetsGeometry.only(
-                  left: 16,
-                  right: 16,
-                  bottom: 5,
-                  top: 5,
-                ),
-                child: AxisButton.text(
-                  label: Routes.login.label,
-                  isHighlighted:
-                      Routes.login.slug ==
-                      ModalRoute.of(context)?.settings.name,
-                  width: double.infinity,
-                  icon: Routes.login.icon,
-                  onPressed: () =>
-                      Navigator.of(context).pushNamed(Routes.login.slug),
-                ),
-              ),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-      appBar: AppBar(
-        centerTitle: false,
-        toolbarHeight: 80,
-        actionsPadding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-        ),
-        title: Text(
-          widget.pageTitle,
-          style: appBarTitle,
-        ),
-        actions: [
-          ...widget.actions,
-          /* auth.currentUser == null
-              ? Text('Not signed in')
-              : Text(
-                  'Signed in as ${auth.currentUser!.email!.substring(0, 5)}${'*' * (auth.currentUser!.email!.length - 5)}',
-                ),
-        */
-        ],
-        leading: Builder(
-          builder: (ctx) => DrawerButton(
-            onPressed: () {
-              Scaffold.of(ctx).openDrawer();
+      backgroundColor: StakentColors.bgPrimary,
+      body: Row(
+        children: [
+          // Left Sidebar
+          StakentSidebar(
+            logoText: 'Stakent',
+            logoTagline: 'Top Staking Assets',
+            navItems: navItems,
+            currentRoute: currentRoute,
+            onRouteSelected: (route) {
+              if (route != currentRoute) {
+                Navigator.of(context).pushReplacementNamed(route);
+              }
+            },
+            onLogout: () async {
+              await auth.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushReplacementNamed(Routes.login.slug);
+              }
             },
           ),
-        ),
+
+          // Main Content Area
+          Expanded(
+            child: Column(
+              children: [
+                // Topbar
+                StakentTopbar(
+                  title: widget.pageTitle,
+                  userAvatarUrl: '', // Add proper avatar URL if available
+                  userName: auth.currentUser?.email ?? 'Ryan Crawford',
+                  userStatus: 'PRO',
+                  trailing: Row(children: widget.actions),
+                ),
+
+                // Page Content
+                Expanded(
+                  child: Container(
+                    color: StakentColors.bgPrimary,
+                    child: widget.body(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
-  void dispose() async {
-    await sub.cancel();
+  void dispose() {
+    sub.cancel();
     super.dispose();
   }
 }

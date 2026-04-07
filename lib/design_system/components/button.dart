@@ -1,6 +1,6 @@
 part of axis_dashboard;
 
-class AxisButton extends StatefulWidget {
+class AxisButton extends StatelessWidget {
   final Widget child;
   final bool isHighlighted;
   final VoidCallback? onPressed;
@@ -14,123 +14,83 @@ class AxisButton extends StatefulWidget {
     this.width = double.infinity,
     this.height = double.infinity,
     this.isHighlighted = false,
-    super.key,
-  }) : icon = null;
-
-  AxisButton.text({
-    required String label,
-    this.onPressed,
     this.icon,
-    this.width,
-    this.height,
-    this.isHighlighted = false,
     super.key,
-  }) : child = Padding(
-         padding: const EdgeInsets.all(14),
-         child: Row(
-           children: [
-             if (icon != null) ...[
-               Icon(
-                 icon,
-                 color: buttonLabel.color,
-               ),
-               const SizedBox(width: 8),
-             ],
-             Text(
-               label,
-               style: buttonLabel,
-             ),
-           ],
-         ),
-       );
+  });
 
-  @override
-  State<StatefulWidget> createState() => AxisButtonState();
-}
-
-enum ButtonState { pressed, none, disabled }
-
-class AxisButtonState extends State<AxisButton> {
-  late ButtonState buttonState;
-  bool isHovering = false;
-
-  bool get enabled => widget.onPressed != null;
-
-  @override
-  void initState() {
-    if (widget.onPressed == null) {
-      buttonState = ButtonState.disabled;
-    } else {
-      buttonState = ButtonState.none;
-    }
-    super.initState();
+  factory AxisButton.text({
+    required String label,
+    VoidCallback? onPressed,
+    IconData? icon,
+    double? width,
+    double? height,
+    bool isHighlighted = false,
+    Key? key,
+  }) {
+    return _AxisButtonText(
+      label: label,
+      onPressed: onPressed,
+      icon: icon,
+      width: width,
+      height: height,
+      isHighlighted: isHighlighted,
+      key: key,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    Color buttonColor = switch (buttonState) {
-      ButtonState.none =>
-        widget.isHighlighted
-            ? AxisColors.blackPurple30.withValues(alpha: 0.35)
-            : Colors.transparent,
-      ButtonState.pressed => AxisColors.blackPurple30.withValues(alpha: 0.55),
-      ButtonState.disabled => AxisColors.blackPurple50.withValues(alpha: 0.5),
-    };
-    if (isHovering) {
-      buttonColor = Color.alphaBlend(
-        buttonColor,
-        AxisColors.blackPurple30.withValues(alpha: 0.4),
-      );
-    }
     return GestureDetector(
-      onTapDown: (_) {
-        if (!enabled) return;
-        buttonState = ButtonState.pressed;
-        setState(() {});
-      },
-      onTapUp: (_) {
-        if (!enabled) return;
-        buttonState = ButtonState.none;
-        setState(() {});
-        widget.onPressed?.call();
-      },
+      onTap: onPressed,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) {
-          if (!enabled) return;
-          setState(() {
-            isHovering = true;
-          });
-        },
-        onExit: (_) {
-          if (!enabled) return;
-          setState(() {
-            isHovering = false;
-          });
-        },
-        child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeOutQuint,
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: buttonColor,
-              borderRadius: BorderRadius.circular(16),
-              border: widget.isHighlighted
-                  ? Border(
-                      right: BorderSide(
-                        width: 2,
-                        color: AxisColors.lilacPurple20.withValues(alpha: 0.2),
-                      ),
-                    )
-                  : null,
-            ),
-            child: widget.child,
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: StakentColors.surfaceInput,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: StakentColors.borderSubtle),
           ),
+          child: Center(child: child),
         ),
       ),
     );
+  }
+}
+
+class _AxisButtonText extends AxisButton {
+  final String label;
+
+  _AxisButtonText({
+    required this.label,
+    super.onPressed,
+    super.icon,
+    super.width,
+    super.height,
+    super.isHighlighted,
+    super.key,
+  }) : super(child: const SizedBox());
+
+  @override
+  Widget build(BuildContext context) {
+    if (isHighlighted) {
+      return StakentPrimaryButton(
+        label: label,
+        onPressed: onPressed,
+        icon: icon,
+        width: width,
+        height: height,
+      );
+    } else {
+      return StakentSecondaryButton(
+        label: label,
+        onPressed: onPressed,
+        icon: icon,
+        width: width,
+        height: height,
+      );
+    }
   }
 }
 
@@ -146,22 +106,9 @@ class AxisNMButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NeumorphicButton(
-      style: NeumorphicStyle(
-        boxShape: NeumorphicBoxShape.stadium(),
-        border: NeumorphicBorder(color: AxisColors.blackPurple20),
-        color: AxisColors.blackPurple30.withValues(alpha: 0.3),
-        shadowLightColor: AxisColors.blackPurple20.withValues(alpha: 0.7),
-      ),
-      padding: const EdgeInsets.all(0),
+    return StakentPrimaryButton(
+      label: label,
       onPressed: onPressed,
-      child: Padding(
-        padding: const EdgeInsetsGeometry.all(12),
-        child: Text(
-          label,
-          style: buttonLabel,
-        ),
-      ),
     );
   }
 }

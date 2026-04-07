@@ -155,8 +155,10 @@ class StakentAssetCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  (isPositive ? '+' : '') + changePercentage.toStringAsFixed(2) + '%',
-                  style: StakentTextStyles.percentageSmall.copyWith(
+                  (isPositive ? '+' : '') +
+                      changePercentage.toStringAsFixed(2) +
+                      '%',
+                  style: StakentTextStyles.labelSmall.copyWith(
                     color: isPositive
                         ? StakentColors.success
                         : StakentColors.error,
@@ -236,7 +238,7 @@ class StakentStatCard extends StatelessWidget {
           if (subtitle != null) ...[
             const SizedBox(height: 4),
             Text(
-              subtitle,
+              subtitle!,
               style: StakentTextStyles.bodySmall,
             ),
           ],
