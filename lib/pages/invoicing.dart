@@ -772,9 +772,9 @@ class InvoicingPageState extends State<InvoicingPage> {
         }
       }
       for (final monthEntry in newSessions[teacherEntry.key]!.entries) {
-        final int totNumSess = newSessions[teacherEntry.key]!.values.fold(
+        final int totNumSess = monthEntry.value.values.fold(
           0,
-          (a, b) => a + b.values.fold(0, (c, d) => c + d),
+          (a, b) => a + b,
         );
         final double rate = TeacherPayout.calculateRate(totNumSess);
         final double payout = rate * totNumSess;

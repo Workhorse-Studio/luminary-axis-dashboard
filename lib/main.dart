@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:math';
 
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf_maker/pdf_maker.dart' as m;
 import 'package:web/web.dart' as web;
 import 'package:data_table_2/data_table_2.dart';
@@ -28,6 +30,7 @@ part './pages/student_details.dart';
 part './pages/term_details.dart';
 part './pages/onboarding_page.dart';
 part './pages/dev_screen.dart';
+part './pages/financials.dart';
 
 part './components/navbar.dart';
 part './components/protected_page.dart';
@@ -176,6 +179,12 @@ enum Routes {
     'Dev',
     [],
     Icons.code,
+  ),
+  financials(
+    '/financials',
+    'Financials',
+    ['admin'],
+    Icons.attach_money,
   )
   /* studentDetails(
     '/studentDetails',
@@ -234,6 +243,10 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           Routes.termDetails.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,
             child: const TermDetailsPage(),
+          ),
+          Routes.financials.slug: (_) => ProtectedPage(
+            redirectOnIncorrectRole: Routes.login,
+            child: const FinancialsPage(),
           ),
           Routes.login.slug: (_) => LoginPage(),
         },
