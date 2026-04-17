@@ -20,10 +20,12 @@ class FutureBuilderTemplate<T> extends StatelessWidget {
         if (snapshot.hasData) {
           return builder(ctx, snapshot);
         } else if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            width: 100,
-            height: 100,
-            child: CircularProgressIndicator(),
+          return const Center(
+            child: SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(),
+            ),
           );
         } else {
           print(errorMsg?.call(snapshot.error) ?? 'An error occurred.');
