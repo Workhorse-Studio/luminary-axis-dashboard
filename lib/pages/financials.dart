@@ -254,7 +254,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                 interval: 500,
                 getTitlesWidget: (value, meta) {
                   return SideTitleWidget(
-                    axisSide: meta.axisSide,
+                    meta: meta,
                     child: Text(
                       '\$${value.toInt()}',
                       style: body2,
@@ -271,7 +271,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                 getTitlesWidget: (value, meta) {
                   if (value < 1 || value > 12) return const SizedBox();
                   return SideTitleWidget(
-                    axisSide: meta.axisSide,
+                    meta: meta,
                     child: Text(
                       DateFormat.MMM().format(DateTime(0, value.toInt())),
                       style: body2,
@@ -322,7 +322,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                 interval: 500,
                 getTitlesWidget: (value, meta) {
                   return SideTitleWidget(
-                    axisSide: meta.axisSide,
+                    meta: meta,
                     child: Text(
                       '\$${value.toInt()}',
                       style: body2,
@@ -339,7 +339,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                 getTitlesWidget: (value, meta) {
                   if (value < 1 || value > 12) return const SizedBox();
                   return SideTitleWidget(
-                    axisSide: meta.axisSide,
+                    meta: meta,
                     child: Text(
                       DateFormat.MMM().format(DateTime(0, value.toInt())),
                       style: body2,

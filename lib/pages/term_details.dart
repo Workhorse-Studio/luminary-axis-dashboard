@@ -579,7 +579,8 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         sd.data()!,
                       );
                       if (filterStudentMenuController.text != 'None' &&
-                          filterStudentMenuController.text != studentData.name) {
+                          filterStudentMenuController.text !=
+                              studentData.name) {
                         continue;
                       }
                       if (studentData.withdrawn[cd.id]!) continue;
@@ -645,7 +646,9 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                       )
                                       .update({'${cd.id}.${sd.id}': newInt});
                                   await allocationsCache.get(
-                                    globalState!.terms[currentTabIndex].termName,
+                                    globalState!
+                                        .terms[currentTabIndex]
+                                        .termName,
                                     bypassCache: true,
                                   );
 
@@ -781,8 +784,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                       width: 1,
                     ),
                   ),
-                  dataRowMinHeight: 60,
-                  dataRowMaxHeight: 80,
+                  dataRowHeight: 80,
                   columns: [
                     DataColumn2(
                       fixedWidth: 280,
