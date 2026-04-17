@@ -241,7 +241,7 @@ class DashboardPageState extends State<DashboardPage> {
                                   ),
                               ],
                             ),
-
+                      const SizedBox(height: 30),
                       AxisButton.text(
                         label: 'Add New Class',
                         width: 160,
@@ -505,6 +505,7 @@ class DashboardPageState extends State<DashboardPage> {
                                   ),
                               ],
                             ),
+                      const SizedBox(height: 30),
                       AxisButton.text(
                         label: 'Add New Teacher',
                         width: 180,
