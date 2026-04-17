@@ -508,325 +508,322 @@ class TermDetailsPageState extends State<TermDetailsPage> {
     for (int i = 0; i < globalState!.terms.length; i++) {
       tabViews.add(
         Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            FutureBuilderTemplate(
-              future: () async {
-                final List<DataRow> rows = [];
-                for (final entry in classesCache.registry.entries) {
-                  final cd = (await classesCache.get(
-                    entry.key,
-                  ));
-                  final classData = ClassData.fromJson(
-                    cd.data()!,
-                  );
-                  if (filterClassMenuController.text != 'None' &&
-                      filterClassMenuController.text != classData.name) {
-                    continue;
-                  }
-                  rows.add(
-                    DataRow(
-                      color: WidgetStatePropertyAll(
-                        AxisColors.blackPurple20.withValues(
-                          alpha: 0.14,
-                        ),
-                      ),
-                      cells: [
-                        DataCell(
-                          RichText(
-                            text: TextSpan(
-                              text: classData.name,
-                              style: heading3,
-                              children: [
-                                TextSpan(
-                                  style: body2,
-                                  text:
-                                      "     by ${!classIdToTeacherNameMap.containsKey(entry.key) ? classIdToTeacherNameMap[entry.key] = TeacherData.fromJson(
-                                              (await firestore.collection(
-                                                'users',
-                                              ).where(
-                                                'role',
-                                                whereIn: const [
-                                                  'teacher',
-                                                  'admin',
-                                                ],
-                                              ).where(
-                                                'classes',
-                                                arrayContains: entry.key,
-                                              ).get()).docs.first.data(),
-                                            ).name : classIdToTeacherNameMap[entry.key]}",
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        DataCell.empty,
-                        DataCell.empty,
-                        DataCell.empty,
-                      ],
-                    ),
-                  );
-
-                  /* int startIndex = 1;
-                                      int numEntriesAdded = 0; */
-                  for (final stId in classData.studentIds) {
-                    final sd = (await studentsCache.get(
-                      stId,
+            Expanded(
+              child: FutureBuilderTemplate(
+                future: () async {
+                  final List<DataRow> rows = [];
+                  for (final entry in classesCache.registry.entries) {
+                    final cd = (await classesCache.get(
+                      entry.key,
                     ));
-                    final studentData = StudentData.fromJson(
-                      sd.data()!,
+                    final classData = ClassData.fromJson(
+                      cd.data()!,
                     );
-                    if (filterStudentMenuController.text != 'None' &&
-                        filterStudentMenuController.text != studentData.name) {
+                    if (filterClassMenuController.text != 'None' &&
+                        filterClassMenuController.text != classData.name) {
                       continue;
                     }
-                    if (studentData.withdrawn[cd.id]!) continue;
-                    //  numEntriesAdded += 1;
-                    visibleRows.add((sd, cd.id));
+                    rows.add(
+                      DataRow(
+                        color: WidgetStatePropertyAll(
+                          AxisColors.blackPurple20.withValues(
+                            alpha: 0.14,
+                          ),
+                        ),
+                        cells: [
+                          DataCell(
+                            RichText(
+                              text: TextSpan(
+                                text: classData.name,
+                                style: heading3,
+                                children: [
+                                  TextSpan(
+                                    style: body2,
+                                    text:
+                                        "     by ${!classIdToTeacherNameMap.containsKey(entry.key) ? classIdToTeacherNameMap[entry.key] = TeacherData.fromJson(
+                                                (await firestore.collection(
+                                                  'users',
+                                                ).where(
+                                                  'role',
+                                                  whereIn: const [
+                                                    'teacher',
+                                                    'admin',
+                                                  ],
+                                                ).where(
+                                                  'classes',
+                                                  arrayContains: entry.key,
+                                                ).get()).docs.first.data(),
+                                              ).name : classIdToTeacherNameMap[entry.key]}",
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          DataCell.empty,
+                          DataCell.empty,
+                          DataCell.empty,
+                        ],
+                      ),
+                    );
 
-                    final String rowData =
-                        allocData.sessions[cd.id]![sd.id] == -1
-                        ? 'Unallocated'
-                        : "${allocData.sessions[cd.id]![sd.id]}";
-                    final rowKey = "${entry.key}-$stId-$rowData";
-
-                    if (!controllers.containsKey(rowKey)) {
-                      controllers[rowKey] = TextEditingController(
-                        text: rowData,
+                    /* int startIndex = 1;
+                                        int numEntriesAdded = 0; */
+                    for (final stId in classData.studentIds) {
+                      final sd = (await studentsCache.get(
+                        stId,
+                      ));
+                      final studentData = StudentData.fromJson(
+                        sd.data()!,
                       );
-                    }
-                    final r = DataRow(
-                      color: rowData != 'Unallocated'
-                          ? null
-                          : WidgetStatePropertyAll(
-                              Colors.yellow.withValues(
-                                alpha: 0.1,
+                      if (filterStudentMenuController.text != 'None' &&
+                          filterStudentMenuController.text != studentData.name) {
+                        continue;
+                      }
+                      if (studentData.withdrawn[cd.id]!) continue;
+                      //  numEntriesAdded += 1;
+                      visibleRows.add((sd, cd.id));
+
+                      final String rowData =
+                          allocData.sessions[cd.id]![sd.id] == -1
+                          ? 'Unallocated'
+                          : "${allocData.sessions[cd.id]![sd.id]}";
+                      final rowKey = "${entry.key}-$stId-$rowData";
+
+                      if (!controllers.containsKey(rowKey)) {
+                        controllers[rowKey] = TextEditingController(
+                          text: rowData,
+                        );
+                      }
+                      final r = DataRow(
+                        color: rowData != 'Unallocated'
+                            ? null
+                            : WidgetStatePropertyAll(
+                                Colors.yellow.withValues(
+                                  alpha: 0.1,
+                                ),
                               ),
+                        cells: [
+                          DataCell(
+                            Text(
+                              studentData.name,
+                              style: body2,
                             ),
-                      cells: [
-                        DataCell(
-                          Text(
-                            studentData.name,
-                            style: body2,
-                          ),
-                          onTap: () async {
-                            final sd = await studentsCache.get(stId);
-                            await showDialog(
-                              context: context,
-                              builder: (_) => StudentInfoDialog(
-                                studentId: stId,
-                                studentData: sd,
-                                classIdToTeacherNameMap:
-                                    classIdToTeacherNameMap,
-                              ),
-                            );
-                          },
-                        ),
-                        DataCell(
-                          TextField(
-                            controller: controllers[rowKey]!,
-                            onEditingComplete: () async {
-                              final String msg;
-
-                              final int? newInt = int.tryParse(
-                                controllers[rowKey]!.text,
-                              );
-                              if (controllers[rowKey]!.text.isEmpty) {
-                                msg = 'Action canclled.';
-                                controllers[rowKey]!.text = rowData;
-                              } else if (newInt != null) {
-                                await allocsColl
-                                    .doc(
-                                      globalState!
-                                          .terms[currentTabIndex]
-                                          .termName,
-                                    )
-                                    .update({'${cd.id}.${sd.id}': newInt});
-                                await allocationsCache.get(
-                                  globalState!.terms[currentTabIndex].termName,
-                                  bypassCache: true,
-                                );
-
-                                msg = 'Updated session count successfully!';
-
-                                setState(() {});
-                              } else {
-                                msg =
-                                    'Invalid input provided, where only a number was expected. Try again.';
-                              }
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(
-                                  SnackBar(
-                                    content: Text(msg),
-                                  ),
-                                );
-                              }
-                            },
-                            decoration: InputDecoration(
-                              hint: Text(
-                                controllers[rowKey]!.value.text,
-                                style: body2.copyWith(
-                                  color: AxisColors.blackPurple20,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: AxisColors.lilacPurple20.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                  color: AxisColors.lilacPurple50.withValues(
-                                    alpha: 0.4,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            style: body2,
-                          ),
-                        ),
-                        DataCell(
-                          Text(
-                            controllers[rowKey]!.text == 'Unallocated'
-                                ? ''
-                                : "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
-                                        (entry) => monthKeyToTermIndex(globalState!, entry.key) == currentTabIndex && entry.value.containsKey(
-                                              stId,
-                                            ) && entry.value[stId]!.isPresent,
-                                      ).length}",
-                            style: body2,
-                          ),
-                        ),
-                        DataCell(
-                          AxisNMButton(
-                            label: 'Withdraw',
-                            onPressed: () async {
-                              final bool confirm = await showDialog(
+                            onTap: () async {
+                              final sd = await studentsCache.get(stId);
+                              await showDialog(
                                 context: context,
-                                builder: (_) => ConfirmationDialog(
-                                  confirmationMsg:
-                                      'Are you sure you would like to withdraw from class "${classData.name}"?',
+                                builder: (_) => StudentInfoDialog(
+                                  studentId: stId,
+                                  studentData: sd,
+                                  classIdToTeacherNameMap:
+                                      classIdToTeacherNameMap,
                                 ),
                               );
-                              final String msg;
-                              if (confirm) {
-                                await withdrawStudentFromClass(
-                                  studentId: stId,
-                                  classId: (await classesCache.get(
-                                    entry.key,
-                                  )).id,
+                            },
+                          ),
+                          DataCell(
+                            TextField(
+                              controller: controllers[rowKey]!,
+                              onEditingComplete: () async {
+                                final String msg;
+
+                                final int? newInt = int.tryParse(
+                                  controllers[rowKey]!.text,
                                 );
-                                await classesCache.get(
-                                  entry.key,
-                                  bypassCache: true,
-                                );
-                                await studentsCache.get(
-                                  stId,
-                                  bypassCache: true,
-                                );
-                                setState(() {});
-                                msg =
-                                    'Withdrawn student from class successfully!';
-                              } else {
-                                msg = 'Action cancelled';
-                              }
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      msg,
-                                      style: body2,
+                                if (controllers[rowKey]!.text.isEmpty) {
+                                  msg = 'Action canclled.';
+                                  controllers[rowKey]!.text = rowData;
+                                } else if (newInt != null) {
+                                  await allocsColl
+                                      .doc(
+                                        globalState!
+                                            .terms[currentTabIndex]
+                                            .termName,
+                                      )
+                                      .update({'${cd.id}.${sd.id}': newInt});
+                                  await allocationsCache.get(
+                                    globalState!.terms[currentTabIndex].termName,
+                                    bypassCache: true,
+                                  );
+
+                                  msg = 'Updated session count successfully!';
+
+                                  setState(() {});
+                                } else {
+                                  msg =
+                                      'Invalid input provided, where only a number was expected. Try again.';
+                                }
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(msg),
+                                    ),
+                                  );
+                                }
+                              },
+                              decoration: InputDecoration(
+                                hint: Text(
+                                  controllers[rowKey]!.value.text,
+                                  style: body2.copyWith(
+                                    color: AxisColors.blackPurple20,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: AxisColors.lilacPurple20.withValues(
+                                      alpha: 0.6,
                                     ),
                                   ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: AxisColors.lilacPurple50.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              style: body2,
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              controllers[rowKey]!.text == 'Unallocated'
+                                  ? ''
+                                  : "${int.parse(controllers[rowKey]!.text) - classData.attendance.entries.where(
+                                          (entry) => monthKeyToTermIndex(globalState!, entry.key) == currentTabIndex && entry.value.containsKey(
+                                                stId,
+                                              ) && entry.value[stId]!.isPresent,
+                                        ).length}",
+                              style: body2,
+                            ),
+                          ),
+                          DataCell(
+                            AxisNMButton(
+                              label: 'Withdraw',
+                              onPressed: () async {
+                                final bool confirm = await showDialog(
+                                  context: context,
+                                  builder: (_) => ConfirmationDialog(
+                                    confirmationMsg:
+                                        'Are you sure you would like to withdraw from class "${classData.name}"?',
+                                  ),
                                 );
-                              }
-                              setState(() {});
-                            },
+                                final String msg;
+                                if (confirm) {
+                                  await withdrawStudentFromClass(
+                                    studentId: stId,
+                                    classId: (await classesCache.get(
+                                      entry.key,
+                                    )).id,
+                                  );
+                                  await classesCache.get(
+                                    entry.key,
+                                    bypassCache: true,
+                                  );
+                                  await studentsCache.get(
+                                    stId,
+                                    bypassCache: true,
+                                  );
+                                  setState(() {});
+                                  msg =
+                                      'Withdrawn student from class successfully!';
+                                } else {
+                                  msg = 'Action cancelled';
+                                }
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        msg,
+                                        style: body2,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                setState(() {});
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                    rows.add(r);
-                  }
-                  if (rows.last.cells[1] == DataCell.empty) {
-                    rows.removeLast();
-                  } /* else {
-                                        rows.replaceRange(
-                                          startIndex,
-                                          startIndex + numEntriesAdded,
-                                          rows.sublist(
+                        ],
+                      );
+                      rows.add(r);
+                    }
+                    if (rows.last.cells[1] == DataCell.empty) {
+                      rows.removeLast();
+                    } /* else {
+                                          rows.replaceRange(
                                             startIndex,
-                                            startIndex + numEntriesAdded + 1,
-                                          ).,
-                                        );
+                                            startIndex + numEntriesAdded,
+                                            rows.sublist(
+                                              startIndex,
+                                              startIndex + numEntriesAdded + 1,
+                                            ).,
+                                          );
 
-                                        startIndex = rows.length - 1;
-                                      } */
-                }
-                return rows;
-              }(),
-              builder: (context, snapshot) => Align(
-                alignment: Alignment.topLeft,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: DataTable(
-                      dataRowMinHeight: 60,
-                      dataRowMaxHeight: 80,
-                      columns: [
-                        DataColumn(
-                          columnWidth: FixedColumnWidth(
-                            280,
-                          ),
-                          label: Text(
-                            'Name',
-                            style: body2.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        DataColumn(
-                          onSort: (columnIndex, ascending) {
-                            setState(() {
-                              sortASC = ascending;
-                            });
-                          },
-                          label: Text(
-                            'Allocated Session Count',
-                            style: body2.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          onSort: (columnIndex, ascending) {
-                            setState(() {
-                              sortRSC = ascending;
-                            });
-                          },
-                          label: Text(
-                            'Remaining Session Count',
-                            style: body2.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: const SizedBox(),
-                        ),
-                      ],
-                      rows: snapshot.data ?? const [],
+                                          startIndex = rows.length - 1;
+                                        } */
+                  }
+                  return rows;
+                }(),
+                builder: (context, snapshot) => DataTable2(
+                  dividerThickness: 0.5,
+                  border: TableBorder(
+                    horizontalInside: BorderSide(
+                      color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                      width: 1,
                     ),
                   ),
+                  dataRowMinHeight: 60,
+                  dataRowMaxHeight: 80,
+                  columns: [
+                    DataColumn2(
+                      fixedWidth: 280,
+                      label: Text(
+                        'Name',
+                        style: body2.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    DataColumn2(
+                      onSort: (columnIndex, ascending) {
+                        setState(() {
+                          sortASC = ascending;
+                        });
+                      },
+                      label: Text(
+                        'Allocated Session Count',
+                        style: body2.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    DataColumn2(
+                      onSort: (columnIndex, ascending) {
+                        setState(() {
+                          sortRSC = ascending;
+                        });
+                      },
+                      label: Text(
+                        'Remaining Session Count',
+                        style: body2.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const DataColumn2(
+                      label: SizedBox(),
+                    ),
+                  ],
+                  rows: snapshot.data ?? const [],
                 ),
               ),
             ),
