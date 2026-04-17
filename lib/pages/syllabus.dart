@@ -17,19 +17,14 @@ class SyllabusPageState extends State<SyllabusPage> {
     return Navbar(
       pageTitle: 'Attendance',
       actions: [
-        TextButton(
+        AxisButton.text(
+          icon: Icons.refresh,
+          label: 'Refresh',
           onPressed: () {
             setState(() {
               hasLoaded = false;
             });
           },
-          child: Wrap(
-            children: [
-              Icon(Icons.refresh),
-              const SizedBox(width: 10),
-              Text('Refresh'),
-            ],
-          ),
         ),
       ],
       body: (ctx) => Center(
