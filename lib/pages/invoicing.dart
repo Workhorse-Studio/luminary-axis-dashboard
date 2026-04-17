@@ -224,6 +224,18 @@ class InvoicingPageState extends State<InvoicingPage> {
       }(),
       builder: (context, _) => DataTable2(
         fixedLeftColumns: 1,
+        dataRowHeight: 110,
+        dividerThickness: 0.5,
+        border: TableBorder(
+          verticalInside: BorderSide(
+            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+            width: 1,
+          ),
+          horizontalInside: BorderSide(
+            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+            width: 1,
+          ),
+        ),
         columns: viewType == 'student'
             ? [
                 DataColumn2(
@@ -340,9 +352,10 @@ class InvoicingPageState extends State<InvoicingPage> {
         res.add(
           DataCell(
             Center(
-              child: SizedBox(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 width: 770,
-                height: 80,
+                height: 100,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children:
@@ -358,6 +371,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                           const Spacer(),
                           AxisButton.text(
                             width: 100,
+                            height: 60,
                             icon: Icons.edit,
                             label: 'Edit',
                             onPressed: () async {
@@ -375,6 +389,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                               }
                             },
                           ),
+                          const SizedBox(width: 16),
                           AxisDropdownButton<InvoiceStatus>(
                             width: 270,
                             seaprateInitialSelectionEntry: false,
@@ -411,8 +426,10 @@ class InvoicingPageState extends State<InvoicingPage> {
                               }
                             },
                           ),
+                          const SizedBox(width: 16),
                           AxisButton.text(
                             width: 140,
+                            height: 60,
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
@@ -510,9 +527,10 @@ class InvoicingPageState extends State<InvoicingPage> {
                     sessionsMap.isNotEmpty &&
                     sessionsMap[teacherData.id]!.containsKey(monthId)
                 ? Center(
-                    child: SizedBox(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       width: 510,
-                      height: 80,
+                      height: 100,
                       child: Row(
                         children: [
                           const SizedBox(width: 10),
@@ -580,9 +598,11 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   },
                                 ),
                           ),
+                          const SizedBox(width: 16),
                           const Spacer(),
                           AxisButton.text(
                             width: 140,
+                            height: 60,
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
