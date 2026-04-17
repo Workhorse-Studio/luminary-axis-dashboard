@@ -251,24 +251,34 @@ class _FinancialsPageState extends State<FinancialsPage> {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
+                interval: 500,
                 getTitlesWidget: (value, meta) {
-                  return Text(
-                    '\$${value.toInt()}',
-                    style: body2,
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      '\$${value.toInt()}',
+                      style: body2,
+                    ),
                   );
                 },
-                reservedSize: 50,
+                reservedSize: 60,
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
+                interval: 2,
                 getTitlesWidget: (value, meta) {
-                  return Text(
-                    DateFormat.MMM().format(DateTime(0, value.toInt())),
-                    style: body2,
+                  if (value < 1 || value > 12) return const SizedBox();
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      DateFormat.MMM().format(DateTime(0, value.toInt())),
+                      style: body2,
+                    ),
                   );
                 },
+                reservedSize: 32,
               ),
             ),
             topTitles: const AxisTitles(
@@ -309,24 +319,34 @@ class _FinancialsPageState extends State<FinancialsPage> {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
+                interval: 500,
                 getTitlesWidget: (value, meta) {
-                  return Text(
-                    '\$${value.toInt()}',
-                    style: body2,
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      '\$${value.toInt()}',
+                      style: body2,
+                    ),
                   );
                 },
-                reservedSize: 50,
+                reservedSize: 60,
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
+                interval: 2,
                 getTitlesWidget: (value, meta) {
-                  return Text(
-                    DateFormat.MMM().format(DateTime(0, value.toInt())),
-                    style: body2,
+                  if (value < 1 || value > 12) return const SizedBox();
+                  return SideTitleWidget(
+                    axisSide: meta.axisSide,
+                    child: Text(
+                      DateFormat.MMM().format(DateTime(0, value.toInt())),
+                      style: body2,
+                    ),
                   );
                 },
+                reservedSize: 32,
               ),
             ),
             topTitles: const AxisTitles(
