@@ -151,7 +151,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
         }
 
         Future<({List<DataRow> rows, String className, int colCount})>
-        generateReportContent(String classId) async {
+        generateReportContent(String classId, int termIndex) async {
           final List<DataRow> rows = [];
           final cd = ClassData.fromJson(
             (await classesCache.get(classId)).data()!,
@@ -159,7 +159,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
           final Map<String, List<String>> studentRecords = {};
 
           for (final attEntry in cd.attendance.entries) {
-            if (monthKeyToTermIndex(globalState!, attEntry.key) == termNum) {
+            if (monthKeyToTermIndex(globalState!, attEntry.key) == termIndex) {
               for (final students in attEntry.value.entries) {
                 studentRecords.ensureKey(students.key, list: <String>[]);
                 studentRecords[students.key]!.add(
@@ -298,7 +298,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
               ),
               for (final clId in teacherData.classIds)
                 FutureBuilderTemplate(
-                  future: generateReportContent(clId),
+                  future: generateReportContent(clId, widget.termIndex),
                   builder: (context, snapshot) => AxisCard(
                     header: snapshot.data!.className,
                     width: MediaQuery.of(context).size.width * 0.85,

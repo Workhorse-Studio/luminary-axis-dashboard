@@ -240,7 +240,9 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                 }
               }
 
-              String termName = recursivelyNameNewTerm('Term ${termNum + 2}');
+              String termName = recursivelyNameNewTerm(
+                'Term ${currentTabIndex + 2}',
+              );
               await studentsCache.initAll();
               final allocs = {
                 for (final cl in classesCache.registry.entries)

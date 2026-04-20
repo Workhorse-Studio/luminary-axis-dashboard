@@ -80,7 +80,6 @@ part './firebase/auth.dart';
 
 late String role = '';
 bool isAdmin = false;
-late int termNum;
 final StudentAttendanceStore studentAttendanceStore = StudentAttendanceStore();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,7 +90,6 @@ void main() async {
     firestore;
     auth;
     if (kDebugMode) {
-      termNum = 0;
       role = 'admin';
       await auth.signInWithEmailAndPassword(
         email: 'admin@gmail.com',
@@ -154,7 +152,7 @@ enum Routes {
     '/invoicing',
     'Billings',
     ['admin'],
-    Icons.payments,
+    Icons.request_quote,
   ),
   teachers(
     '/teachers',
@@ -184,7 +182,7 @@ enum Routes {
     '/financials',
     'Financials',
     ['admin'],
-    Icons.attach_money,
+    Icons.bar_chart,
   )
   /* studentDetails(
     '/studentDetails',

@@ -243,8 +243,8 @@ class DashboardPageState extends State<DashboardPage> {
                             ),
                       const SizedBox(height: 30),
                       AxisButton.text(
-                        label: 'Add New Class',
-                        width: 160,
+                        label: 'Create New Class Template',
+                        width: 260,
                         isHighlighted: true,
                         onPressed: () async {
                           final ClassTemplate? classData = await showDialog(
@@ -349,12 +349,10 @@ class DashboardPageState extends State<DashboardPage> {
                                                       bool exists = false;
                                                       for (final clId
                                                           in tData.classIds) {
+                                                        final clDoc = await classesCache.get(clId);
+                                                        if (!clDoc.exists) continue;
                                                         if (ClassData.fromJson(
-                                                              (await classesCache
-                                                                      .get(
-                                                                        clId,
-                                                                      ))
-                                                                  .data()!,
+                                                              clDoc.data()!,
                                                             ).templateReference ==
                                                             template) {
                                                           exists = true;
@@ -386,6 +384,7 @@ class DashboardPageState extends State<DashboardPage> {
                                                                 attendance: {},
                                                               ).toJson(),
                                                             );
+                                                        classesCache.registry[docRef.id] = await docRef.get();
                                                         await firestore
                                                             .collection('users')
                                                             .doc(
@@ -534,10 +533,10 @@ class DashboardPageState extends State<DashboardPage> {
                                     in tData.offeredClassTemplates) {
                                   bool exists = false;
                                   for (final clId in tData.classIds) {
+                                    final clDoc = await classesCache.get(clId);
+                                    if (!clDoc.exists) continue;
                                     if (ClassData.fromJson(
-                                          (await classesCache.get(
-                                            clId,
-                                          )).data()!,
+                                          clDoc.data()!,
                                         ).templateReference ==
                                         template) {
                                       exists = true;
@@ -567,6 +566,7 @@ class DashboardPageState extends State<DashboardPage> {
                                             attendance: {},
                                           ).toJson(),
                                         );
+                                    classesCache.registry[docRef.id] = await docRef.get();
                                     await firestore
                                         .collection('users')
                                         .doc(
@@ -592,7 +592,7 @@ class DashboardPageState extends State<DashboardPage> {
                                 final docRef = firestore
                                     .collection('users')
                                     .doc(uid);
-                                await docRef.update(tData.toJson());
+                                await docRef.set(tData.toJson());
                                 teachersCache.registry[docRef.id] = await docRef
                                     .get();
                                 setState(() {});

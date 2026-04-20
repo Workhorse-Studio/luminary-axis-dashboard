@@ -68,14 +68,12 @@ class ClassData extends JSONSerialisable {
     'students': studentIds,
     'templateReference': templateReference,
     'attendance': attendance.entries.isEmpty
-        ? Map<String, Map<String, AttendanceType>>()
+        ? {}
         : {
             for (final entry in attendance.entries)
-              {
-                entry.key: {
-                  for (final e in entry.value.entries)
-                    {e.key: e.value.toString()},
-                },
+              entry.key: {
+                for (final e in entry.value.entries)
+                  e.key: e.value.toString(),
               },
           },
   };
