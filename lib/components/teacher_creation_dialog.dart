@@ -189,7 +189,9 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                             Navigator.of(context).pop(
                               TeacherData(
                                 name: teacherNameController.text,
-                                role: 'teacher',
+                                role: teacherData != null
+                                    ? TeacherData.fromJson(teacherData!.data()!).role
+                                    : 'teacher',
                                 email: teacherEmailController.text,
                                 classIds: isClassSelected.entries
                                     .where((e) => e.value)

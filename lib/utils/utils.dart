@@ -45,23 +45,28 @@ Future<({bool ok, JSON? body})> makeRequest({
     'Content-Type': 'application/json',
   },
 }) async {
-  final res = await web.window
-      .fetch(
-        url.toJS,
-        web.RequestInit(
-          method: 'POST',
-          body: body,
-          headers: headers.jsify() as web.Headers,
-          credentials: 'omit',
-        ),
-      )
-      .toDart;
+  try {
+    final res = await web.window
+        .fetch(
+          url.toJS,
+          web.RequestInit(
+            method: 'POST',
+            body: body,
+            headers: headers.jsify() as web.Headers,
+            credentials: 'omit',
+          ),
+        )
+        .toDart;
 
-  final jsonBody = await res.text().toDart;
-  return (
-    ok: res.ok,
-    body: jsonDecode(jsonBody.toDart) as JSON,
-  );
+    final jsonBody = await res.text().toDart;
+    return (
+      ok: res.ok,
+      body: jsonDecode(jsonBody.toDart) as JSON,
+    );
+  } catch (e) {
+    print('makeRequest error: $e');
+    return (ok: false, body: null);
+  }
 }
 
 String generateId() => String.fromCharCodes(
