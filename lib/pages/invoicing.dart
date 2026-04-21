@@ -434,49 +434,60 @@ class InvoicingPageState extends State<InvoicingPage> {
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
-                              if (await sendInvoiceEmail(
-                                StudentData.fromJson(studentData.data()!).email,
-                                InvoiceWidget(
-                                  showFonts: false,
-                                  studentInvoiceData: studentAttendanceStore
-                                      .invoicesData[i][studentData.id]!,
-                                  teacherInvoiceData: null,
-                                  total: studentAttendanceStore
-                                      .invoicesData[i][studentData.id]!
-                                      .amtPayable,
-                                ),
-                                context,
-                              )) {
-                                await firestore
-                                    .collection('global')
-                                    .doc('archives')
-                                    .collection('invoices')
-                                    .doc(
-                                      studentAttendanceStore
-                                          .invoicesData[i][studentData.id]!
-                                          .invoiceId,
-                                    )
-                                    .update({
-                                      'invoiceStatus':
-                                          InvoiceStatus.pendingPayment.name,
-                                    });
-                                studentAttendanceStore
-                                        .invoicesData[i][studentData.id] =
-                                    StudentInvoiceData.fromJson(
-                                      (await firestore
-                                              .collection('global')
-                                              .doc('archives')
-                                              .collection('invoices')
-                                              .doc(
-                                                studentAttendanceStore
-                                                    .invoicesData[i][studentData
-                                                        .id]!
-                                                    .invoiceId,
-                                              )
-                                              .get())
-                                          .data()!,
-                                    );
-                                setState(() {});
+                              try {
+                                if (await sendInvoiceEmail(
+                                  StudentData.fromJson(
+                                    studentData.data()!,
+                                  ).email,
+                                  InvoiceWidget(
+                                    showFonts: false,
+                                    studentInvoiceData: studentAttendanceStore
+                                        .invoicesData[i][studentData.id]!,
+                                    teacherInvoiceData: null,
+                                    total: studentAttendanceStore
+                                        .invoicesData[i][studentData.id]!
+                                        .amtPayable,
+                                  ),
+                                  context,
+                                )) {
+                                  await firestore
+                                      .collection('global')
+                                      .doc('archives')
+                                      .collection('invoices')
+                                      .doc(
+                                        studentAttendanceStore
+                                            .invoicesData[i][studentData.id]!
+                                            .invoiceId,
+                                      )
+                                      .update({
+                                        'invoiceStatus':
+                                            InvoiceStatus.pendingPayment.name,
+                                      });
+                                  studentAttendanceStore
+                                      .invoicesData[i][studentData
+                                      .id] = StudentInvoiceData.fromJson(
+                                    (await firestore
+                                            .collection('global')
+                                            .doc('archives')
+                                            .collection('invoices')
+                                            .doc(
+                                              studentAttendanceStore
+                                                  .invoicesData[i][studentData
+                                                      .id]!
+                                                  .invoiceId,
+                                            )
+                                            .get())
+                                        .data()!,
+                                  );
+                                  setState(() {});
+                                }
+                              } catch (e, st) {
+                                print('Error in Student Send Button: $e\n$st');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Send Error: $e')),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -709,7 +720,7 @@ class InvoicingPageState extends State<InvoicingPage> {
 
       final file = web.File(
         [
-          bytes.buffer.toJS as JSAny,
+          bytes.toJS as JSAny,
         ].toJS,
         'invoice.pdf',
       );
@@ -887,11 +898,9 @@ class IWBlankPage extends m.BlankPage {
 
   @override
   Widget createPageContent(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: child,
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: child,
     );
   }
 }

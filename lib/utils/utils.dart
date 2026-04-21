@@ -58,10 +58,14 @@ Future<({bool ok, JSON? body})> makeRequest({
         )
         .toDart;
 
-    final jsonBody = await res.text().toDart;
+    final jsonBodyStr = (await res.text().toDart).toDart;
+    JSON? parsedBody;
+    if (jsonBodyStr.trim().isNotEmpty) {
+      parsedBody = jsonDecode(jsonBodyStr) as JSON;
+    }
     return (
       ok: res.ok,
-      body: jsonDecode(jsonBody.toDart) as JSON,
+      body: parsedBody,
     );
   } catch (e) {
     print('makeRequest error: $e');
