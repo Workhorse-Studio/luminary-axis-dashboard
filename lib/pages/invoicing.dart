@@ -130,6 +130,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                   currentTabIndex = index;
                   setState(() {});
                 },
+                dividerColor: AxisColors.blackPurple20.withValues(alpha: 0.35),
                 indicatorColor: AxisColors.lilacPurple20,
                 tabs: [
                   Padding(
@@ -225,15 +226,15 @@ class InvoicingPageState extends State<InvoicingPage> {
       builder: (context, _) => DataTable2(
         fixedLeftColumns: 1,
         dataRowHeight: 110,
-        dividerThickness: 0.5,
+        dividerThickness: 0.2,
         border: TableBorder(
           verticalInside: BorderSide(
-            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+            color: AxisColors.blackPurple20.withValues(alpha: 0.35),
             width: 1,
           ),
           horizontalInside: BorderSide(
             color: AxisColors.blackPurple20.withValues(alpha: 0.15),
-            width: 1,
+            width: 0.5,
           ),
         ),
         columns: viewType == 'student'

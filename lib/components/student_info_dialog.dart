@@ -32,16 +32,21 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
     Map<String, String> generateContactDetailsRows(StudentData data) {
       return {
         "Name": data.name,
+        "Email": data.email,
         "Contact Number": data.studentContactNo,
         "Parent's Name": data.parentName,
         "Parent's Contact Number": data.parentContactNo,
+        "Address": data.address,
+        "Postal Code": data.postalCode,
+        "School": data.school,
+        "Subject Combination": data.subjectCombi,
       };
     }
 
     return Center(
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.height * 0.9,
+        width: MediaQuery.of(context).size.width * 0.5,
+        height: MediaQuery.of(context).size.height * 0.75,
         foregroundDecoration: dialogForegroundDecoration,
         child: Scaffold(
           backgroundColor: AxisColors.blackPurple50,
@@ -51,10 +56,21 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: Center(
+                      child: Text(
+                        'Student Information',
+                        style: heading1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
                   const SizedBox(height: 40),
                   Text(
                     'Contact Details',
-                    style: heading1,
+                    style: heading2,
                   ),
                   const SizedBox(height: 20),
                   for (final infoItem in generateContactDetailsRows(
@@ -77,7 +93,7 @@ class StudentInfoDialogState extends State<StudentInfoDialog> {
                   const SizedBox(height: 40),
                   Text(
                     'Registered Classes',
-                    style: heading1,
+                    style: heading2,
                   ),
                   const SizedBox(height: 20),
                   FutureBuilderTemplate(

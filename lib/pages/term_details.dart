@@ -72,105 +72,147 @@ class TermDetailsPageState extends State<TermDetailsPage> {
       builder: (context, snapshot) => Navbar(
         pageTitle: 'Term Details',
         actions: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+          Row(
             key: ValueKey(currentTabIndex),
             children: [
-              Text(
-                'Start: ${DateTime.fromMillisecondsSinceEpoch(globalState!.terms[currentTabIndex].termStartDate).toTimestampStringShort()}',
-                style: body2,
+              RichText(
+                text: TextSpan(
+                  text: DateTime.fromMillisecondsSinceEpoch(
+                    globalState!.terms[currentTabIndex].termStartDate,
+                  ).toTimestampStringShort(),
+                  style: body2.copyWith(fontWeight: FontWeight.bold),
+                  children: [
+                    TextSpan(
+                      text: ' to ',
+                      style: body2,
+                      children: [
+                        TextSpan(
+                          text: DateTime.fromMillisecondsSinceEpoch(
+                            globalState!.terms[currentTabIndex].termEndDate,
+                          ).toTimestampStringShort(),
+                          style: body2.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'End: ${DateTime.fromMillisecondsSinceEpoch(globalState!.terms[currentTabIndex].termEndDate).toTimestampStringShort()}',
-                style: body2,
+              const SizedBox(width: 10),
+              AxisButton.text(
+                label: 'Modify End Date',
+                onPressed: () async {
+                  final endDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.fromMillisecondsSinceEpoch(
+                      globalState!.terms[currentTabIndex].termEndDate,
+                    ),
+                    firstDate: DateTime.now().subtract(
+                      const Duration(days: 30 * 6),
+                    ),
+                    lastDate: DateTime.now().add(const Duration(days: 30 * 6)),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: const ColorScheme.dark(
+                            primary: AxisColors.lilacPurple50,
+                            onPrimary: AxisColors.white50,
+                            surface: AxisColors.blackPurple30,
+                            onSurface: AxisColors.white50,
+                          ),
+                          dialogBackgroundColor: AxisColors.blackPurple50,
+                          textButtonTheme: TextButtonThemeData(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AxisColors.lilacPurple20,
+                            ),
+                          ),
+                          dialogTheme: DialogThemeData(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: const BorderSide(
+                                color: AxisColors.blackPurple20,
+                              ),
+                            ),
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (endDate == null) return;
+
+                  final bool? confirm = await showDialog(
+                    context: context,
+                    builder: (_) => ConfirmationDialog(
+                      confirmationMsg:
+                          'Are you sure you want to adjust the term end date? This will shift all subsequent term start/end dates.',
+                    ),
+                  );
+                  if (confirm == null || !confirm) return;
+                  final List<TermData> newData = [
+                    ...globalState!.terms.sublist(
+                      0,
+                      currentTabIndex,
+                    ),
+                    TermData(
+                      termEndDate: endDate.millisecondsSinceEpoch,
+                      termName: globalState!.terms[currentTabIndex].termName,
+                      termStartDate:
+                          globalState!.terms[currentTabIndex].termStartDate,
+                    ),
+                  ];
+                  Duration? delta;
+                  for (
+                    int i = currentTabIndex + 1;
+                    i < globalState!.terms.length;
+                    i++
+                  ) {
+                    delta ??= DateTime.fromMillisecondsSinceEpoch(
+                      globalState!.terms[i].termStartDate,
+                    ).difference(endDate);
+                    if (delta.isNegative) {
+                      newData.add(
+                        TermData(
+                          termEndDate:
+                              globalState!.terms[i].termEndDate +
+                              delta.abs().inMilliseconds +
+                              1000,
+                          termName: globalState!.terms[i].termName,
+                          termStartDate:
+                              globalState!.terms[i].termStartDate +
+                              delta.abs().inMilliseconds +
+                              1000,
+                        ),
+                      );
+                    } else {
+                      break;
+                    }
+                  }
+                  await firestore.collection('global').doc('state').update({
+                    'terms': newData.map((e) => e.toJson()),
+                  });
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Term end date set successfully!',
+                          style: body2,
+                        ),
+                      ),
+                    );
+                    globalState = GlobalState.fromJson(
+                      (await firestore.collection('global').doc('state').get())
+                          .data()!,
+                    );
+                  }
+
+                  setState(() {});
+                },
               ),
             ],
           ),
-          const SizedBox(width: 10),
-          AxisButton.text(
-            label: 'Modify End Date',
-            onPressed: () async {
-              final endDate = await showDatePicker(
-                context: context,
-                firstDate: DateTime.now().subtract(
-                  const Duration(days: 30 * 6),
-                ),
-                lastDate: DateTime.now().add(const Duration(days: 30 * 6)),
-              );
-              if (endDate == null) return;
 
-              final bool? confirm = await showDialog(
-                context: context,
-                builder: (_) => ConfirmationDialog(
-                  confirmationMsg:
-                      'Are you sure you want to adjust the term end date? This will shift all subsequent term start/end dates.',
-                ),
-              );
-              if (confirm == null || !confirm) return;
-              final List<TermData> newData = [
-                ...globalState!.terms.sublist(
-                  0,
-                  currentTabIndex,
-                ),
-                TermData(
-                  termEndDate: endDate.millisecondsSinceEpoch,
-                  termName: globalState!.terms[currentTabIndex].termName,
-                  termStartDate:
-                      globalState!.terms[currentTabIndex].termStartDate,
-                ),
-              ];
-              Duration? delta;
-              for (
-                int i = currentTabIndex + 1;
-                i < globalState!.terms.length;
-                i++
-              ) {
-                delta ??= DateTime.fromMillisecondsSinceEpoch(
-                  globalState!.terms[i].termStartDate,
-                ).difference(endDate);
-                if (delta.isNegative) {
-                  newData.add(
-                    TermData(
-                      termEndDate:
-                          globalState!.terms[i].termEndDate +
-                          delta.abs().inMilliseconds +
-                          1000,
-                      termName: globalState!.terms[i].termName,
-                      termStartDate:
-                          globalState!.terms[i].termStartDate +
-                          delta.abs().inMilliseconds +
-                          1000,
-                    ),
-                  );
-                } else {
-                  break;
-                }
-              }
-              await firestore.collection('global').doc('state').update({
-                'terms': newData.map((e) => e.toJson()),
-              });
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Term end date set successfully!',
-                      style: body2,
-                    ),
-                  ),
-                );
-                globalState = GlobalState.fromJson(
-                  (await firestore.collection('global').doc('state').get())
-                      .data()!,
-                );
-              }
-
-              setState(() {});
-            },
-          ),
           const SizedBox(width: 60),
           SizedBox(
             width: 240,
@@ -227,7 +269,7 @@ class TermDetailsPageState extends State<TermDetailsPage> {
           ),
           const SizedBox(width: 20),
           AxisButton.text(
-            label: 'New Term',
+            label: 'Create New Term',
             onPressed: () async {
               String recursivelyNameNewTerm(String prevName) {
                 final dupNames = globalState!.terms.where(
@@ -468,10 +510,25 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                         globalState!.terms[index].termName;
                     setState(() {});
                   },
+                  dividerColor: AxisColors.blackPurple20.withValues(
+                    alpha: 0.35,
+                  ),
+                  indicatorColor: AxisColors.lilacPurple20,
+
                   tabs: [
                     for (final term in globalState!.terms)
-                      Tab(
-                        text: term.termName,
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(
+                          term.termName,
+                          style: body2.copyWith(
+                            color:
+                                globalState!.terms[currentTabIndex].termName ==
+                                    term.termName
+                                ? AxisColors.lilacPurple20
+                                : AxisColors.lilacPurple50,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -779,11 +836,15 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                   return rows;
                 }(),
                 builder: (context, snapshot) => DataTable2(
-                  dividerThickness: 0.5,
+                  dividerThickness: 0.2,
                   border: TableBorder(
+                    verticalInside: BorderSide(
+                      color: AxisColors.blackPurple20.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
                     horizontalInside: BorderSide(
                       color: AxisColors.blackPurple20.withValues(alpha: 0.15),
-                      width: 1,
+                      width: 0.5,
                     ),
                   ),
                   dataRowHeight: 80,

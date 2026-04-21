@@ -184,12 +184,6 @@ enum Routes {
     ['admin'],
     Icons.bar_chart,
   )
-  /* studentDetails(
-    '/studentDetails',
-    'Student Details',
-    ['admin'],
-    Icons.person_pin,
-  ) */
   ;
 
   final String slug;
@@ -222,10 +216,6 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
             redirectOnIncorrectRole: Routes.login,
             child: const DashboardPage(),
           ),
-          /* Routes.students.slug: (_) => ProtectedPage(
-            redirectOnIncorrectRole: Routes.login,
-            child: StudentsPage(),
-          ), */
           Routes.syllabus.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,
             child: SyllabusPage(),

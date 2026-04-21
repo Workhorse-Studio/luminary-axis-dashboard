@@ -19,11 +19,7 @@ class DevScreen extends StatelessWidget {
                 .data()!,
           ))(),
           builder: (_, snapshot) => Center(
-            child: SingleChildScrollView(
-              child: EditableInvoiceDialog(
-                studentInvoiceData: snapshot.data,
-              ),
-            ),
+            child: InvoicingPage(),
           ),
         ),
       ),

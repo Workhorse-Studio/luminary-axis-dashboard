@@ -71,105 +71,181 @@ class OnboardingPageState extends State<OnboardingPage> {
                     style: heading1,
                   ),
                   const SizedBox(height: 60),
-                  Text(
-                    'Full Name',
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Full Name',
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: nameController,
+                              cursorColor: AxisColors.lilacPurple20,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 30),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Student Contact Number',
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: hpController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: nameController,
-                    cursorColor: AxisColors.lilacPurple20,
-                    style: body2,
+                  const SizedBox(height: 30),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Invoicing Email',
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: emailController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 30),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "School Name",
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: schoolController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'Student Contact Number',
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
+                  const SizedBox(height: 30),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Parent's Name",
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: parentsNameController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 30),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Parent's Contact Number",
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: parentsHpController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-
-                  TextField(
-                    controller: hpController,
-                    style: body2,
+                  const SizedBox(height: 30),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Full Address",
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: addressController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 30),
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Postal Code",
+                              style: heading3.copyWith(
+                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: postalCodeController,
+                              style: body2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 15),
-                  Text(
-                    'Invoicing Email',
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  TextField(
-                    controller: emailController,
-                    style: body2,
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "Parent's Name",
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: parentsNameController,
-                    style: body2,
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "Parent's Contact Number",
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: parentsHpController,
-                    style: body2,
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "School Name",
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: schoolController,
-                    style: body2,
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "Full Address",
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: addressController,
-                    style: body2,
-                  ),
-                  const SizedBox(height: 15),
-                  Text(
-                    "Postal Code",
-                    style: heading3.copyWith(
-                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: postalCodeController,
-                    style: body2,
-                  ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 30),
                   Text(
                     "Subject Combination",
                     style: heading3.copyWith(
@@ -181,7 +257,7 @@ class OnboardingPageState extends State<OnboardingPage> {
                     controller: subjectCombi,
                     style: body2,
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 30),
                   Text(
                     "Select your classes",
                     style: heading3.copyWith(

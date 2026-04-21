@@ -168,7 +168,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Revenue vs Payouts', style: heading2),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 42),
                             _buildBarChart(financialData),
                           ],
                         ),
@@ -179,7 +179,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Net Profit Trend', style: heading2),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 42),
                             _buildLineChart(financialData),
                           ],
                         ),

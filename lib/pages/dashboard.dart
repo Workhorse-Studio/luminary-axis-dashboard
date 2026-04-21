@@ -349,8 +349,11 @@ class DashboardPageState extends State<DashboardPage> {
                                                       bool exists = false;
                                                       for (final clId
                                                           in tData.classIds) {
-                                                        final clDoc = await classesCache.get(clId);
-                                                        if (!clDoc.exists) continue;
+                                                        final clDoc =
+                                                            await classesCache
+                                                                .get(clId);
+                                                        if (!clDoc.exists)
+                                                          continue;
                                                         if (ClassData.fromJson(
                                                               clDoc.data()!,
                                                             ).templateReference ==
@@ -384,7 +387,10 @@ class DashboardPageState extends State<DashboardPage> {
                                                                 attendance: {},
                                                               ).toJson(),
                                                             );
-                                                        classesCache.registry[docRef.id] = await docRef.get();
+                                                        classesCache
+                                                            .registry[docRef
+                                                            .id] = await docRef
+                                                            .get();
                                                         await firestore
                                                             .collection('users')
                                                             .doc(
@@ -566,7 +572,8 @@ class DashboardPageState extends State<DashboardPage> {
                                             attendance: {},
                                           ).toJson(),
                                         );
-                                    classesCache.registry[docRef.id] = await docRef.get();
+                                    classesCache.registry[docRef.id] =
+                                        await docRef.get();
                                     await firestore
                                         .collection('users')
                                         .doc(
@@ -682,8 +689,13 @@ class DashboardPageState extends State<DashboardPage> {
                     "Parent's Contact: ${obd.parentContactNo}",
                     style: body2,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
 
+                  Text(
+                    "Assign a teacher:",
+                    style: body2,
+                  ),
+                  const SizedBox(height: 8),
                   AxisDropdownButton(
                     width: 240,
                     entries: [
@@ -812,6 +824,7 @@ class DashboardPageState extends State<DashboardPage> {
                       }
                     },
                   ),
+                  const SizedBox(height: 14),
                 ],
               ),
             ),

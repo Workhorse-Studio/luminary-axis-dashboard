@@ -120,6 +120,17 @@ class TermReportWidgetState extends State<TermReportWidget> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
+                    dividerThickness: 0.5,
+                    border: TableBorder(
+                      verticalInside: BorderSide(
+                        color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                        width: 1,
+                      ),
+                      horizontalInside: BorderSide(
+                        color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                        width: 1,
+                      ),
+                    ),
                     columns: [
                       for (final c in [
                         'Name',
@@ -306,6 +317,17 @@ class TermReportWidgetState extends State<TermReportWidget> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
+                        dividerThickness: 0.5,
+                        border: TableBorder(
+                          verticalInside: BorderSide(
+                            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                          horizontalInside: BorderSide(
+                            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                            width: 1,
+                          ),
+                        ),
                         columns: [
                           for (final c in [
                             'Name',

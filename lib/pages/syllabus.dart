@@ -64,9 +64,11 @@ class SyllabusPageState extends State<SyllabusPage> {
                             header: cl.$2.name,
                             width: MediaQuery.of(context).size.width * 0.3,
                             height: null,
-                            child: AxisButton(
-                              width: 40,
-                              height: 40,
+                            child: AxisButton.text(
+                              width: 280,
+                              height: 70,
+                              label: 'Manage Attendance',
+                              icon: Icons.ballot,
                               onPressed: () async {
                                 final Map<String, AttendanceType>? result =
                                     await showDialog(
@@ -87,11 +89,6 @@ class SyllabusPageState extends State<SyllabusPage> {
                                   ).showSnackBar(SnackBar(content: Text(msg)));
                                 }
                               },
-                              child: Icon(
-                                Icons.ballot,
-                                size: 30,
-                                color: AxisColors.blackPurple20,
-                              ),
                             ),
                           ),
                         ),
