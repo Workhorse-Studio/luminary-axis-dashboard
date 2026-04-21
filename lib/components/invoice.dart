@@ -92,7 +92,7 @@ class InvoiceWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Image.asset(
-                        'images/axis_logo.png',
+                        'assets/images/axis_logo.png',
                         width: 300,
                         height: 100,
                       ),

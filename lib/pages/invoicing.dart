@@ -694,55 +694,71 @@ class InvoicingPageState extends State<InvoicingPage> {
     InvoiceWidget widget,
     BuildContext context,
   ) async {
-    await precacheImage(AssetImage('images/axis_logo.png'), context);
-    final bytes = await m.PDFMaker().createPDF(
-      IWBlankPage(child: widget),
-      setup: m.PageSetup(
-        context: context,
-        quality: 2.0,
-        scale: 1.5,
-        pageFormat: m.PageFormat.a4,
-        margins: 10,
-      ),
-    );
+    try {
+      await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
+      final bytes = await m.PDFMaker().createPDF(
+        IWBlankPage(child: widget),
+        setup: m.PageSetup(
+          context: context,
+          quality: 2.0,
+          scale: 1.5,
+          pageFormat: m.PageFormat.a4,
+          margins: 10,
+        ),
+      );
 
-    final file = web.File(
-      [
-        bytes.buffer.toJS as JSAny,
-      ].toJS,
-      'invoice.pdf',
-    );
+      final file = web.File(
+        [
+          bytes.buffer.toJS as JSAny,
+        ].toJS,
+        'invoice.pdf',
+      );
 
-    final overrideResp = await makeRequest(
-      body: '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
-    );
+      final overrideResp = await makeRequest(
+        body: '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
+      );
 
-    final String msg;
-    if (!overrideResp.ok) {
-      msg = 'Pre-flight request to LAD server failed.';
-      return false;
-    } else {
-      final response = await web.window
-          .fetch(
-            'http://localhost:8088'.toJS,
-            web.RequestInit(
-              method: 'POST',
-              body: file,
-            ),
-          )
-          .toDart;
-
-      if (response.ok) {
-        msg = 'Invoice sent successfully!';
+      final String msg;
+      if (!overrideResp.ok) {
+        msg = 'Pre-flight request to LAD server failed.';
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        }
+        return false;
       } else {
-        msg = 'LAD server encountered an issue while sending the invoice.';
+        final response = await web.window
+            .fetch(
+              'https://axis-server-850501828016.asia-southeast1.run.app/api/'
+                  .toJS,
+              web.RequestInit(
+                method: 'POST',
+                body: file,
+              ),
+            )
+            .toDart;
+
+        if (response.ok) {
+          msg = 'Invoice sent successfully!';
+        } else {
+          msg = 'LAD server encountered an issue while sending the invoice.';
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        }
+        return response.ok;
       }
+    } catch (e, st) {
+      print('Error sending invoice email: $e\n$st');
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate/send invoice: $e')),
+        );
       }
-      return response.ok;
+      return false;
     }
   }
 
