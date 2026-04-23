@@ -154,72 +154,66 @@ class TermReportWidgetState extends State<TermReportWidget> {
           return empty;
         }
 
-        Future<({List<DataRow> rows, String className, int colCount})>
+        Future<({List<DataRow> rows, String className, List<String> dates})>
         generateReportContent(String classId, int termIndex) async {
           final List<DataRow> rows = [];
           final cd = ClassData.fromJson(
             (await classesCache.get(classId)).data()!,
           );
-          final Map<String, List<String>> studentRecords = {};
-
+          
+          final List<String> termDates = [];
           for (final attEntry in cd.attendance.entries) {
             if (monthKeyToTermIndex(globalState!, attEntry.key) == termIndex) {
-              for (final students in attEntry.value.entries) {
-                studentRecords.ensureKey(students.key, list: <String>[]);
-                studentRecords[students.key]!.add(
-                  students.value.isPresent
-                      ? attEntry.key.substring(0, attEntry.key.length - 5)
-                      : 'X',
-                );
-              }
+              termDates.add(attEntry.key);
             }
           }
 
-          final int maxSessionsNum = studentRecords.values.fold(
-            0,
-            (a, b) => max(a, b.length),
-          );
+          termDates.sort((a, b) {
+            final aParts = a.split('-');
+            final bParts = b.split('-');
+            final aDate = DateTime(int.parse(aParts[2]), int.parse(aParts[1]), int.parse(aParts[0]));
+            final bDate = DateTime(int.parse(bParts[2]), int.parse(bParts[1]), int.parse(bParts[0]));
+            return aDate.compareTo(bDate);
+          });
 
-          for (final studentEntry in studentRecords.entries) {
-            final List<DataCell> fillerCells = [];
+          final allocDoc = await firestore
+              .collection('global')
+              .doc('state')
+              .collection('allocations')
+              .doc(globalState!.terms[termIndex].termName)
+              .get();
+              
+          final TermAllocation allocData = (!allocDoc.exists || allocDoc.data() == null) 
+              ? TermAllocation(sessions: {}) 
+              : TermAllocation.fromJson(allocDoc.data()!);
 
-            if (studentEntry.value.length < maxSessionsNum) {
-              for (
-                int i = 0;
-                i < maxSessionsNum - studentEntry.value.length;
-                i++
-              ) {
-                fillerCells.add(
-                  DataCell(
-                    Text(
-                      ' ',
-                      style: body2,
-                    ),
-                  ),
-                );
+          final Set<String> studentIds = {};
+          for (final date in termDates) {
+            studentIds.addAll(cd.attendance[date]!.keys);
+          }
+
+          for (final studentId in studentIds) {
+            final List<DataCell> studentCells = [];
+            final List<String> stringValues = [];
+            
+            for (final date in termDates) {
+              final studentStatus = cd.attendance[date]![studentId];
+              if (studentStatus != null) {
+                final str = studentStatus.isPresent ? date.substring(0, date.length - 5) : 'X';
+                studentCells.add(DataCell(Text(str, style: body2)));
+                stringValues.add(str);
+              } else {
+                studentCells.add(DataCell(Text(' ', style: body2)));
+                stringValues.add(' ');
               }
             }
-
-            final studentDoc = await studentCache.get(studentEntry.key);
-            final studentDataJson = studentDoc.data()!;
             
-            int initialCount = 0;
-            
-            try {
-              dynamic sd = StudentData.fromJson(studentDataJson);
-              initialCount = sd.sessionCounts[termIndex][classId] ?? 0;
-            } catch (_) {
-              dynamic isc = studentDataJson['initialSessionCount'];
-              if (isc != null) {
-                if (isc is Map && isc.containsKey(classId)) {
-                  initialCount = (isc[classId] as num).toInt();
-                } else if (isc is num) {
-                  initialCount = isc.toInt();
-                }
-              }
+            int initialCount = allocData.sessions[classId]?[studentId] ?? 0;
+            if (initialCount == -1) {
+              initialCount = 0;
             }
 
-            int attendedSessions = studentEntry.value.where((d) => d != 'X').length;
+            int attendedSessions = stringValues.where((d) => d != 'X' && d != ' ').length;
             int finalCount = initialCount - attendedSessions;
             double progress = initialCount > 0 ? (1 - (finalCount / initialCount)) : 0.0;
 
@@ -231,9 +225,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                       children: [
                         FutureBuilderTemplate(
                           future: (() async => (StudentData.fromJson(
-                            (await studentCache.get(
-                              studentEntry.key,
-                            )).data()!,
+                            (await studentCache.get(studentId)).data()!,
                           )).name)(),
                           builder: (_, snapshot) => Text(
                             "${snapshot.data}",
@@ -261,14 +253,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                       ),
                     ),
                   ),
-                  ...fillerCells,
-                  for (final str in studentEntry.value)
-                    DataCell(
-                      Text(
-                        str,
-                        style: body2,
-                      ),
-                    ),
+                  ...studentCells,
                   DataCell(
                     Text(
                       '$initialCount',
@@ -288,7 +273,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
           return (
             rows: rows,
             className: cd.name,
-            colCount: maxSessionsNum,
+            dates: termDates.map((date) => date.substring(0, date.length - 5)).toList(),
           );
         }
 
@@ -352,10 +337,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                           for (final c in [
                             'Name',
                             'Level',
-                            ...List<String>.generate(
-                              snapshot.data!.colCount,
-                              (_) => 'Date',
-                            ),
+                            ...snapshot.data!.dates,
                             'Initial Count',
                             'Final Count',
                           ])

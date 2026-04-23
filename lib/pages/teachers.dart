@@ -104,21 +104,24 @@ class TeachersPageState extends State<TeachersPage> {
                                 int total = 0;
                                 final teacherDataJson = tDoc.data();
                                 final teacherClasses = TeacherData.fromJson(teacherDataJson).classIds;
-                                
+
                                 if (teacherDataJson['priorSessionCount'] != null) {
                                   total += (teacherDataJson['priorSessionCount'] as num).toInt();
                                 }
-                                
-                                for (final termData in studentAttendanceStore.sessionsPerTerm) {
-                                  for (final clEntry in termData.entries) {
-                                    if (teacherClasses.contains(clEntry.key)) {
-                                      for (final val in clEntry.value.values) { total += (val as num).toInt(); }
+
+                                for (final clId in teacherClasses) {
+                                  final cdJson = classesCache.registry[clId]?.data();
+                                  if (cdJson != null) {
+                                    final cd = ClassData.fromJson(cdJson);
+                                    for (final date in cd.attendance.keys) {
+                                      if (monthKeyToTermIndex(globalState, date) <= currentTermIndex) {
+                                        total++;
+                                      }
                                     }
                                   }
                                 }
                                 return total;
-                              })(),
-                              TermReportWidget(
+                              })(),                              TermReportWidget(
                                 teacherId: tDoc.id,
                                 termIndex: currentTermIndex,
                               ),
