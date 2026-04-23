@@ -100,19 +100,24 @@ class TeachersPageState extends State<TeachersPage> {
                               globalState: globalState,
                             );
                             return (
-                              [
-                                for (final clEntry
-                                    in studentAttendanceStore
-                                        .sessionsPerTerm[currentTermIndex]
-                                        .entries)
-                                  if (TeacherData.fromJson(
-                                    tDoc.data(),
-                                  ).classIds.contains(clEntry.key))
-                                    clEntry.value.values.fold(
-                                      0,
-                                      (a, b) => a + b,
-                                    ),
-                              ].fold(0, (a, b) => a + b),
+                              (() {
+                                int total = 0;
+                                final teacherDataJson = tDoc.data();
+                                final teacherClasses = TeacherData.fromJson(teacherDataJson).classIds;
+                                
+                                if (teacherDataJson['priorSessionCount'] != null) {
+                                  total += (teacherDataJson['priorSessionCount'] as num).toInt();
+                                }
+                                
+                                for (final termData in studentAttendanceStore.sessionsPerTerm) {
+                                  for (final clEntry in termData.entries) {
+                                    if (teacherClasses.contains(clEntry.key)) {
+                                      for (final val in clEntry.value.values) { total += (val as num).toInt(); }
+                                    }
+                                  }
+                                }
+                                return total;
+                              })(),
                               TermReportWidget(
                                 teacherId: tDoc.id,
                                 termIndex: currentTermIndex,

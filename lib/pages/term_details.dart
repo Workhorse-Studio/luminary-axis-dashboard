@@ -237,12 +237,14 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                       .data()!,
                 );
 
+                final oldTermDoc = await allocationsCache.get(oldTerm.termName);
+                allocationsCache.registry[newTermName] = oldTermDoc;
                 await allocsColl
                     .doc(newTermName)
                     .set(
-                      (allocationsCache.registry[newTermName] =
-                              await allocationsCache.get(oldTerm.termName))
-                          .data()!,
+                      (!oldTermDoc.exists || oldTermDoc.data() == null)
+                          ? {}
+                          : oldTermDoc.data()!,
                     );
                 allocationsCache.registry.remove(oldTerm.termName);
 
@@ -292,9 +294,10 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     for (final studentId in ClassData.fromJson(
                       cl.value.data()!,
                     ).studentIds)
-                      if (!StudentData.fromJson(
-                        (await studentsCache.get(studentId)).data()!,
-                      ).withdrawn[cl.key]!)
+                      if (StudentData.fromJson(
+                            (await studentsCache.get(studentId)).data()!,
+                          ).withdrawn[cl.key] !=
+                          true)
                         studentId: -1,
                   },
               };
@@ -446,21 +449,23 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                                       "This action will allocate $sc sessions for every student visible in the current view (${visibleRows.length} students). Are you sure you want to continue?",
                                 ),
                               );
-                              final allocData = TermAllocation.fromJson(
-                                (await allocationsCache.get(
-                                  globalState!.terms[currentTabIndex].termName,
-                                )).data()!,
+                              final allocDoc = await allocationsCache.get(
+                                globalState!.terms[currentTabIndex].termName,
                               );
+                              final allocData =
+                                  (!allocDoc.exists || allocDoc.data() == null)
+                                  ? TermAllocation(sessions: {})
+                                  : TermAllocation.fromJson(allocDoc.data()!);
                               if (res) {
-                                final visibleIds = visibleRows.map((r) => r.$2);
-                                for (final clEntry
-                                    in allocData.sessions.entries) {
-                                  final affectedKeys = clEntry.value.keys.where(
-                                    (e) => visibleIds.contains(e),
-                                  );
-                                  for (final k in affectedKeys) {
-                                    allocData.sessions[clEntry.key]![k] = sc;
+                                for (final row in visibleRows) {
+                                  final studentId = row.$1.id;
+                                  final classId = row.$2;
+                                  if (!allocData.sessions.containsKey(
+                                    classId,
+                                  )) {
+                                    allocData.sessions[classId] = {};
                                   }
+                                  allocData.sessions[classId]![studentId] = sc;
                                 }
 
                                 await allocsColl
@@ -539,11 +544,13 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     alignment: Alignment.topLeft,
                     child: FutureBuilderTemplate(
                       future: () async {
-                        return TermAllocation.fromJson(
-                          (await allocationsCache.get(
-                            globalState!.terms[currentTabIndex].termName,
-                          )).data()!,
+                        final doc = await allocationsCache.get(
+                          globalState!.terms[currentTabIndex].termName,
                         );
+                        if (!doc.exists || doc.data() == null) {
+                          return TermAllocation(sessions: {});
+                        }
+                        return TermAllocation.fromJson(doc.data()!);
                       }(),
                       builder: (context, snapshot) => TabBarView(
                         key: ValueKey(
@@ -642,14 +649,16 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                               studentData.name) {
                         continue;
                       }
-                      if (studentData.withdrawn[cd.id]!) continue;
+                      if (studentData.withdrawn[cd.id] == true) continue;
                       //  numEntriesAdded += 1;
                       visibleRows.add((sd, cd.id));
 
+                      final int? sessionCount =
+                          allocData.sessions[cd.id]?[sd.id];
                       final String rowData =
-                          allocData.sessions[cd.id]![sd.id] == -1
+                          sessionCount == null || sessionCount == -1
                           ? 'Unallocated'
-                          : "${allocData.sessions[cd.id]![sd.id]}";
+                          : "$sessionCount";
                       final rowKey = "${entry.key}-$stId-$rowData";
 
                       if (!controllers.containsKey(rowKey)) {

@@ -73,13 +73,6 @@ class TermReportWidgetState extends State<TermReportWidget> {
                               style: body2,
                             ),
                           ),
-
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: LinearProgressIndicator(
-                              value: 0, // termReport.progresses[j],
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -207,6 +200,29 @@ class TermReportWidgetState extends State<TermReportWidget> {
               }
             }
 
+            final studentDoc = await studentCache.get(studentEntry.key);
+            final studentDataJson = studentDoc.data()!;
+            
+            int initialCount = 0;
+            
+            try {
+              dynamic sd = StudentData.fromJson(studentDataJson);
+              initialCount = sd.sessionCounts[termIndex][classId] ?? 0;
+            } catch (_) {
+              dynamic isc = studentDataJson['initialSessionCount'];
+              if (isc != null) {
+                if (isc is Map && isc.containsKey(classId)) {
+                  initialCount = (isc[classId] as num).toInt();
+                } else if (isc is num) {
+                  initialCount = isc.toInt();
+                }
+              }
+            }
+
+            int attendedSessions = studentEntry.value.where((d) => d != 'X').length;
+            int finalCount = initialCount - attendedSessions;
+            double progress = initialCount > 0 ? (1 - (finalCount / initialCount)) : 0.0;
+
             rows.add(
               DataRow(
                 cells: [
@@ -228,7 +244,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
                         const SizedBox(width: 10),
                         Flexible(
                           child: LinearProgressIndicator(
-                            value: 0,
+                            value: progress,
                           ),
                         ),
                       ],
@@ -255,13 +271,13 @@ class TermReportWidgetState extends State<TermReportWidget> {
                     ),
                   DataCell(
                     Text(
-                      '0',
+                      '$initialCount',
                       style: body2,
                     ),
                   ),
                   DataCell(
                     Text(
-                      '0',
+                      '$finalCount',
                       style: body2,
                     ),
                   ),
@@ -320,11 +336,15 @@ class TermReportWidgetState extends State<TermReportWidget> {
                         dividerThickness: 0.5,
                         border: TableBorder(
                           verticalInside: BorderSide(
-                            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                            color: AxisColors.blackPurple20.withValues(
+                              alpha: 0.15,
+                            ),
                             width: 1,
                           ),
                           horizontalInside: BorderSide(
-                            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                            color: AxisColors.blackPurple20.withValues(
+                              alpha: 0.15,
+                            ),
                             width: 1,
                           ),
                         ),
