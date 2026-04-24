@@ -36,6 +36,7 @@ class NavbarState extends State<Navbar> {
         alignment: Alignment.topLeft,
         child: Container(
           width: MediaQuery.of(context).size.width * 0.22,
+          height: double.infinity,
           decoration: BoxDecoration(
             color: AxisColors.blackPurple50,
             border: Border(
@@ -61,30 +62,38 @@ class NavbarState extends State<Navbar> {
                 ),
               ),
               const SizedBox(height: 30),
-              for (final r in Routes.values)
-                if (!((const [
-                      Routes.login,
-                      Routes.dev,
-                      Routes.students,
-                    ]).contains(r)) &&
-                    hasRolesForRoute(r))
-                  Padding(
-                    padding: EdgeInsetsGeometry.only(
-                      left: 16,
-                      right: 16,
-                      bottom: 5,
-                      top: 5,
-                    ),
-                    child: AxisButton.text(
-                      label: r.label,
-                      isHighlighted:
-                          r.slug == ModalRoute.of(context)?.settings.name,
-                      width: double.infinity,
-                      icon: r.icon,
-                      onPressed: () => Navigator.of(context).pushNamed(r.slug),
-                    ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (final r in Routes.values)
+                        if (!((const [
+                              Routes.login,
+                              Routes.dev,
+                              Routes.students,
+                            ]).contains(r)) &&
+                            hasRolesForRoute(r))
+                          Padding(
+                            padding: EdgeInsetsGeometry.only(
+                              left: 16,
+                              right: 16,
+                              bottom: 5,
+                              top: 5,
+                            ),
+                            child: AxisButton.text(
+                              label: r.label,
+                              isHighlighted:
+                                  r.slug == ModalRoute.of(context)?.settings.name,
+                              width: double.infinity,
+                              icon: r.icon,
+                              onPressed: () =>
+                                  Navigator.of(context).pushNamed(r.slug),
+                            ),
+                          ),
+                    ],
                   ),
-              const Spacer(),
+                ),
+              ),
               Padding(
                 padding: EdgeInsetsGeometry.only(
                   left: 16,
