@@ -42,7 +42,12 @@ class _FinancialsPageState extends State<FinancialsPage> {
 
     for (final doc in invoicesSnapshot.docs) {
       final data = doc.data();
-      final date = DateFormat('d-M-y').parse(data['invoiceDateFormatted']);
+      final dateStr = data['invoiceDateFormatted'] as String?;
+      if (dateStr == null) continue;
+      
+      final date = DateFormat('d-M-y').parse(dateStr);
+      if (date.year != year) continue;
+
       final month = date.month;
       final invoiceType = data['invoiceType'];
       final amount = data['amtDue'] ?? data['amtPayable'] ?? 0.0;
@@ -125,7 +130,12 @@ class _FinancialsPageState extends State<FinancialsPage> {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.monthlyData.isEmpty) {
-            return const Center(child: Text('No financial data available.'));
+            return Center(
+              child: Text(
+                'No financial data to be shown.',
+                style: heading3,
+              ),
+            );
           }
 
           final financialData = snapshot.data!;
