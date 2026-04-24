@@ -91,20 +91,26 @@ class InvoicingPageState extends State<InvoicingPage> {
             int numUpdated = 0;
 
             if (currentTabIndex == 0) {
-              await studentAttendanceStore.ensureInit(
-                globalState: globalState!,
-                classesCache: classesCache,
-                studentCache: studentCache,
+              await studentCache.initAll(
+                query: firestore
+                    .collection('users')
+                    .where('role', isEqualTo: 'student'),
+                force: true,
               );
+              await classesCache.initAll(
+                collection: firestore.collection('classes'),
+                force: true,
+              );
+              studentAttendanceStore.markStale();
 
-              await studentAttendanceStore.run(
+              numUpdated = await studentAttendanceStore.run(
                 globalState: globalState!,
                 classesCache: classesCache,
                 studentCache: studentCache,
               );
               setState(() {});
             } else {
-              await fetchUpdatedTeacherInvoices(forceAll: true);
+              numUpdated = await fetchUpdatedTeacherInvoices(forceAll: true);
             }
 
             setState(() {});
@@ -387,6 +393,15 @@ class InvoicingPageState extends State<InvoicingPage> {
                                     teacherInvoiceData: null,
                                   ),
                                 );
+                                
+                                final updatedDoc = await firestore
+                                  .collection('global')
+                                  .doc('archives')
+                                  .collection('invoices')
+                                  .doc(studentInvData.invoiceId)
+                                  .get();
+                                studentAttendanceStore.invoicesData[i][studentData.id] = StudentInvoiceData.fromJson(updatedDoc.data()!);
+                                setState((){});
                               }
                             },
                           ),
@@ -678,6 +693,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     ),
                   ),
                 );
+                setState((){});
               }
             },
           ),
@@ -773,7 +789,7 @@ class InvoicingPageState extends State<InvoicingPage> {
     }
   }
 
-  Future<void> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {
+  Future<int> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {
     bool invoicePayloadMatches(
       TeacherInvoiceData a,
       TeacherInvoiceData b,
@@ -794,6 +810,7 @@ class InvoicingPageState extends State<InvoicingPage> {
           a.terms == b.terms;
     }
 
+    int numUpdated = 0;
     final Map<String, Map<String, Map<String, int>>> newSessions = {};
     final mIds = generateMonthIds();
     for (final teacherEntry in teachersCache.registry.entries) {
@@ -862,10 +879,12 @@ class InvoicingPageState extends State<InvoicingPage> {
               .doc(teacherData.invoiceIds[monthEntry.key]);
           existingInvoice = await docRef.get();
           final existing = TeacherInvoiceData.fromJson(existingInvoice.data()!);
-          if (invoicePayloadMatches(existing, candidate)) {
+          if (!forceAll && invoicePayloadMatches(existing, candidate)) {
             continue;
           }
         }
+
+        numUpdated++;
         docRef = firestore
             .collection('global')
             .doc('archives')
@@ -886,6 +905,8 @@ class InvoicingPageState extends State<InvoicingPage> {
     sessionsMap
       ..clear()
       ..addAll(newSessions);
+
+    return numUpdated;
   }
 }
 

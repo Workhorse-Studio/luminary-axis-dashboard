@@ -12,17 +12,17 @@ class GenericCache<T> {
     Query? query,
     bool force = false,
   }) async {
-    if (_hasInitAll) {
-      if (!force) return;
-    } else {
-      final res = collection != null
-          ? (await collection.get()).docs
-          : (await query!.get()).docs;
-      for (final item in res) {
-        registry[item.id] = item as T;
-      }
-      _hasInitAll = true;
+    if (_hasInitAll && !force) {
+      return;
     }
+
+    final res = collection != null
+        ? (await collection.get()).docs
+        : (await query!.get()).docs;
+    for (final item in res) {
+      registry[item.id] = item as T;
+    }
+    _hasInitAll = true;
   }
 
   Future<T> get(String id, {bool bypassCache = false}) async {

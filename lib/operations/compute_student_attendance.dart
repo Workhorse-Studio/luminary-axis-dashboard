@@ -59,7 +59,7 @@ class StudentAttendanceStore {
     }
   }
 
-  Future<void> run({
+  Future<int> run({
     required GlobalState globalState,
     required GenericCache<DocumentSnapshot<JSON>> classesCache,
     required GenericCache<DocumentSnapshot<JSON>> studentCache,
@@ -68,7 +68,7 @@ class StudentAttendanceStore {
     if (reuseFrom != null &&
         lastRunTs != null &&
         DateTime.now().difference(lastRunTs!) < reuseFrom) {
-      return;
+      return 0;
     } else {
       sessionsPerTerm.clear();
       termReports.clear();
@@ -78,6 +78,23 @@ class StudentAttendanceStore {
         sessionsPerTerm.add(<String, Map<String, int>>{});
         termReports.add(<String, Map<String, List<String?>>>{});
         hasInvoice.add(<String, bool>{});
+      }
+    }
+
+    int numUpdated = 0;
+
+    final allocationsByTerm = <String, TermAllocation>{};
+    for (final term in globalState.terms) {
+      final doc = await firestore
+          .collection('global')
+          .doc('state')
+          .collection('allocations')
+          .doc(term.termName)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        allocationsByTerm[term.termName] = TermAllocation.fromJson(doc.data()!);
+      } else {
+        allocationsByTerm[term.termName] = TermAllocation(sessions: {});
       }
     }
 
@@ -115,9 +132,9 @@ class StudentAttendanceStore {
       }
     }
     for (int t = 0; t < sessionsPerTerm.length; t++) {
-      final attendanceData = sessionsPerTerm[t];
+      final termReportData = termReports[t];
       final Map<String, StudentInvoiceData> currentTermInvoices = {};
-      for (final studentEntry in attendanceData.entries) {
+      for (final studentEntry in termReportData.entries) {
         DocumentSnapshot<JSON>? existingInvoice;
         final sd = StudentData.fromJson(
           (await studentCache.get(studentEntry.key)).data()!,
@@ -133,14 +150,28 @@ class StudentAttendanceStore {
         final List<({double amt, String desc, int qty, double rate})> entries =
             [];
         final double rate = studentEntry.value.length >= 3 ? (95 / 2) : 95.00;
+
         for (final classEntry in studentEntry.value.entries) {
+          final termName = globalState.terms[t].termName;
+          final termAllocations = allocationsByTerm[termName]!;
+          final classId = classEntry.key;
+          final studentId = studentEntry.key;
+
+          int sessionCount =
+              termAllocations.sessions[classId]?[studentId] ?? -1;
+
+          // If unallocated, fall back to attendance count.
+          if (sessionCount == -1) {
+            sessionCount = classEntry.value.where((x) => x != 'X').length;
+          }
+
           entries.add((
             desc: ClassData.fromJson(
               (await classesCache.get(classEntry.key)).data()!,
             ).name,
             rate: rate,
-            qty: classEntry.value,
-            amt: rate * classEntry.value,
+            qty: sessionCount,
+            amt: rate * sessionCount,
           ));
         }
 
@@ -185,6 +216,8 @@ class StudentAttendanceStore {
           }
         }
 
+        numUpdated++;
+
         currentTermInvoices[studentEntry.key] = candidate;
         await docRef.set(
           currentTermInvoices[studentEntry.key]!.toJson(),
@@ -203,6 +236,7 @@ class StudentAttendanceStore {
 
     if (!_hasInit) _hasInit = true;
     lastRunTs = DateTime.now();
+    return numUpdated;
   }
 }
 

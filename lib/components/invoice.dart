@@ -4,12 +4,14 @@ class InvoiceWidget extends StatelessWidget {
   final bool maskEditableFields;
   final StudentInvoiceData? studentInvoiceData;
   final TeacherInvoiceData? teacherInvoiceData;
+  final List<({String desc, int qty, double rate, double amt})>? overrideEntries;
   final double total;
   final bool showFonts;
 
   const InvoiceWidget({
     this.studentInvoiceData,
     this.teacherInvoiceData,
+    this.overrideEntries,
     this.showFonts = true,
     required this.total,
     this.maskEditableFields = false,
@@ -21,14 +23,11 @@ class InvoiceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double total = studentInvoiceData == null
-        ? teacherInvoiceData!.amtDue
-        : studentInvoiceData!.amtPayable;
     final List<DataRow> invoiceRows = [];
     final List<({String desc, int qty, double rate, double amt})>
-    invoiceEntries = studentInvoiceData == null
+    invoiceEntries = overrideEntries ?? (studentInvoiceData == null
         ? teacherInvoiceData!.entries
-        : studentInvoiceData!.entries;
+        : studentInvoiceData!.entries);
     for (int i = 0; i < invoiceEntries.length; i++) {
       invoiceRows.add(
         DataRow(
@@ -210,7 +209,7 @@ class InvoiceWidget extends StatelessWidget {
                       const SizedBox(height: 5),
                       if (studentInvoiceData != null)
                         Text(
-                          'SGD ${studentInvoiceData!.amtPayable.toStringAsFixed(2)}',
+                          'SGD ${total.toStringAsFixed(2)}',
                           style: handleFonts(
                             body3.copyWith(
                               fontSize: 22,
@@ -220,7 +219,7 @@ class InvoiceWidget extends StatelessWidget {
                         ),
                       if (teacherInvoiceData != null)
                         Text(
-                          'SGD ${teacherInvoiceData!.amtDue.toStringAsFixed(2)}',
+                          'SGD ${total.toStringAsFixed(2)}',
                           style: handleFonts(
                             body3.copyWith(
                               fontSize: 22,

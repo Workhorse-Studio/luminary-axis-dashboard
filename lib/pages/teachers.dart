@@ -67,9 +67,10 @@ class TeachersPageState extends State<TeachersPage> {
         return Navbar(
           pageTitle: 'Teachers',
           actions: [
-            AxisDropdownButton(
+            AxisDropdownButton<int>(
               width: 140,
               entries: termEntries,
+              initialSelection: currentTermIndex,
               onSelected: (newData) => setState(() {
                 if (newData != null) currentTermIndex = newData;
               }),
@@ -93,6 +94,7 @@ class TeachersPageState extends State<TeachersPage> {
                         studentAttendanceStore.sessionsPerTerm.length)
                       for (final tDoc in teachersData) ...[
                         FutureBuilderTemplate(
+                          key: ValueKey('teacher-card-${tDoc.id}-$currentTermIndex'),
                           future: () async {
                             await studentAttendanceStore.ensureInit(
                               classesCache: classesCache,

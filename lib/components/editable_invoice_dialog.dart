@@ -82,6 +82,13 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
     );
   }
 
+  void _updateEntryAndTotal(int index, ({double amt, String desc, int qty, double rate}) newEntry) {
+    entries[index] = newEntry;
+    total = entries.fold(0.0, (acc, item) => acc + item.amt);
+    setState(() {});
+    updateInvoice(entries);
+  }
+
   List<Widget> generateFieldsWithOffset(int index) => [
     Positioned(
       top: (924 + 47 * index) as double,
@@ -99,15 +106,14 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
               contentPadding: EdgeInsets.only(top: -20, left: 7),
               enabledBorder: InputBorder.none,
             ),
-            onSubmitted: (value) async {
-              final updatedEntries = entries;
-              updatedEntries[index] = (
-                qty: int.parse(value),
-                amt: double.parse(value) * entries[index].rate,
+            onChanged: (value) async {
+              int parsedQty = int.tryParse(value) ?? 0;
+              _updateEntryAndTotal(index, (
+                qty: parsedQty,
+                amt: parsedQty * entries[index].rate,
                 rate: entries[index].rate,
                 desc: entries[index].desc,
-              );
-              await updateInvoice(updatedEntries);
+              ));
             },
           ),
         ),
@@ -129,15 +135,14 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
               contentPadding: EdgeInsets.only(top: -20, left: 7),
               enabledBorder: InputBorder.none,
             ),
-            onSubmitted: (value) async {
-              final updatedEntries = entries;
-              updatedEntries[index] = (
+            onChanged: (value) async {
+              double parsedRate = double.tryParse(value) ?? 0.0;
+              _updateEntryAndTotal(index, (
                 qty: entries[index].qty,
-                amt: double.parse(value) * entries[index].qty,
-                rate: double.parse(value),
+                amt: parsedRate * entries[index].qty,
+                rate: parsedRate,
                 desc: entries[index].desc,
-              );
-              await updateInvoice(updatedEntries);
+              ));
             },
           ),
         ),
@@ -159,15 +164,13 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
               contentPadding: EdgeInsets.only(top: -20, left: 7),
               enabledBorder: InputBorder.none,
             ),
-            onSubmitted: (value) async {
-              final updatedEntries = entries;
-              updatedEntries[index] = (
+            onChanged: (value) async {
+               _updateEntryAndTotal(index, (
                 qty: entries[index].qty,
                 amt: entries[index].amt,
                 rate: entries[index].rate,
-                desc: "${entries[index].desc} $value",
-              );
-              await updateInvoice(updatedEntries);
+                desc: value,
+              ));
             },
           ),
         ),

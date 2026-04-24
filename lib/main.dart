@@ -138,7 +138,7 @@ enum Routes {
   login('/login', 'Login', [], Icons.account_circle),
   syllabus(
     '/syllabus',
-    'Attendance',
+  'Attendance',
     ['teacher', 'admin'],
     Icons.checklist,
   ),
