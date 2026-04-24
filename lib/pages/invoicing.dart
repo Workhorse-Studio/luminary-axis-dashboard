@@ -123,6 +123,113 @@ class InvoicingPageState extends State<InvoicingPage> {
             }
           },
         ),
+        const SizedBox(width: 16),
+        AxisButton.text(
+          icon: Icons.send,
+          label: 'Send All',
+          onPressed: () async {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return const Center(child: CircularProgressIndicator());
+              },
+            );
+
+            int successCount = 0;
+            if (currentTabIndex == 0) {
+              for (int i = 0;
+                  i < studentAttendanceStore.invoicesData.length;
+                  i++) {
+                for (final entry
+                    in studentAttendanceStore.invoicesData[i].entries) {
+                  final studentId = entry.key;
+                  final studentInvData = entry.value;
+                  final studentDoc = await studentCache.get(studentId);
+                  final studentData = StudentData.fromJson(studentDoc.data()!);
+
+                  try {
+                    if (await sendInvoiceEmail(
+                      studentData.email,
+                      InvoiceWidget(
+                        showFonts: false,
+                        studentInvoiceData: studentInvData,
+                        teacherInvoiceData: null,
+                        total: studentInvData.amtPayable,
+                      ),
+                      context,
+                    )) {
+                      await firestore
+                          .collection('global')
+                          .doc('archives')
+                          .collection('invoices')
+                          .doc(studentInvData.invoiceId)
+                          .update({
+                        'invoiceStatus': InvoiceStatus.pendingPayment.name,
+                      });
+                      successCount++;
+                    }
+                  } catch (e, st) {
+                    print(
+                        'Error sending invoice for ${studentData.name}: $e\n$st');
+                  }
+                }
+              }
+            } else {
+              // Teachers tab
+              for (final teacherEntry in teachersCache.registry.entries) {
+                final teacherData =
+                    TeacherData.fromJson(teacherEntry.value.data()!);
+                for (final monthId in teacherData.invoiceIds.keys) {
+                  final invoiceId = teacherData.invoiceIds[monthId];
+                  if (invoiceId == null) continue;
+
+                  try {
+                    final invDoc = await firestore
+                        .collection('global')
+                        .doc('archives')
+                        .collection('invoices')
+                        .doc(invoiceId)
+                        .get();
+                    if (!invDoc.exists) continue;
+
+                    final invData = TeacherInvoiceData.fromJson(invDoc.data()!);
+
+                    if (await sendInvoiceEmail(
+                      teacherData.email,
+                      InvoiceWidget(
+                        showFonts: false,
+                        studentInvoiceData: null,
+                        teacherInvoiceData: invData,
+                        total: invData.amtDue,
+                      ),
+                      context,
+                    )) {
+                      await invDoc.reference.update({
+                        'invoiceStatus': InvoiceStatus.pendingPayment.name,
+                      });
+                      successCount++;
+                    }
+                  } catch (e, st) {
+                    print(
+                        'Error sending invoice for ${teacherData.name}: $e\n$st');
+                  }
+                }
+              }
+            }
+
+            Navigator.of(context).pop(); // Close the loading dialog
+            setState(() {});
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                SnackBar(
+                    content: Text('$successCount invoices were sent successfully.')),
+              );
+            }
+          },
+        ),
       ],
       body: (context) => DefaultTabController(
         length: 2,
