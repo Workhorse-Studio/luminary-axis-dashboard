@@ -137,9 +137,14 @@ class DashboardPageState extends State<DashboardPage> {
                                   builder: (context, constraints) {
                                     const double minWidth = 450;
                                     const double spacing = 20;
-                                    int crossAxisCount = (constraints.maxWidth + spacing) ~/ (minWidth + spacing);
+                                    int crossAxisCount =
+                                        (constraints.maxWidth + spacing) ~/
+                                        (minWidth + spacing);
                                     if (crossAxisCount < 1) crossAxisCount = 1;
-                                    final double itemWidth = (constraints.maxWidth - (crossAxisCount - 1) * spacing) / crossAxisCount;
+                                    final double itemWidth =
+                                        (constraints.maxWidth -
+                                            (crossAxisCount - 1) * spacing) /
+                                        crossAxisCount;
 
                                     return Wrap(
                                       spacing: spacing,
@@ -171,9 +176,14 @@ class DashboardPageState extends State<DashboardPage> {
                               builder: (context, constraints) {
                                 const double minWidth = 300;
                                 const double spacing = 50;
-                                int crossAxisCount = (constraints.maxWidth + spacing) ~/ (minWidth + spacing);
+                                int crossAxisCount =
+                                    (constraints.maxWidth + spacing) ~/
+                                    (minWidth + spacing);
                                 if (crossAxisCount < 1) crossAxisCount = 1;
-                                final double itemWidth = (constraints.maxWidth - (crossAxisCount - 1) * spacing) / crossAxisCount;
+                                final double itemWidth =
+                                    (constraints.maxWidth -
+                                        (crossAxisCount - 1) * spacing) /
+                                    crossAxisCount;
 
                                 return Wrap(
                                   spacing: spacing,
@@ -201,17 +211,17 @@ class DashboardPageState extends State<DashboardPage> {
                                                   Text(
                                                     TeacherData.fromJson(
                                                       teachersCache
-                                                              .registry.entries
+                                                              .registry
+                                                              .entries
                                                               .where(
                                                                 (e) =>
                                                                     TeacherData.fromJson(
-                                                                          e.value
-                                                                              .data()!,
-                                                                        ).classIds
-                                                                        .contains(
-                                                                          clEntry
-                                                                              .key,
-                                                                        ),
+                                                                      e.value
+                                                                          .data()!,
+                                                                    ).classIds.contains(
+                                                                      clEntry
+                                                                          .key,
+                                                                    ),
                                                               )
                                                               .firstOrNull
                                                               ?.value
@@ -220,7 +230,7 @@ class DashboardPageState extends State<DashboardPage> {
                                                             name: 'No teacher',
                                                             role: 'teacher',
                                                             classIds: [
-                                                              clEntry.key
+                                                              clEntry.key,
                                                             ],
                                                             email: '',
                                                             offeredClassTemplates:
@@ -244,8 +254,9 @@ class DashboardPageState extends State<DashboardPage> {
                                                   const Spacer(),
                                                   Text(
                                                     ClassData.fromJson(
-                                                      clEntry.value.data()!,
-                                                    ).studentIds.length.toString(),
+                                                          clEntry.value.data()!,
+                                                        ).studentIds.length
+                                                        .toString(),
                                                     style: body2,
                                                     textAlign: TextAlign.right,
                                                   ),
@@ -308,9 +319,14 @@ class DashboardPageState extends State<DashboardPage> {
                               builder: (context, constraints) {
                                 const double minWidth = 300;
                                 const double spacing = 50;
-                                int crossAxisCount = (constraints.maxWidth + spacing) ~/ (minWidth + spacing);
+                                int crossAxisCount =
+                                    (constraints.maxWidth + spacing) ~/
+                                    (minWidth + spacing);
                                 if (crossAxisCount < 1) crossAxisCount = 1;
-                                final double itemWidth = (constraints.maxWidth - (crossAxisCount - 1) * spacing) / crossAxisCount;
+                                final double itemWidth =
+                                    (constraints.maxWidth -
+                                        (crossAxisCount - 1) * spacing) /
+                                    crossAxisCount;
 
                                 return Wrap(
                                   spacing: spacing,
@@ -340,7 +356,8 @@ class DashboardPageState extends State<DashboardPage> {
                                                 children: [
                                                   Text(
                                                     TeacherData.fromJson(
-                                                      teacherEntry.value.data()!,
+                                                      teacherEntry.value
+                                                          .data()!,
                                                     ).name,
                                                     style: heading2,
                                                   ),
@@ -350,8 +367,8 @@ class DashboardPageState extends State<DashboardPage> {
                                                     height: 45,
                                                     child: Icon(
                                                       Icons.edit,
-                                                      color:
-                                                          AxisColors.blackPurple20,
+                                                      color: AxisColors
+                                                          .blackPurple20,
                                                     ),
                                                     onPressed: () async {
                                                       final TeacherData?
@@ -360,22 +377,28 @@ class DashboardPageState extends State<DashboardPage> {
                                                         builder: (_) =>
                                                             TeacherCreationDialog(
                                                               teacherId:
-                                                                  teacherEntry.key,
+                                                                  teacherEntry
+                                                                      .key,
                                                             ),
                                                       );
                                                       final String msg;
                                                       if (tData != null) {
                                                         await firestore
                                                             .collection('users')
-                                                            .doc(teacherEntry.key)
-                                                            .set(tData.toJson());
+                                                            .doc(
+                                                              teacherEntry.key,
+                                                            )
+                                                            .set(
+                                                              tData.toJson(),
+                                                            );
 
                                                         for (final template
                                                             in tData
                                                                 .offeredClassTemplates) {
                                                           bool exists = false;
                                                           for (final clId
-                                                              in tData.classIds) {
+                                                              in tData
+                                                                  .classIds) {
                                                             final clDoc =
                                                                 await classesCache
                                                                     .get(clId);
@@ -411,7 +434,8 @@ class DashboardPageState extends State<DashboardPage> {
                                                                         const [],
                                                                     templateReference:
                                                                         template,
-                                                                    attendance: {},
+                                                                    attendance:
+                                                                        {},
                                                                   ).toJson(),
                                                                 );
                                                             classesCache
@@ -419,9 +443,12 @@ class DashboardPageState extends State<DashboardPage> {
                                                                 .id] = await docRef
                                                                 .get();
                                                             await firestore
-                                                                .collection('users')
+                                                                .collection(
+                                                                  'users',
+                                                                )
                                                                 .doc(
-                                                                  teacherEntry.key,
+                                                                  teacherEntry
+                                                                      .key,
                                                                 )
                                                                 .update(
                                                                   {
@@ -429,8 +456,7 @@ class DashboardPageState extends State<DashboardPage> {
                                                                         tData
                                                                             .classIds
                                                                           ..add(
-                                                                            docRef
-                                                                                .id,
+                                                                            docRef.id,
                                                                           ),
                                                                   },
                                                                 );
@@ -448,7 +474,8 @@ class DashboardPageState extends State<DashboardPage> {
                                                             'Teacher details updated!';
                                                         setState(() {});
                                                       } else {
-                                                        msg = 'No updates made.';
+                                                        msg =
+                                                            'No updates made.';
                                                       }
                                                       if (context.mounted) {
                                                         ScaffoldMessenger.of(
@@ -486,22 +513,26 @@ class DashboardPageState extends State<DashboardPage> {
                                                           5,
                                                         ),
                                                     border: Border.all(
-                                                      color:
-                                                          AxisColors.blackPurple30,
+                                                      color: AxisColors
+                                                          .blackPurple30,
                                                     ),
-                                                    color: AxisColors.blackPurple30
+                                                    color: AxisColors
+                                                        .blackPurple30
                                                         .withValues(alpha: 0.6),
                                                   ),
                                                   child: Padding(
-                                                    padding: const EdgeInsets.all(
-                                                      10,
-                                                    ),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          10,
+                                                        ),
                                                     child: FutureBuilderTemplate(
                                                       future: () async {
                                                         return ClassData.fromJson(
-                                                          (await classesCache.get(
-                                                            clId,
-                                                          )).data()!,
+                                                          (await classesCache
+                                                                  .get(
+                                                                    clId,
+                                                                  ))
+                                                              .data()!,
                                                         );
                                                       }(),
                                                       builder:
@@ -511,7 +542,9 @@ class DashboardPageState extends State<DashboardPage> {
                                                           ) => Row(
                                                             children: [
                                                               Text(
-                                                                snapshot.data!.name,
+                                                                snapshot
+                                                                    .data!
+                                                                    .name,
                                                                 style: body2,
                                                               ),
                                                               const Spacer(),
@@ -521,7 +554,8 @@ class DashboardPageState extends State<DashboardPage> {
                                                                   color: body2
                                                                       .color!
                                                                       .withValues(
-                                                                        alpha: 0.2,
+                                                                        alpha:
+                                                                            0.2,
                                                                       ),
                                                                 ),
                                                               ),
@@ -822,16 +856,22 @@ class DashboardPageState extends State<DashboardPage> {
                           msg =
                               'The selected teacher does not teach any ${template.className} classes.';
                         } else {
-                          await firestore
-                              .collection(
-                                'global',
-                              )
-                              .doc('state')
-                              .collection(
-                                'pendingOnboarding',
-                              )
-                              .doc(poDoc.id)
-                              .delete();
+                          obd.classes.remove(tempId);
+                          if (obd.classes.isEmpty) {
+                            await firestore
+                                .collection('global')
+                                .doc('state')
+                                .collection('pendingOnboarding')
+                                .doc(poDoc.id)
+                                .delete();
+                          } else {
+                            await firestore
+                                .collection('global')
+                                .doc('state')
+                                .collection('pendingOnboarding')
+                                .doc(poDoc.id)
+                                .update({'classes': obd.classes});
+                          }
                           msg = 'Student has been onboarded';
                         }
 

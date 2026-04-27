@@ -34,7 +34,7 @@ class OnboardingStudentData extends JSONSerialisable {
       address = json['address'] as String,
       postalCode = json['postalCode'] as String,
       school = json['school'] as String,
-      classes = (json['classes'] as List).cast(),
+      classes = (json['classes'] as List).cast<String>().toList(),
       subjectCombi = json['subjectCombi'] as String;
   @override
   JSON toJson() => {

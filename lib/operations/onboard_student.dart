@@ -1,6 +1,15 @@
 part of axis_dashboard;
 
 Future<String> onboardStudent(OnboardingStudentData obData) async {
+  final existingQuery = await firestore
+      .collection('users')
+      .where('email', isEqualTo: obData.email)
+      .where('role', isEqualTo: 'student')
+      .get();
+  if (existingQuery.docs.isNotEmpty) {
+    return existingQuery.docs.first.id;
+  }
+
   final gs = GlobalState.fromJson(
     (await firestore.collection('global').doc('state').get()).data()!,
   );
