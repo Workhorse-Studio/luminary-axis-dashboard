@@ -134,11 +134,44 @@ class StudentAttendanceStore {
     for (int t = 0; t < sessionsPerTerm.length; t++) {
       final termReportData = termReports[t];
       final Map<String, StudentInvoiceData> currentTermInvoices = {};
-      for (final studentEntry in termReportData.entries) {
+      for (final studentEntry in studentCache.registry.entries) {
+        final studentId = studentEntry.key;
+        final sd = StudentData.fromJson(studentEntry.value.data()!);
+
+        final termName = globalState.terms[t].termName;
+        final termAllocations = allocationsByTerm[termName]!;
+
+        final Map<String, int> relevantClasses = {};
+        for (final clEntry in classesCache.registry.entries) {
+          final classId = clEntry.key;
+          final classData = ClassData.fromJson(clEntry.value.data()!);
+
+          int sessionCount =
+              termAllocations.sessions[classId]?[studentId] ?? -1;
+          if (sessionCount == -1) {
+            final studentReport = termReportData[studentId];
+            if (studentReport != null && studentReport.containsKey(classId)) {
+              sessionCount = studentReport[classId]!
+                  .where((x) => x != 'X')
+                  .length;
+            } else {
+              sessionCount = 0;
+            }
+          }
+
+          if (sessionCount > 0 ||
+              (classData.studentIds.contains(studentId) &&
+                  sd.withdrawn[classId] != true)) {
+            relevantClasses[classId] = sessionCount;
+          }
+        }
+
+        if (relevantClasses.isEmpty &&
+            (sd.invoiceIds.length <= t || sd.invoiceIds[t] == null)) {
+          continue;
+        }
+
         DocumentSnapshot<JSON>? existingInvoice;
-        final sd = StudentData.fromJson(
-          (await studentCache.get(studentEntry.key)).data()!,
-        );
         if (sd.invoiceIds.length > t && sd.invoiceIds[t] != null) {
           existingInvoice = await firestore
               .collection('global')
@@ -149,25 +182,15 @@ class StudentAttendanceStore {
         }
         final List<({double amt, String desc, int qty, double rate})> entries =
             [];
-        final double rate = studentEntry.value.length >= 3 ? (95 / 2) : 95.00;
+        final double rate = relevantClasses.length >= 3 ? (95 / 2) : 95.00;
 
-        for (final classEntry in studentEntry.value.entries) {
-          final termName = globalState.terms[t].termName;
-          final termAllocations = allocationsByTerm[termName]!;
+        for (final classEntry in relevantClasses.entries) {
           final classId = classEntry.key;
-          final studentId = studentEntry.key;
-
-          int sessionCount =
-              termAllocations.sessions[classId]?[studentId] ?? -1;
-
-          // If unallocated, fall back to attendance count.
-          if (sessionCount == -1) {
-            sessionCount = classEntry.value.where((x) => x != 'X').length;
-          }
+          final sessionCount = classEntry.value;
 
           entries.add((
             desc: ClassData.fromJson(
-              (await classesCache.get(classEntry.key)).data()!,
+              (await classesCache.get(classId)).data()!,
             ).name,
             rate: rate,
             qty: sessionCount,
@@ -242,10 +265,8 @@ class StudentAttendanceStore {
 
 extension ListUtilsMap<T> on List<T> {
   void ensureLength(int l, {required T map}) {
-    if (l <= length) {
-      for (int i = length - 1; i < l; i++) {
-        add(map);
-      }
+    while (length <= l) {
+      add(map);
     }
   }
 }
