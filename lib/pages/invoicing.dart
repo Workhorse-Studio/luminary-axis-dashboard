@@ -138,11 +138,13 @@ class InvoicingPageState extends State<InvoicingPage> {
 
             int successCount = 0;
             if (currentTabIndex == 0) {
-              for (int i = 0;
-                  i < studentAttendanceStore.invoicesData.length;
-                  i++) {
+              final int currentTermIndex = globalState!.currentTermNum;
+              if (studentAttendanceStore.invoicesData.length >
+                  currentTermIndex) {
                 for (final entry
-                    in studentAttendanceStore.invoicesData[i].entries) {
+                    in studentAttendanceStore
+                        .invoicesData[currentTermIndex]
+                        .entries) {
                   final studentId = entry.key;
                   final studentInvData = entry.value;
                   final studentDoc = await studentCache.get(studentId);
@@ -165,55 +167,57 @@ class InvoicingPageState extends State<InvoicingPage> {
                           .collection('invoices')
                           .doc(studentInvData.invoiceId)
                           .update({
-                        'invoiceStatus': InvoiceStatus.pendingPayment.name,
-                      });
+                            'invoiceStatus': InvoiceStatus.pendingPayment.name,
+                          });
                       successCount++;
                     }
                   } catch (e, st) {
                     print(
-                        'Error sending invoice for ${studentData.name}: $e\n$st');
+                      'Error sending invoice for ${studentData.name}: $e\n$st',
+                    );
                   }
                 }
               }
             } else {
               // Teachers tab
+              final currentMonthId = generateMonthIds().last;
               for (final teacherEntry in teachersCache.registry.entries) {
-                final teacherData =
-                    TeacherData.fromJson(teacherEntry.value.data()!);
-                for (final monthId in teacherData.invoiceIds.keys) {
-                  final invoiceId = teacherData.invoiceIds[monthId];
-                  if (invoiceId == null) continue;
+                final teacherData = TeacherData.fromJson(
+                  teacherEntry.value.data()!,
+                );
+                final invoiceId = teacherData.invoiceIds[currentMonthId];
+                if (invoiceId == null) continue;
 
-                  try {
-                    final invDoc = await firestore
-                        .collection('global')
-                        .doc('archives')
-                        .collection('invoices')
-                        .doc(invoiceId)
-                        .get();
-                    if (!invDoc.exists) continue;
+                try {
+                  final invDoc = await firestore
+                      .collection('global')
+                      .doc('archives')
+                      .collection('invoices')
+                      .doc(invoiceId)
+                      .get();
+                  if (!invDoc.exists) continue;
 
-                    final invData = TeacherInvoiceData.fromJson(invDoc.data()!);
+                  final invData = TeacherInvoiceData.fromJson(invDoc.data()!);
 
-                    if (await sendInvoiceEmail(
-                      teacherData.email,
-                      InvoiceWidget(
-                        showFonts: false,
-                        studentInvoiceData: null,
-                        teacherInvoiceData: invData,
-                        total: invData.amtDue,
-                      ),
-                      context,
-                    )) {
-                      await invDoc.reference.update({
-                        'invoiceStatus': InvoiceStatus.pendingPayment.name,
-                      });
-                      successCount++;
-                    }
-                  } catch (e, st) {
-                    print(
-                        'Error sending invoice for ${teacherData.name}: $e\n$st');
+                  if (await sendInvoiceEmail(
+                    teacherData.email,
+                    InvoiceWidget(
+                      showFonts: false,
+                      studentInvoiceData: null,
+                      teacherInvoiceData: invData,
+                      total: invData.amtDue,
+                    ),
+                    context,
+                  )) {
+                    await invDoc.reference.update({
+                      'invoiceStatus': InvoiceStatus.pendingPayment.name,
+                    });
+                    successCount++;
                   }
+                } catch (e, st) {
+                  print(
+                    'Error sending invoice for ${teacherData.name}: $e\n$st',
+                  );
                 }
               }
             }
@@ -225,7 +229,10 @@ class InvoicingPageState extends State<InvoicingPage> {
                 context,
               ).showSnackBar(
                 SnackBar(
-                    content: Text('$successCount invoices were sent successfully.')),
+                  content: Text(
+                    '$successCount invoices were sent successfully.',
+                  ),
+                ),
               );
             }
           },
@@ -500,15 +507,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                                     teacherInvoiceData: null,
                                   ),
                                 );
-                                
+
                                 final updatedDoc = await firestore
-                                  .collection('global')
-                                  .doc('archives')
-                                  .collection('invoices')
-                                  .doc(studentInvData.invoiceId)
-                                  .get();
-                                studentAttendanceStore.invoicesData[i][studentData.id] = StudentInvoiceData.fromJson(updatedDoc.data()!);
-                                setState((){});
+                                    .collection('global')
+                                    .doc('archives')
+                                    .collection('invoices')
+                                    .doc(studentInvData.invoiceId)
+                                    .get();
+                                studentAttendanceStore
+                                        .invoicesData[i][studentData.id] =
+                                    StudentInvoiceData.fromJson(
+                                      updatedDoc.data()!,
+                                    );
+                                setState(() {});
                               }
                             },
                           ),
@@ -800,7 +811,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                     ),
                   ),
                 );
-                setState((){});
+                setState(() {});
               }
             },
           ),
