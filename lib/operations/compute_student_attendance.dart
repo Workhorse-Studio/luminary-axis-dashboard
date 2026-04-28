@@ -182,11 +182,14 @@ class StudentAttendanceStore {
         }
         final List<({double amt, String desc, int qty, double rate})> entries =
             [];
-        final double rate = relevantClasses.length >= 3 ? (95 / 2) : 95.00;
 
+        int classIndex = 0;
         for (final classEntry in relevantClasses.entries) {
           final classId = classEntry.key;
           final sessionCount = classEntry.value;
+
+          final double rate = classIndex < 2 ? 95.00 : (95.00 / 2);
+          classIndex++;
 
           entries.add((
             desc: ClassData.fromJson(
