@@ -649,10 +649,12 @@ class InvoicingPageState extends State<InvoicingPage> {
                           child: SizedBox(
                             width: MediaQuery.of(context).size.width * 0.7,
                             height: MediaQuery.of(context).size.height * 0.85,
-                            child: InvoiceWidget(
-                              studentInvoiceData: studentInvData,
-                              teacherInvoiceData: null,
-                              total: studentInvData.amtPayable,
+                            child: SingleChildScrollView(
+                              child: InvoiceWidget(
+                                studentInvoiceData: studentInvData,
+                                teacherInvoiceData: null,
+                                total: studentInvData.amtPayable,
+                              ),
                             ),
                           ),
                         ),
@@ -803,10 +805,12 @@ class InvoicingPageState extends State<InvoicingPage> {
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.7,
                       height: MediaQuery.of(context).size.height * 0.85,
-                      child: InvoiceWidget(
-                        studentInvoiceData: null,
-                        teacherInvoiceData: teacherInvData,
-                        total: teacherInvData.amtDue,
+                      child: SingleChildScrollView(
+                        child: InvoiceWidget(
+                          studentInvoiceData: null,
+                          teacherInvoiceData: teacherInvData,
+                          total: teacherInvData.amtDue,
+                        ),
                       ),
                     ),
                   ),
@@ -841,8 +845,51 @@ class InvoicingPageState extends State<InvoicingPage> {
   ) async {
     try {
       await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
-      final bytes = await m.PDFMaker().createPDF(
-        IWBlankPage(child: widget),
+
+      final List<({String desc, int qty, double rate, double amt})> allEntries = 
+        widget.overrideEntries ?? (widget.studentInvoiceData == null
+            ? widget.teacherInvoiceData!.entries
+            : widget.studentInvoiceData!.entries);
+
+      final List<IWBlankPage> pages = [];
+      if (allEntries.length <= 2) {
+        // Fits comfortably on a single page with header and footer
+        pages.add(IWBlankPage(child: widget));
+      } else {
+        // Split into multiple pages
+        int i = 0;
+        while (i < allEntries.length) {
+          final bool isFirstPage = i == 0;
+          final int chunkSize = isFirstPage ? 2 : 12;
+          final int end = (i + chunkSize < allEntries.length) 
+              ? i + chunkSize 
+              : allEntries.length;
+          
+          final chunk = allEntries.sublist(i, end);
+          final bool isLastPage = end == allEntries.length;
+
+          pages.add(
+            IWBlankPage(
+              child: InvoiceWidget(
+                studentInvoiceData: widget.studentInvoiceData,
+                teacherInvoiceData: widget.teacherInvoiceData,
+                overrideEntries: chunk,
+                showFonts: widget.showFonts,
+                showTopHeader: isFirstPage,
+                showBottomFooter: isLastPage,
+                startIndex: i,
+                total: widget.total,
+                maskEditableFields: widget.maskEditableFields,
+              ),
+            ),
+          );
+          
+          i = end;
+        }
+      }
+
+      final bytes = await m.PDFMaker().createMultiPagePDF(
+        pages,
         setup: m.PageSetup(
           context: context,
           quality: 2.0,

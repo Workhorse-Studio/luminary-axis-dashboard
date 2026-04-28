@@ -7,12 +7,18 @@ class InvoiceWidget extends StatelessWidget {
   final List<({String desc, int qty, double rate, double amt})>? overrideEntries;
   final double total;
   final bool showFonts;
+  final bool showTopHeader;
+  final bool showBottomFooter;
+  final int startIndex;
 
   const InvoiceWidget({
     this.studentInvoiceData,
     this.teacherInvoiceData,
     this.overrideEntries,
     this.showFonts = true,
+    this.showTopHeader = true,
+    this.showBottomFooter = true,
+    this.startIndex = 0,
     required this.total,
     this.maskEditableFields = false,
     super.key,
@@ -34,7 +40,7 @@ class InvoiceWidget extends StatelessWidget {
           cells: [
             DataCell(
               Text(
-                (i + 1).toString(),
+                (startIndex + i + 1).toString(),
                 style: handleFonts(body3),
               ),
             ),
@@ -79,10 +85,10 @@ class InvoiceWidget extends StatelessWidget {
           top: 80,
           bottom: 80,
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (showTopHeader) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -261,8 +267,9 @@ class InvoiceWidget extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 30),
+            ],
 
-              DataTable(
+            DataTable(
                 border: TableBorder(bottom: BorderSide(color: Colors.grey)),
                 headingRowColor: WidgetStatePropertyAll(Colors.blueGrey),
                 headingTextStyle: handleFonts(
@@ -283,7 +290,7 @@ class InvoiceWidget extends StatelessWidget {
                 rows: invoiceRows,
               ),
               const SizedBox(height: 8),
-              ...[
+              if (showBottomFooter) ...[
                 Text(
                   'Sub Total: ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
                   style: handleFonts(body3),
@@ -316,7 +323,6 @@ class InvoiceWidget extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }
