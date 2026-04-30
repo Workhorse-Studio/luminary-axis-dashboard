@@ -411,22 +411,31 @@ class InvoicingPageState extends State<InvoicingPage> {
         rows: [
           if (viewType == 'student')
             for (final student in studentCache.registry.entries)
-              if (!isStudentCompletelyWithdrawn(student.key, StudentData.fromJson(student.value.data()!), classesCache))
+              if (!isStudentCompletelyWithdrawn(
+                    student.key,
+                    StudentData.fromJson(student.value.data()!),
+                    classesCache,
+                  ) ||
+                  (studentAttendanceStore.invoicesData.length >
+                          globalState!.currentTermNum &&
+                      studentAttendanceStore
+                          .invoicesData[globalState!.currentTermNum]
+                          .containsKey(student.key)))
                 DataRow2(
                   cells: [
-                  DataCell(
-                    Text(
-                      StudentData.fromJson(
-                        student.value.data()!,
-                      ).name,
-                      style: body2,
+                    DataCell(
+                      Text(
+                        StudentData.fromJson(
+                          student.value.data()!,
+                        ).name,
+                        style: body2,
+                      ),
                     ),
-                  ),
-                  ...generateCellsForInvoices(
-                    studentData: student.value,
-                  ),
-                ],
-              ),
+                    ...generateCellsForInvoices(
+                      studentData: student.value,
+                    ),
+                  ],
+                ),
           if (viewType == 'teacher')
             for (final teacher in teachersCache.registry.entries)
               DataRow2(
@@ -453,7 +462,8 @@ class InvoicingPageState extends State<InvoicingPage> {
     final List<String> res = [];
     void generateForYear(int year) {
       for (int i = 1; i < 13; i++) {
-        if (year <= DateTime.now().year && i <= DateTime.now().month) {
+        if (year < DateTime.now().year ||
+            (year == DateTime.now().year && i <= DateTime.now().month)) {
           res.add("$i-$year");
         }
       }
@@ -701,50 +711,56 @@ class InvoicingPageState extends State<InvoicingPage> {
                           const SizedBox(width: 20),
                           FutureBuilderTemplate(
                             future: () async {
-                              final doc = (await firestore
+                              final invoiceId = TeacherData.fromJson(
+                                teacherData.data()!,
+                              ).invoiceIds[monthId];
+                              if (invoiceId == null) return null;
+                              final doc = await firestore
                                   .collection('global')
                                   .doc('archives')
                                   .collection('invoices')
-                                  .doc(
-                                    TeacherData.fromJson(
-                                      teacherData.data()!,
-                                    ).invoiceIds[monthId],
-                                  )
-                                  .get());
+                                  .doc(invoiceId)
+                                  .get();
+                              if (!doc.exists || doc.data() == null)
+                                return null;
                               return (
                                 doc,
                                 TeacherInvoiceData.fromJson(doc.data()!),
                               );
                             }(),
                             builder: (context, snapshot) =>
-                                AxisDropdownButton<InvoiceStatus>(
-                                  width: 270,
-                                  entries: [
-                                    for (final status in InvoiceStatus.values)
-                                      (status.label, status),
-                                  ],
-                                  seaprateInitialSelectionEntry: false,
-                                  initalLabel:
-                                      snapshot.data!.$2.invoiceStatus.label,
-                                  initialSelection:
-                                      snapshot.data!.$2.invoiceStatus,
-                                  onSelected: (invoiceStatus) async {
-                                    if (invoiceStatus != null) {
-                                      await snapshot.data!.$1.reference.update({
-                                        'invoiceStatus': invoiceStatus.name,
-                                      });
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Status updated!'),
-                                          ),
-                                        );
+                                snapshot.data == null
+                                ? const SizedBox(width: 270)
+                                : AxisDropdownButton<InvoiceStatus>(
+                                    width: 270,
+                                    entries: [
+                                      for (final status in InvoiceStatus.values)
+                                        (status.label, status),
+                                    ],
+                                    seaprateInitialSelectionEntry: false,
+                                    initalLabel:
+                                        snapshot.data!.$2.invoiceStatus.label,
+                                    initialSelection:
+                                        snapshot.data!.$2.invoiceStatus,
+                                    onSelected: (invoiceStatus) async {
+                                      if (invoiceStatus != null) {
+                                        await snapshot.data!.$1.reference
+                                            .update({
+                                              'invoiceStatus':
+                                                  invoiceStatus.name,
+                                            });
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Status updated!'),
+                                            ),
+                                          );
+                                        }
                                       }
-                                    }
-                                  },
-                                ),
+                                    },
+                                  ),
                           ),
                           const SizedBox(width: 16),
                           const Spacer(),
@@ -754,18 +770,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
+                              final invoiceId = TeacherData.fromJson(
+                                teacherData.data()!,
+                              ).invoiceIds[monthId];
+                              if (invoiceId == null) return;
+                              final doc = await firestore
+                                  .collection('global')
+                                  .doc('archives')
+                                  .collection('invoices')
+                                  .doc(invoiceId)
+                                  .get();
+                              if (!doc.exists || doc.data() == null) return;
                               final invData = TeacherInvoiceData.fromJson(
-                                (await firestore
-                                        .collection('global')
-                                        .doc('archives')
-                                        .collection('invoices')
-                                        .doc(
-                                          TeacherData.fromJson(
-                                            teacherData.data()!,
-                                          ).invoiceIds[monthId],
-                                        )
-                                        .get())
-                                    .data()!,
+                                doc.data()!,
                               );
                               await sendInvoiceEmail(
                                 TeacherData.fromJson(teacherData.data()!).email,
@@ -785,19 +802,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                   )
                 : Text(''),
             onTap: () async {
-              final teacherInvData = TeacherInvoiceData.fromJson(
-                (await firestore
-                        .collection('global')
-                        .doc('archives')
-                        .collection('invoices')
-                        .doc(
-                          TeacherData.fromJson(
-                            teacherData!.data()!,
-                          ).invoiceIds[monthId],
-                        )
-                        .get())
-                    .data()!,
-              );
+              final invoiceId = TeacherData.fromJson(
+                teacherData!.data()!,
+              ).invoiceIds[monthId];
+              if (invoiceId == null) return;
+              final doc = await firestore
+                  .collection('global')
+                  .doc('archives')
+                  .collection('invoices')
+                  .doc(invoiceId)
+                  .get();
+              if (!doc.exists || doc.data() == null) return;
+
+              final teacherInvData = TeacherInvoiceData.fromJson(doc.data()!);
 
               if (context.mounted) {
                 await showDialog(
@@ -847,10 +864,11 @@ class InvoicingPageState extends State<InvoicingPage> {
     try {
       await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
 
-      final List<({String desc, int qty, double rate, double amt})> allEntries = 
-        widget.overrideEntries ?? (widget.studentInvoiceData == null
-            ? widget.teacherInvoiceData!.entries
-            : widget.studentInvoiceData!.entries);
+      final List<({String desc, int qty, double rate, double amt})> allEntries =
+          widget.overrideEntries ??
+          (widget.studentInvoiceData == null
+              ? widget.teacherInvoiceData!.entries
+              : widget.studentInvoiceData!.entries);
 
       final List<IWBlankPage> pages = [];
       if (allEntries.length <= 2) {
@@ -862,10 +880,10 @@ class InvoicingPageState extends State<InvoicingPage> {
         while (i < allEntries.length) {
           final bool isFirstPage = i == 0;
           final int chunkSize = isFirstPage ? 2 : 12;
-          final int end = (i + chunkSize < allEntries.length) 
-              ? i + chunkSize 
+          final int end = (i + chunkSize < allEntries.length)
+              ? i + chunkSize
               : allEntries.length;
-          
+
           final chunk = allEntries.sublist(i, end);
           final bool isLastPage = end == allEntries.length;
 
@@ -884,7 +902,7 @@ class InvoicingPageState extends State<InvoicingPage> {
               ),
             ),
           );
-          
+
           i = end;
         }
       }

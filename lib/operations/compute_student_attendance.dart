@@ -139,6 +139,19 @@ class StudentAttendanceStore {
         final sd = StudentData.fromJson(studentEntry.value.data()!);
 
         if (isStudentCompletelyWithdrawn(studentId, sd, classesCache)) {
+          if (sd.invoiceIds.length > t && sd.invoiceIds[t] != null) {
+            final existingInvoice = await firestore
+                .collection('global')
+                .doc('archives')
+                .collection('invoices')
+                .doc(sd.invoiceIds[t])
+                .get();
+            if (existingInvoice.exists && existingInvoice.data() != null) {
+              currentTermInvoices[studentId] = StudentInvoiceData.fromJson(
+                existingInvoice.data()!,
+              );
+            }
+          }
           continue;
         }
 
