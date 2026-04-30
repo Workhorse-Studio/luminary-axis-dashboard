@@ -118,3 +118,19 @@ extension DateUtils on DateTime {
     day,
   ).isAtSameMomentAs(DateTime(other.year, other.month, other.day));
 }
+
+bool isStudentCompletelyWithdrawn(String studentId, StudentData sd, GenericCache<DocumentSnapshot<JSON>> classesCache) {
+  bool hasAnyClasses = false;
+  bool hasActiveClasses = false;
+  for (final clEntry in classesCache.registry.entries) {
+    final cd = ClassData.fromJson(clEntry.value.data()!);
+    if (cd.studentIds.contains(studentId)) {
+      hasAnyClasses = true;
+      if (sd.withdrawn[clEntry.key] != true) {
+        hasActiveClasses = true;
+        break;
+      }
+    }
+  }
+  return hasAnyClasses && !hasActiveClasses;
+}

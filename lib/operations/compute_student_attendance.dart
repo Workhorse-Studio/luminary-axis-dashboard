@@ -138,6 +138,10 @@ class StudentAttendanceStore {
         final studentId = studentEntry.key;
         final sd = StudentData.fromJson(studentEntry.value.data()!);
 
+        if (isStudentCompletelyWithdrawn(studentId, sd, classesCache)) {
+          continue;
+        }
+
         final termName = globalState.terms[t].termName;
         final termAllocations = allocationsByTerm[termName]!;
 

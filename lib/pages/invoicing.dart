@@ -411,8 +411,9 @@ class InvoicingPageState extends State<InvoicingPage> {
         rows: [
           if (viewType == 'student')
             for (final student in studentCache.registry.entries)
-              DataRow2(
-                cells: [
+              if (!isStudentCompletelyWithdrawn(student.key, StudentData.fromJson(student.value.data()!), classesCache))
+                DataRow2(
+                  cells: [
                   DataCell(
                     Text(
                       StudentData.fromJson(

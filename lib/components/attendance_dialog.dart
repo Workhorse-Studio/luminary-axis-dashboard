@@ -80,7 +80,8 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   in studentsData) {
                 studentsDataMap[studentDoc.id] = studentDoc.data;
                 records[studentDoc.id] =
-                    classData.attendance[todayId]![studentDoc.id]!;
+                    classData.attendance[todayId]?[studentDoc.id] ??
+                    AttendanceType.absent;
               }
               return records;
             }(),
