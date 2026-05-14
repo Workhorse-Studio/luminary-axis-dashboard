@@ -70,12 +70,11 @@ class SyllabusPageState extends State<SyllabusPage> {
                               label: 'Manage Attendance',
                               icon: Icons.ballot,
                               onPressed: () async {
-                                final Map<String, AttendanceType>? result =
-                                    await showDialog(
-                                      context: context,
-                                      builder: (_) =>
-                                          AttendanceDialog(classId: cl.$1),
-                                    );
+                                final bool? result = await showDialog(
+                                  context: context,
+                                  builder: (_) =>
+                                      AttendanceDialog(classId: cl.$1),
+                                );
                                 final String msg;
                                 if (result != null) {
                                   msg = "Attendance updated successfully!";

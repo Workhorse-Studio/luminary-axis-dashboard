@@ -21,7 +21,7 @@ void main() {
             'desc': 'Class A',
             'qty': 2,
             'rate': 95.0,
-          }
+          },
         ],
       };
 
@@ -56,7 +56,7 @@ void main() {
             'desc': 'Teaching Hours',
             'qty': 20,
             'rate': 25.0,
-          }
+          },
         ],
       };
 
@@ -110,6 +110,73 @@ void main() {
       final backToJson = data.toJson();
       expect(backToJson['name'], 'Jane Doe');
       expect((backToJson['invoiceIds'] as List).length, 2);
+    });
+
+    test('ClassData supports multi-session attendance keys', () {
+      final json = {
+        'name': 'Class 101',
+        'students': ['s1', 's2'],
+        'templateReference': 'tpl-1',
+        'attendance': {
+          '14-5-2026': {
+            's1': 'presentOnline',
+            's2': 'absent',
+          },
+          '14-5-2026__s002': {
+            's1': 'presentPhysical',
+            's2': 'presentRecording',
+          },
+        },
+      };
+
+      final data = ClassData.fromJson(json);
+      expect(
+        data.attendance['14-5-2026']!['s1'],
+        AttendanceType.presentOnline,
+      );
+      expect(
+        data.attendance['14-5-2026__s002']!['s2'],
+        AttendanceType.presentRecording,
+      );
+
+      final backToJson = data.toJson();
+      final attendance = backToJson['attendance'] as Map;
+      expect(attendance.containsKey('14-5-2026__s002'), isTrue);
+      expect(
+        (attendance['14-5-2026__s002'] as Map)['s1'],
+        'presentPhysical',
+      );
+    });
+
+    test('ArchivedAttendanceSheet preserves session-key attendance', () {
+      final sheet = ArchivedAttendanceSheet(
+        timestamp: '14-5-2026 09:00:00',
+        attendance: {
+          '14-5-2026__s001': {
+            's1': AttendanceType.presentPhysical,
+          },
+          '14-5-2026__s002': {
+            's1': AttendanceType.absent,
+          },
+        },
+      );
+
+      final json = sheet.toJson();
+      final reparsed = ArchivedAttendanceSheet.fromJson({
+        'timestamp': json['timestamp'],
+        'attendance': {
+          '14-5-2026__s001': {'s1': 'presentPhysical'},
+          '14-5-2026__s002': {'s1': 'absent'},
+        },
+      });
+      expect(
+        reparsed.attendance['14-5-2026__s001']!['s1'],
+        AttendanceType.presentPhysical,
+      );
+      expect(
+        reparsed.attendance['14-5-2026__s002']!['s1'],
+        AttendanceType.absent,
+      );
     });
   });
 }

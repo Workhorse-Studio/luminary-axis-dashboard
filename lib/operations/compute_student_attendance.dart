@@ -122,8 +122,9 @@ class StudentAttendanceStore {
                   orElse: 0,
                 ) +
                 1;
+            final dateParts = attendanceBaseDateKey(attDay.key).split('-');
             termReports[t][e.key]![clEntry.key]!.add(
-              attDay.key.substring(0, attDay.key.length - 5),
+              '${dateParts[0]}-${dateParts[1]} ${attendanceSessionLabel(attDay.key)}',
             );
           } else {
             termReports[t][e.key]![clEntry.key]!.add('X');

@@ -1011,7 +1011,7 @@ class InvoicingPageState extends State<InvoicingPage> {
 
         for (final attEntry in classData.attendance.entries) {
           if (attEntry.value.isEmpty) continue;
-          final String monthId = attEntry.key.split('-').sublist(1).join('-');
+          final String monthId = attendanceMonthId(attEntry.key);
           if (!newSessions[teacherEntry.key]![monthId]!.containsKey(clId)) {
             newSessions[teacherEntry.key]![monthId]![clId] = 0;
           }

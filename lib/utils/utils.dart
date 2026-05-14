@@ -82,12 +82,84 @@ String generateId() => String.fromCharCodes(
   ),
 );
 
+const String attendanceSessionDelimiter = '__s';
+
+String attendanceBaseDateKey(String attendanceKey) {
+  final int i = attendanceKey.indexOf(attendanceSessionDelimiter);
+  return i >= 0 ? attendanceKey.substring(0, i) : attendanceKey;
+}
+
+DateTime attendanceKeyToDateTime(String attendanceKey) {
+  final chunks = attendanceBaseDateKey(attendanceKey).split('-');
+  if (chunks.length != 3) {
+    throw Exception('Invalid attendance key "$attendanceKey"');
+  }
+  return DateTime(
+    int.parse(chunks[2]),
+    int.parse(chunks[1]),
+    int.parse(chunks[0]),
+  );
+}
+
+int attendanceSessionNumber(String attendanceKey) {
+  final int i = attendanceKey.indexOf(attendanceSessionDelimiter);
+  if (i < 0) return 1;
+  return int.tryParse(
+        attendanceKey.substring(i + attendanceSessionDelimiter.length),
+      ) ??
+      1;
+}
+
+String attendanceSessionLabel(String attendanceKey) =>
+    'S${attendanceSessionNumber(attendanceKey)}';
+
+int compareAttendanceKeys(String a, String b) {
+  final int dateCmp = attendanceKeyToDateTime(a).compareTo(
+    attendanceKeyToDateTime(b),
+  );
+  if (dateCmp != 0) {
+    return dateCmp;
+  }
+  return attendanceSessionNumber(a).compareTo(attendanceSessionNumber(b));
+}
+
+String attendanceMonthId(String attendanceKey) {
+  final dt = attendanceKeyToDateTime(attendanceKey);
+  return '${dt.month}-${dt.year}';
+}
+
+String buildAttendanceSessionKey({
+  required DateTime date,
+  required int sessionNumber,
+}) {
+  return '${date.toTimestampStringShort(false)}$attendanceSessionDelimiter'
+      '${sessionNumber.toString().padLeft(3, '0')}';
+}
+
+bool attendanceKeyMatchesDate(String attendanceKey, DateTime date) {
+  final attDt = attendanceKeyToDateTime(attendanceKey);
+  return attDt.year == date.year &&
+      attDt.month == date.month &&
+      attDt.day == date.day;
+}
+
+int nextAttendanceSessionNumberForDate(
+  Iterable<String> attendanceKeys,
+  DateTime date,
+) {
+  int maxSession = 0;
+  for (final key in attendanceKeys) {
+    if (!attendanceKeyMatchesDate(key, date)) continue;
+    final int n = attendanceSessionNumber(key);
+    if (n > maxSession) {
+      maxSession = n;
+    }
+  }
+  return maxSession + 1;
+}
+
 int monthKeyToTermIndex(GlobalState gs, String monthKey) {
-  final tmp = monthKey.split('-').reversed.toList();
-  tmp[1] = tmp[1].padLeft(2, '0');
-  tmp[2] = tmp[2].padLeft(2, '0');
-  final String reversedMonthKey = tmp.join('-');
-  final dt = DateTime.parse(reversedMonthKey);
+  final dt = attendanceKeyToDateTime(monthKey);
   int counter = 0;
   for (final term in gs.terms) {
     if (term.termEndDate >= dt.millisecondsSinceEpoch) {
@@ -119,7 +191,11 @@ extension DateUtils on DateTime {
   ).isAtSameMomentAs(DateTime(other.year, other.month, other.day));
 }
 
-bool isStudentCompletelyWithdrawn(String studentId, StudentData sd, GenericCache<DocumentSnapshot<JSON>> classesCache) {
+bool isStudentCompletelyWithdrawn(
+  String studentId,
+  StudentData sd,
+  GenericCache<DocumentSnapshot<JSON>> classesCache,
+) {
   bool hasAnyClasses = false;
   bool hasActiveClasses = false;
   for (final clEntry in classesCache.registry.entries) {

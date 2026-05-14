@@ -168,21 +168,7 @@ class TermReportWidgetState extends State<TermReportWidget> {
             }
           }
 
-          termDates.sort((a, b) {
-            final aParts = a.split('-');
-            final bParts = b.split('-');
-            final aDate = DateTime(
-              int.parse(aParts[2]),
-              int.parse(aParts[1]),
-              int.parse(aParts[0]),
-            );
-            final bDate = DateTime(
-              int.parse(bParts[2]),
-              int.parse(bParts[1]),
-              int.parse(bParts[0]),
-            );
-            return aDate.compareTo(bDate);
-          });
+          termDates.sort(compareAttendanceKeys);
 
           final allocDoc = await firestore
               .collection('global')
@@ -205,11 +191,14 @@ class TermReportWidgetState extends State<TermReportWidget> {
             final List<DataCell> studentCells = [];
             final List<String> stringValues = [];
 
-            for (final date in termDates) {
-              final studentStatus = cd.attendance[date]![studentId];
+            for (final attendanceKey in termDates) {
+              final studentStatus = cd.attendance[attendanceKey]![studentId];
               if (studentStatus != null) {
+                final baseDateParts = attendanceBaseDateKey(
+                  attendanceKey,
+                ).split('-');
                 final str = studentStatus.isPresent
-                    ? date.substring(0, date.length - 5)
+                    ? '${baseDateParts[0]}-${baseDateParts[1]} ${attendanceSessionLabel(attendanceKey)}'
                     : 'X';
                 studentCells.add(DataCell(Text(str, style: body2)));
                 stringValues.add(str);
@@ -281,9 +270,10 @@ class TermReportWidgetState extends State<TermReportWidget> {
           return (
             rows: rows,
             className: cd.name,
-            dates: termDates
-                .map((date) => date.substring(0, date.length - 5))
-                .toList(),
+            dates: termDates.map((attendanceKey) {
+              final parts = attendanceBaseDateKey(attendanceKey).split('-');
+              return '${parts[0]}-${parts[1]} ${attendanceSessionLabel(attendanceKey)}';
+            }).toList(),
           );
         }
 
