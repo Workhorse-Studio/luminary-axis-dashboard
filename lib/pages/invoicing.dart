@@ -44,6 +44,8 @@ class InvoicingPageState extends State<InvoicingPage> {
   final Map<String, Map<String, Map<String, int>>> sessionsMap = {};
 
   int year = DateTime.now().year;
+  String selectedTeacherMonthId =
+      "${DateTime.now().month}-${DateTime.now().year}";
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class InvoicingPageState extends State<InvoicingPage> {
             height: 60,
             onPressed: () => setState(() {
               year -= 1;
+              syncSelectedTeacherMonthIdForYear();
             }),
             child: Icon(
               Icons.chevron_left,
@@ -72,6 +75,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                   height: 60,
                   onPressed: () => setState(() {
                     year += 1;
+                    syncSelectedTeacherMonthIdForYear();
                   }),
                   child: Icon(
                     Icons.chevron_right,
@@ -82,6 +86,24 @@ class InvoicingPageState extends State<InvoicingPage> {
                   width: 60,
                   height: 60,
                 ),
+          const SizedBox(width: 16),
+          AxisDropdownButton<String>(
+            key: ValueKey('teacher-month-$year-$selectedTeacherMonthId'),
+            width: 200,
+            seaprateInitialSelectionEntry: false,
+            entries: [
+              for (final monthId in generateMonthIds())
+                (formatMonthIdLabel(monthId), monthId),
+            ],
+            initialSelection: selectedTeacherMonthIdForYear(),
+            onSelected: (monthId) {
+              if (monthId != null) {
+                setState(() {
+                  selectedTeacherMonthId = monthId;
+                });
+              }
+            },
+          ),
         ],
         const SizedBox(width: 40),
         AxisButton.text(
@@ -180,12 +202,12 @@ class InvoicingPageState extends State<InvoicingPage> {
               }
             } else {
               // Teachers tab
-              final currentMonthId = generateMonthIds().last;
+              final monthId = selectedTeacherMonthIdForYear();
               for (final teacherEntry in teachersCache.registry.entries) {
                 final teacherData = TeacherData.fromJson(
                   teacherEntry.value.data()!,
                 );
-                final invoiceId = teacherData.invoiceIds[currentMonthId];
+                final invoiceId = teacherData.invoiceIds[monthId];
                 if (invoiceId == null) continue;
 
                 try {
@@ -472,6 +494,27 @@ class InvoicingPageState extends State<InvoicingPage> {
     generateForYear(year);
 
     return res;
+  }
+
+  String selectedTeacherMonthIdForYear() {
+    final monthIds = generateMonthIds();
+    final currentMonthId = "${DateTime.now().month}-${DateTime.now().year}";
+    if (monthIds.isEmpty) return currentMonthId;
+    if (monthIds.contains(selectedTeacherMonthId))
+      return selectedTeacherMonthId;
+    if (monthIds.contains(currentMonthId)) return currentMonthId;
+    return monthIds.last;
+  }
+
+  void syncSelectedTeacherMonthIdForYear() {
+    selectedTeacherMonthId = selectedTeacherMonthIdForYear();
+  }
+
+  String formatMonthIdLabel(String monthId) {
+    final parts = monthId.split('-');
+    final month = int.tryParse(parts[0]) ?? 1;
+    final y = int.tryParse(parts[1]) ?? year;
+    return DateFormat('MMMM y').format(DateTime(y, month));
   }
 
   List<DataCell> generateCellsForInvoices({
