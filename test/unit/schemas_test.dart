@@ -8,6 +8,7 @@ void main() {
         'invoiceType': 'student',
         'invoiceId': 'INV123',
         'amtPayable': 190.0,
+        'remarks': 'Needs invoice split by class',
         'parentName': 'John Doe',
         'studentName': 'Jane Doe',
         'address': '123 Street',
@@ -28,14 +29,42 @@ void main() {
       final data = StudentInvoiceData.fromJson(json);
       expect(data.invoiceId, 'INV123');
       expect(data.amtPayable, 190.0);
+      expect(data.remarks, 'Needs invoice split by class');
       expect(data.invoiceStatus, InvoiceStatus.pendingPayment);
       expect(data.entries.length, 1);
       expect(data.entries[0].desc, 'Class A');
 
       final backToJson = data.toJson();
       expect(backToJson['invoiceId'], 'INV123');
+      expect(backToJson['remarks'], 'Needs invoice split by class');
       expect(backToJson['invoiceStatus'], 'pendingPayment');
       expect(((backToJson['entries'] as List)[0] as Map)['rate'], 95.0);
+    });
+
+    test('StudentInvoiceData defaults remarks when missing', () {
+      final json = {
+        'invoiceType': 'student',
+        'invoiceId': 'INV123',
+        'amtPayable': 190.0,
+        'parentName': 'John Doe',
+        'studentName': 'Jane Doe',
+        'address': '123 Street',
+        'invoiceDateFormatted': '01-01-2023',
+        'terms': 'Term 1',
+        'dueDateFormatted': '08-01-2023',
+        'invoiceStatus': 'pendingPayment',
+        'entries': [
+          {
+            'amt': 190.0,
+            'desc': 'Class A',
+            'qty': 2,
+            'rate': 95.0,
+          },
+        ],
+      };
+
+      final data = StudentInvoiceData.fromJson(json);
+      expect(data.remarks, '');
     });
 
     test('TeacherInvoiceData fromJson/toJson', () {

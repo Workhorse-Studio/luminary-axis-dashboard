@@ -35,6 +35,7 @@ class StudentInvoiceData extends JSONSerialisable {
   final String invoiceType;
   final String invoiceId;
   final double amtPayable;
+  final String remarks;
   final String parentName;
   final String studentName;
   final String address;
@@ -48,6 +49,7 @@ class StudentInvoiceData extends JSONSerialisable {
     required this.invoiceDateFormatted,
     required this.address,
     required this.amtPayable,
+    this.remarks = '',
     required this.dueDateFormatted,
     required this.entries,
     required this.invoiceId,
@@ -61,6 +63,7 @@ class StudentInvoiceData extends JSONSerialisable {
     : invoiceType = json['invoiceType'] as String,
       invoiceId = json['invoiceId'] as String,
       amtPayable = json['amtPayable'] as double,
+      remarks = (json['remarks'] as String?) ?? '',
       parentName = json['parentName'] as String,
       studentName = json['studentName'] as String,
       address = json['address'] as String,
@@ -85,6 +88,7 @@ class StudentInvoiceData extends JSONSerialisable {
     'invoiceType': invoiceType,
     'invoiceId': invoiceId,
     'amtPayable': amtPayable,
+    'remarks': remarks,
     'parentName': parentName,
     'studentName': studentName,
     'address': address,

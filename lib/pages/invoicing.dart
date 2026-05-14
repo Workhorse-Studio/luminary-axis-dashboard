@@ -42,10 +42,23 @@ class InvoicingPageState extends State<InvoicingPage> {
       );
 
   final Map<String, Map<String, Map<String, int>>> sessionsMap = {};
+  final Map<String, TextEditingController> studentRemarksControllers = {};
+  final Map<String, Timer> studentRemarksSaveTimers = {};
 
   int year = DateTime.now().year;
   String selectedTeacherMonthId =
       "${DateTime.now().month}-${DateTime.now().year}";
+
+  @override
+  void dispose() {
+    for (final controller in studentRemarksControllers.values) {
+      controller.dispose();
+    }
+    for (final timer in studentRemarksSaveTimers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -517,6 +530,84 @@ class InvoicingPageState extends State<InvoicingPage> {
     return DateFormat('MMMM y').format(DateTime(y, month));
   }
 
+  String studentRemarksFieldKey({
+    required int termIndex,
+    required String studentId,
+  }) => '$studentId::$termIndex';
+
+  TextEditingController getStudentRemarksController({
+    required String fieldKey,
+    required StudentInvoiceData data,
+  }) {
+    final existing = studentRemarksControllers[fieldKey];
+    if (existing != null) {
+      if (existing.text != data.remarks) {
+        existing.text = data.remarks;
+      }
+      return existing;
+    }
+
+    final controller = TextEditingController(text: data.remarks);
+    studentRemarksControllers[fieldKey] = controller;
+    return controller;
+  }
+
+  Future<void> saveStudentRemarks({
+    required int termIndex,
+    required String studentId,
+    required String remarks,
+  }) async {
+    final current = studentAttendanceStore.invoicesData[termIndex][studentId];
+    if (current == null || current.remarks == remarks) return;
+
+    await firestore
+        .collection('global')
+        .doc('archives')
+        .collection('invoices')
+        .doc(current.invoiceId)
+        .update({
+          'remarks': remarks,
+        });
+
+    studentAttendanceStore.invoicesData[termIndex][studentId] =
+        StudentInvoiceData(
+          invoiceDateFormatted: current.invoiceDateFormatted,
+          address: current.address,
+          amtPayable: current.amtPayable,
+          remarks: remarks,
+          dueDateFormatted: current.dueDateFormatted,
+          entries: current.entries,
+          invoiceId: current.invoiceId,
+          parentName: current.parentName,
+          studentName: current.studentName,
+          invoiceStatus: current.invoiceStatus,
+          terms: current.terms,
+        );
+  }
+
+  void scheduleSaveStudentRemarks({
+    required int termIndex,
+    required String studentId,
+    required String fieldKey,
+    required String remarks,
+  }) {
+    studentRemarksSaveTimers[fieldKey]?.cancel();
+    studentRemarksSaveTimers[fieldKey] = Timer(
+      const Duration(milliseconds: 500),
+      () async {
+        try {
+          await saveStudentRemarks(
+            termIndex: termIndex,
+            studentId: studentId,
+            remarks: remarks,
+          );
+        } catch (e, st) {
+          print('Error saving student invoice remarks: $e\n$st');
+        }
+      },
+    );
+  }
+
   List<DataCell> generateCellsForInvoices({
     DocumentSnapshot<JSON>? studentData,
     DocumentSnapshot<JSON>? teacherData,
@@ -543,6 +634,56 @@ class InvoicingPageState extends State<InvoicingPage> {
                             "\$${studentAttendanceStore.invoicesData[i][studentData.id]!.amtPayable.toStringAsFixed(2)}",
                             style: body2,
                           ),
+                          const SizedBox(width: 10),
+                          (() {
+                            final studentInvData = studentAttendanceStore
+                                .invoicesData[i][studentData.id]!;
+                            final fieldKey = studentRemarksFieldKey(
+                              termIndex: i,
+                              studentId: studentData.id,
+                            );
+                            return SizedBox(
+                              width: 180,
+                              child: TextField(
+                                key: ValueKey('remarks-$fieldKey'),
+                                controller: getStudentRemarksController(
+                                  fieldKey: fieldKey,
+                                  data: studentInvData,
+                                ),
+                                style: body2,
+                                decoration: InputDecoration(
+                                  hint: Text(
+                                    'Remarks',
+                                    style: body2.copyWith(
+                                      color: AxisColors.blackPurple20
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: AxisColors.lilacPurple20,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: AxisColors.lilacPurple50
+                                          .withValues(
+                                            alpha: 0.7,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                onChanged: (text) {
+                                  scheduleSaveStudentRemarks(
+                                    termIndex: i,
+                                    studentId: studentData.id,
+                                    fieldKey: fieldKey,
+                                    remarks: text,
+                                  );
+                                },
+                              ),
+                            );
+                          })(),
                           const Spacer(),
                           AxisButton.text(
                             width: 100,
