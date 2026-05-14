@@ -28,6 +28,7 @@ Future<String> onboardStudent(OnboardingStudentData obData) async {
     postalCode: obData.postalCode,
     address: obData.address,
     subjectCombi: obData.subjectCombi,
+    referralCode: obData.referralCode,
     invoiceIds: List<String?>.generate(numTerms, (_) => null),
     withdrawn: {},
   );

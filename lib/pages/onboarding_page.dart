@@ -20,6 +20,7 @@ class OnboardingPageState extends State<OnboardingPage> {
       addressController = TextEditingController(),
       postalCodeController = TextEditingController(),
       subjectCombi = TextEditingController(),
+      referralCodeController = TextEditingController(),
       emailController = TextEditingController(),
       teachersNameController = TextEditingController();
 
@@ -259,6 +260,18 @@ class OnboardingPageState extends State<OnboardingPage> {
                   ),
                   const SizedBox(height: 30),
                   Text(
+                    "Referral Code (Optional)",
+                    style: heading3.copyWith(
+                      color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: referralCodeController,
+                    style: body2,
+                  ),
+                  const SizedBox(height: 30),
+                  Text(
                     "Select your classes",
                     style: heading3.copyWith(
                       color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
@@ -319,6 +332,10 @@ class OnboardingPageState extends State<OnboardingPage> {
                                 address: addressController.text,
                                 postalCode: postalCodeController.text,
                                 subjectCombi: subjectCombi.text,
+                                referralCode:
+                                    referralCodeController.text.trim().isEmpty
+                                    ? null
+                                    : referralCodeController.text.trim(),
                                 classes: selections.map((s) => s.id).toList(),
                               ).toJson(),
                             );
