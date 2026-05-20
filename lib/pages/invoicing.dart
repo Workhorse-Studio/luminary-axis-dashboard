@@ -188,10 +188,9 @@ class InvoicingPageState extends State<InvoicingPage> {
                   try {
                     if (await sendInvoiceEmail(
                       studentData.email,
-                      InvoiceWidget(
+                      StudentInvoiceWidget(
                         showFonts: false,
                         studentInvoiceData: studentInvData,
-                        teacherInvoiceData: null,
                         total: studentInvData.amtPayable,
                       ),
                       context,
@@ -236,9 +235,8 @@ class InvoicingPageState extends State<InvoicingPage> {
 
                   if (await sendInvoiceEmail(
                     teacherData.email,
-                    InvoiceWidget(
+                    TeacherInvoiceWidget(
                       showFonts: false,
-                      studentInvoiceData: null,
                       teacherInvoiceData: invData,
                       total: invData.amtDue,
                     ),
@@ -767,11 +765,10 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   StudentData.fromJson(
                                     studentData.data()!,
                                   ).email,
-                                  InvoiceWidget(
+                                  StudentInvoiceWidget(
                                     showFonts: false,
                                     studentInvoiceData: studentAttendanceStore
                                         .invoicesData[i][studentData.id]!,
-                                    teacherInvoiceData: null,
                                     total: studentAttendanceStore
                                         .invoicesData[i][studentData.id]!
                                         .amtPayable,
@@ -845,9 +842,8 @@ class InvoicingPageState extends State<InvoicingPage> {
                             width: MediaQuery.of(context).size.width * 0.7,
                             height: MediaQuery.of(context).size.height * 0.85,
                             child: SingleChildScrollView(
-                              child: InvoiceWidget(
+                              child: StudentInvoiceWidget(
                                 studentInvoiceData: studentInvData,
-                                teacherInvoiceData: null,
                                 total: studentInvData.amtPayable,
                               ),
                             ),
@@ -970,9 +966,8 @@ class InvoicingPageState extends State<InvoicingPage> {
                               );
                               await sendInvoiceEmail(
                                 TeacherData.fromJson(teacherData.data()!).email,
-                                InvoiceWidget(
+                                TeacherInvoiceWidget(
                                   showFonts: false,
-                                  studentInvoiceData: null,
                                   teacherInvoiceData: invData,
                                   total: invData.amtDue,
                                 ),
@@ -1008,8 +1003,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                       width: MediaQuery.of(context).size.width * 0.7,
                       height: MediaQuery.of(context).size.height * 0.85,
                       child: SingleChildScrollView(
-                        child: InvoiceWidget(
-                          studentInvoiceData: null,
+                        child: TeacherInvoiceWidget(
                           teacherInvoiceData: teacherInvData,
                           total: teacherInvData.amtDue,
                         ),
@@ -1042,22 +1036,72 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   Future<bool> sendInvoiceEmail(
     String recipientAddress,
-    InvoiceWidget widget,
+    Widget widget,
     BuildContext context,
   ) async {
     try {
       await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
 
-      final List<({String desc, int qty, double rate, double amt})> allEntries =
-          widget.overrideEntries ??
-          (widget.studentInvoiceData == null
-              ? widget.teacherInvoiceData!.entries
-              : widget.studentInvoiceData!.entries);
+      late final List<InvoiceEntry> allEntries;
+      late final Widget firstPageWidget;
+      late final Widget Function({
+        required List<InvoiceEntry> entries,
+        required bool isFirstPage,
+        required bool isLastPage,
+        required int startIndex,
+      })
+      pagedWidgetBuilder;
+
+      if (widget is StudentInvoiceWidget) {
+        allEntries =
+            widget.overrideEntries ?? widget.studentInvoiceData.entries;
+        firstPageWidget = widget;
+        pagedWidgetBuilder =
+            ({
+              required List<InvoiceEntry> entries,
+              required bool isFirstPage,
+              required bool isLastPage,
+              required int startIndex,
+            }) => StudentInvoiceWidget(
+              studentInvoiceData: widget.studentInvoiceData,
+              overrideEntries: entries,
+              showFonts: widget.showFonts,
+              showTopHeader: isFirstPage,
+              showBottomFooter: isLastPage,
+              startIndex: startIndex,
+              total: widget.total,
+              maskEditableFields: widget.maskEditableFields,
+            );
+      } else if (widget is TeacherInvoiceWidget) {
+        allEntries =
+            widget.overrideEntries ?? widget.teacherInvoiceData.entries;
+        firstPageWidget = widget;
+        pagedWidgetBuilder =
+            ({
+              required List<InvoiceEntry> entries,
+              required bool isFirstPage,
+              required bool isLastPage,
+              required int startIndex,
+            }) => TeacherInvoiceWidget(
+              teacherInvoiceData: widget.teacherInvoiceData,
+              overrideEntries: entries,
+              showFonts: widget.showFonts,
+              showTopHeader: isFirstPage,
+              showBottomFooter: isLastPage,
+              startIndex: startIndex,
+              total: widget.total,
+              maskEditableFields: widget.maskEditableFields,
+            );
+      } else {
+        throw ArgumentError(
+          'Unsupported invoice widget type: ${widget.runtimeType}',
+        );
+      }
 
       final List<IWBlankPage> pages = [];
       if (allEntries.length <= 2) {
         // Fits comfortably on a single page with header and footer
-        pages.add(IWBlankPage(child: widget));
+        pages.add(IWBlankPage(child: firstPageWidget));
       } else {
         // Split into multiple pages
         int i = 0;
@@ -1073,16 +1117,11 @@ class InvoicingPageState extends State<InvoicingPage> {
 
           pages.add(
             IWBlankPage(
-              child: InvoiceWidget(
-                studentInvoiceData: widget.studentInvoiceData,
-                teacherInvoiceData: widget.teacherInvoiceData,
-                overrideEntries: chunk,
-                showFonts: widget.showFonts,
-                showTopHeader: isFirstPage,
-                showBottomFooter: isLastPage,
+              child: pagedWidgetBuilder(
+                entries: chunk,
+                isFirstPage: isFirstPage,
+                isLastPage: isLastPage,
                 startIndex: i,
-                total: widget.total,
-                maskEditableFields: widget.maskEditableFields,
               ),
             ),
           );
@@ -1279,7 +1318,7 @@ class InvoicingPageState extends State<InvoicingPage> {
 }
 
 class IWBlankPage extends m.BlankPage {
-  final InvoiceWidget child;
+  final Widget child;
   const IWBlankPage({
     required this.child,
     super.key,

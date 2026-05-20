@@ -1,19 +1,17 @@
 part of axis_dashboard;
 
-class InvoiceWidget extends StatelessWidget {
+class StudentInvoiceWidget extends StatelessWidget {
   final bool maskEditableFields;
-  final StudentInvoiceData? studentInvoiceData;
-  final TeacherInvoiceData? teacherInvoiceData;
-  final List<({String desc, int qty, double rate, double amt})>? overrideEntries;
+  final StudentInvoiceData studentInvoiceData;
+  final List<InvoiceEntry>? overrideEntries;
   final double total;
   final bool showFonts;
   final bool showTopHeader;
   final bool showBottomFooter;
   final int startIndex;
 
-  const InvoiceWidget({
-    this.studentInvoiceData,
-    this.teacherInvoiceData,
+  const StudentInvoiceWidget({
+    required this.studentInvoiceData,
     this.overrideEntries,
     this.showFonts = true,
     this.showTopHeader = true,
@@ -24,17 +22,111 @@ class InvoiceWidget extends StatelessWidget {
     super.key,
   });
 
+  @override
+  Widget build(BuildContext context) {
+    return _InvoiceTemplate(
+      maskEditableFields: maskEditableFields,
+      showFonts: showFonts,
+      showTopHeader: showTopHeader,
+      showBottomFooter: showBottomFooter,
+      startIndex: startIndex,
+      total: total,
+      invoiceId: studentInvoiceData.invoiceId,
+      recipientName:
+          '${studentInvoiceData.parentName} (Child: ${studentInvoiceData.studentName})',
+      address: studentInvoiceData.address,
+      invoiceDateFormatted: studentInvoiceData.invoiceDateFormatted,
+      terms: studentInvoiceData.terms,
+      paymentDateLabel: 'Due Date',
+      paymentDateFormatted: studentInvoiceData.dueDateFormatted,
+      entries: overrideEntries ?? studentInvoiceData.entries,
+    );
+  }
+}
+
+class TeacherInvoiceWidget extends StatelessWidget {
+  final bool maskEditableFields;
+  final TeacherInvoiceData teacherInvoiceData;
+  final List<InvoiceEntry>? overrideEntries;
+  final double total;
+  final bool showFonts;
+  final bool showTopHeader;
+  final bool showBottomFooter;
+  final int startIndex;
+
+  const TeacherInvoiceWidget({
+    required this.teacherInvoiceData,
+    this.overrideEntries,
+    this.showFonts = true,
+    this.showTopHeader = true,
+    this.showBottomFooter = true,
+    this.startIndex = 0,
+    required this.total,
+    this.maskEditableFields = false,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _InvoiceTemplate(
+      maskEditableFields: maskEditableFields,
+      showFonts: showFonts,
+      showTopHeader: showTopHeader,
+      showBottomFooter: showBottomFooter,
+      startIndex: startIndex,
+      total: total,
+      invoiceId: teacherInvoiceData.invoiceId,
+      recipientName: teacherInvoiceData.teacherName,
+      address: '',
+      invoiceDateFormatted: teacherInvoiceData.invoiceDateFormatted,
+      terms: teacherInvoiceData.terms,
+      paymentDateLabel: 'Paid Date',
+      paymentDateFormatted: teacherInvoiceData.paidDateFormatted,
+      entries: overrideEntries ?? teacherInvoiceData.entries,
+    );
+  }
+}
+
+class _InvoiceTemplate extends StatelessWidget {
+  final bool maskEditableFields;
+  final List<InvoiceEntry> entries;
+  final double total;
+  final bool showFonts;
+  final bool showTopHeader;
+  final bool showBottomFooter;
+  final int startIndex;
+  final String invoiceId;
+  final String recipientName;
+  final String address;
+  final String invoiceDateFormatted;
+  final String terms;
+  final String paymentDateLabel;
+  final String paymentDateFormatted;
+
+  const _InvoiceTemplate({
+    required this.maskEditableFields,
+    required this.entries,
+    required this.total,
+    required this.showFonts,
+    required this.showTopHeader,
+    required this.showBottomFooter,
+    required this.startIndex,
+    required this.invoiceId,
+    required this.recipientName,
+    required this.address,
+    required this.invoiceDateFormatted,
+    required this.terms,
+    required this.paymentDateLabel,
+    required this.paymentDateFormatted,
+  });
+
   TextStyle handleFonts(TextStyle style) =>
       showFonts ? style : style.copyWith(fontFamily: 'Helvetica');
 
   @override
   Widget build(BuildContext context) {
     final List<DataRow> invoiceRows = [];
-    final List<({String desc, int qty, double rate, double amt})>
-    invoiceEntries = overrideEntries ?? (studentInvoiceData == null
-        ? teacherInvoiceData!.entries
-        : studentInvoiceData!.entries);
-    for (int i = 0; i < invoiceEntries.length; i++) {
+    for (int i = 0; i < entries.length; i++) {
       invoiceRows.add(
         DataRow(
           cells: [
@@ -46,29 +138,25 @@ class InvoiceWidget extends StatelessWidget {
             ),
             DataCell(
               Text(
-                invoiceEntries[i].desc,
+                entries[i].desc,
                 style: handleFonts(body3),
               ),
             ),
             DataCell(
               Text(
-                maskEditableFields
-                    ? ''
-                    : invoiceEntries[i].qty.toStringAsFixed(2),
+                maskEditableFields ? '' : entries[i].qty.toStringAsFixed(2),
                 style: handleFonts(body3),
               ),
             ),
             DataCell(
               Text(
-                maskEditableFields
-                    ? ''
-                    : invoiceEntries[i].rate.toStringAsFixed(2),
+                maskEditableFields ? '' : entries[i].rate.toStringAsFixed(2),
                 style: handleFonts(body3),
               ),
             ),
             DataCell(
               Text(
-                invoiceEntries[i].amt.toStringAsFixed(2),
+                entries[i].amt.toStringAsFixed(2),
                 style: handleFonts(body3),
               ),
             ),
@@ -76,10 +164,11 @@ class InvoiceWidget extends StatelessWidget {
         ),
       );
     }
+
     return Material(
-      color: Color.fromARGB(255, 255, 255, 255),
+      color: const Color.fromARGB(255, 255, 255, 255),
       child: Padding(
-        padding: const EdgeInsetsGeometry.only(
+        padding: const EdgeInsets.only(
           left: 40,
           right: 40,
           top: 80,
@@ -101,7 +190,6 @@ class InvoiceWidget extends StatelessWidget {
                         width: 300,
                         height: 100,
                       ),
-
                       const SizedBox(height: 10),
                       Text(
                         'Axis Education Centre',
@@ -124,24 +212,16 @@ class InvoiceWidget extends StatelessWidget {
                         style: handleFonts(body3),
                       ),
                       const SizedBox(height: 100),
-                      if (studentInvoiceData != null)
-                        Text(
-                          '${studentInvoiceData!.parentName} (Child: ${studentInvoiceData!.studentName})',
-                          style: handleFonts(
-                            body3.copyWith(fontWeight: FontWeight.bold),
-                          ),
+                      Text(
+                        recipientName,
+                        style: handleFonts(
+                          body3.copyWith(fontWeight: FontWeight.bold),
                         ),
-                      if (teacherInvoiceData != null)
-                        Text(
-                          teacherInvoiceData!.teacherName,
-                          style: handleFonts(
-                            body3.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                      ),
                       const SizedBox(height: 5),
-                      if (studentInvoiceData != null)
+                      if (address.isNotEmpty)
                         Text(
-                          studentInvoiceData!.address,
+                          address,
                           style: handleFonts(body3),
                         ),
                       const SizedBox(height: 30),
@@ -187,24 +267,14 @@ class InvoiceWidget extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      if (studentInvoiceData != null)
-                        Text(
-                          '# ${studentInvoiceData!.invoiceId}',
-                          style: handleFonts(
-                            heading3.copyWith(
-                              color: AxisColors.blackPurple50,
-                            ),
+                      Text(
+                        '# $invoiceId',
+                        style: handleFonts(
+                          heading3.copyWith(
+                            color: AxisColors.blackPurple50,
                           ),
                         ),
-                      if (teacherInvoiceData != null)
-                        Text(
-                          '# ${teacherInvoiceData!.invoiceId}',
-                          style: handleFonts(
-                            heading3.copyWith(
-                              color: AxisColors.blackPurple50,
-                            ),
-                          ),
-                        ),
+                      ),
                       const SizedBox(height: 40),
                       Text(
                         'Balance Due',
@@ -213,54 +283,27 @@ class InvoiceWidget extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      if (studentInvoiceData != null)
-                        Text(
-                          'SGD ${total.toStringAsFixed(2)}',
-                          style: handleFonts(
-                            body3.copyWith(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      Text(
+                        'SGD ${total.toStringAsFixed(2)}',
+                        style: handleFonts(
+                          body3.copyWith(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      if (teacherInvoiceData != null)
-                        Text(
-                          'SGD ${total.toStringAsFixed(2)}',
-                          style: handleFonts(
-                            body3.copyWith(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                      ),
                       const SizedBox(height: 100),
-                      if (studentInvoiceData != null) ...[
-                        for (final line in [
-                          'Invoice Date: ${studentInvoiceData!.invoiceDateFormatted.padLeft(40, ' ')}',
-                          'Terms:    ${studentInvoiceData!.terms.padLeft(40, ' ')}',
-                          'Due Date: ${studentInvoiceData!.dueDateFormatted.padLeft(40, ' ')}',
-                        ]) ...[
-                          Text(
-                            line,
-                            style: handleFonts(body3),
-                            textAlign: TextAlign.right,
-                          ),
-                          const SizedBox(height: 5),
-                        ],
-                      ],
-                      if (teacherInvoiceData != null) ...[
-                        for (final line in [
-                          'Invoice Date: ${teacherInvoiceData!.invoiceDateFormatted.padLeft(40, ' ')}',
-                          'Terms:    ${teacherInvoiceData!.terms.padLeft(40, ' ')}',
-                          'Paid Date: ${teacherInvoiceData!.paidDateFormatted.padLeft(40, ' ')}',
-                        ]) ...[
-                          Text(
-                            line,
-                            style: handleFonts(body3),
-                            textAlign: TextAlign.right,
-                          ),
-                          const SizedBox(height: 5),
-                        ],
+                      for (final line in [
+                        'Invoice Date: ${invoiceDateFormatted.padLeft(40, ' ')}',
+                        'Terms:    ${terms.padLeft(40, ' ')}',
+                        '$paymentDateLabel: ${paymentDateFormatted.padLeft(40, ' ')}',
+                      ]) ...[
+                        Text(
+                          line,
+                          style: handleFonts(body3),
+                          textAlign: TextAlign.right,
+                        ),
+                        const SizedBox(height: 5),
                       ],
                     ],
                   ),
@@ -268,61 +311,59 @@ class InvoiceWidget extends StatelessWidget {
               ),
               const SizedBox(height: 30),
             ],
-
             DataTable(
-                border: TableBorder(bottom: BorderSide(color: Colors.grey)),
-                headingRowColor: WidgetStatePropertyAll(Colors.blueGrey),
-                headingTextStyle: handleFonts(
-                  body3.copyWith(color: Colors.white),
-                ),
-                columns: [
-                  DataColumn(
-                    label: Text('#', style: handleFonts(body3)),
-                  ),
-                  DataColumn(
-                    label: Text('Description', style: handleFonts(body3)),
-                    columnWidth: IntrinsicColumnWidth(flex: 1),
-                  ),
-                  DataColumn(label: Text('Qty', style: handleFonts(body3))),
-                  DataColumn(label: Text('Rate', style: handleFonts(body3))),
-                  DataColumn(label: Text('Amount', style: handleFonts(body3))),
-                ],
-                rows: invoiceRows,
+              border: TableBorder(bottom: BorderSide(color: Colors.grey)),
+              headingRowColor: WidgetStatePropertyAll(Colors.blueGrey),
+              headingTextStyle: handleFonts(
+                body3.copyWith(color: Colors.white),
               ),
-              const SizedBox(height: 8),
-              if (showBottomFooter) ...[
-                Text(
-                  'Sub Total: ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
-                  style: handleFonts(body3),
+              columns: [
+                DataColumn(
+                  label: Text('#', style: handleFonts(body3)),
                 ),
-                const SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.only(right: 22),
-                  child: Text(
-                    'Total:       ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
-                    style: handleFonts(
-                      body3.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
+                DataColumn(
+                  label: Text('Description', style: handleFonts(body3)),
+                  columnWidth: IntrinsicColumnWidth(flex: 1),
                 ),
-                const SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsetsGeometry.only(right: 22),
-                  child: Text(
-                    'Balance Due:       ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
-                    style: handleFonts(
-                      body3.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-                const SizedBox(height: 5),
+                DataColumn(label: Text('Qty', style: handleFonts(body3))),
+                DataColumn(label: Text('Rate', style: handleFonts(body3))),
+                DataColumn(label: Text('Amount', style: handleFonts(body3))),
               ],
-              const SizedBox(height: 50),
+              rows: invoiceRows,
+            ),
+            const SizedBox(height: 8),
+            if (showBottomFooter) ...[
+              Text(
+                'Sub Total: ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
+                style: handleFonts(body3),
+              ),
+              const SizedBox(height: 5),
+              Padding(
+                padding: const EdgeInsets.only(right: 22),
+                child: Text(
+                  'Total:       ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
+                  style: handleFonts(
+                    body3.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Padding(
+                padding: const EdgeInsets.only(right: 22),
+                child: Text(
+                  'Balance Due:       ${total.toStringAsFixed(2).padLeft(30, ' ')}      ',
+                  style: handleFonts(
+                    body3.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              const SizedBox(height: 5),
             ],
-          ),
+          ],
         ),
+      ),
     );
   }
 }

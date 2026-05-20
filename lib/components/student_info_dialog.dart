@@ -19,7 +19,6 @@ class StudentInfoDialog extends StatefulWidget {
 class StudentInfoDialogState extends State<StudentInfoDialog> {
   late DocumentSnapshot<JSON> studentData;
   late final Map<String, String> classIdToTeacherNameMap;
-  late InvoiceWidget invoiceWidget;
   @override
   void initState() {
     studentData = widget.studentData;

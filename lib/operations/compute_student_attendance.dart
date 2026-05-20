@@ -198,8 +198,7 @@ class StudentAttendanceStore {
               .doc(sd.invoiceIds[t])
               .get();
         }
-        final List<({double amt, String desc, int qty, double rate})> entries =
-            [];
+        final List<InvoiceEntry> entries = [];
 
         int classIndex = 0;
         for (final classEntry in relevantClasses.entries) {

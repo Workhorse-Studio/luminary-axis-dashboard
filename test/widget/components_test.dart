@@ -4,7 +4,9 @@ import 'package:axis_dashboard/main.dart';
 
 void main() {
   group('AxisButton Widget Tests', () {
-    testWidgets('AxisButton.text renders correctly', (WidgetTester tester) async {
+    testWidgets('AxisButton.text renders correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -40,7 +42,9 @@ void main() {
       expect(pressed, isTrue);
     });
 
-    testWidgets('AxisButton is disabled when onPressed is null', (WidgetTester tester) async {
+    testWidgets('AxisButton is disabled when onPressed is null', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -56,7 +60,9 @@ void main() {
       expect(state.enabled, isFalse);
     });
 
-    testWidgets('InvoiceWidget renders student invoice data', (WidgetTester tester) async {
+    testWidgets('StudentInvoiceWidget renders student invoice data', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(2000, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -80,7 +86,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: InvoiceWidget(
+            body: StudentInvoiceWidget(
               studentInvoiceData: data,
               total: 190.0,
             ),

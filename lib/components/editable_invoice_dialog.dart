@@ -21,7 +21,7 @@ typedef RowControllerGroup = ({
 class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
   late double total;
   final TextEditingController dueDateController = TextEditingController();
-  late final List<({double amt, String desc, int qty, double rate})> entries;
+  late final List<InvoiceEntry> entries;
   final List<RowControllerGroup> controllers = [];
   StudentInvoiceData? studentInvoiceData;
   TeacherInvoiceData? teacherInvoiceData;
@@ -63,15 +63,28 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
           child: SingleChildScrollView(
             child: Stack(
               children: [
-                InvoiceWidget(
-                  maskEditableFields: true,
-                  key: ValueKey(
-                    entries.map((e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}"),
+                if (widget.studentInvoiceData != null)
+                  StudentInvoiceWidget(
+                    maskEditableFields: true,
+                    key: ValueKey(
+                      entries.map(
+                        (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
+                      ),
+                    ),
+                    studentInvoiceData: widget.studentInvoiceData!,
+                    total: total,
+                  )
+                else
+                  TeacherInvoiceWidget(
+                    maskEditableFields: true,
+                    key: ValueKey(
+                      entries.map(
+                        (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
+                      ),
+                    ),
+                    teacherInvoiceData: widget.teacherInvoiceData!,
+                    total: total,
                   ),
-                  studentInvoiceData: widget.studentInvoiceData,
-                  teacherInvoiceData: widget.teacherInvoiceData,
-                  total: total,
-                ),
 
                 ...rows,
               ],
@@ -82,7 +95,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
     );
   }
 
-  void _updateEntryAndTotal(int index, ({double amt, String desc, int qty, double rate}) newEntry) {
+  void _updateEntryAndTotal(int index, InvoiceEntry newEntry) {
     entries[index] = newEntry;
     total = entries.fold(0.0, (acc, item) => acc + item.amt);
     setState(() {});
@@ -165,7 +178,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
               enabledBorder: InputBorder.none,
             ),
             onChanged: (value) async {
-               _updateEntryAndTotal(index, (
+              _updateEntryAndTotal(index, (
                 qty: entries[index].qty,
                 amt: entries[index].amt,
                 rate: entries[index].rate,
@@ -209,7 +222,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
   }
 
   Future<void> updateInvoice(
-    List<({double amt, String desc, int qty, double rate})> updatedEntries,
+    List<InvoiceEntry> updatedEntries,
   ) async {
     await firestore
         .collection('global')
