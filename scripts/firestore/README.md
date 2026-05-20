@@ -1,0 +1,70 @@
+# Firestore Invoice Schema Migration Scripts
+
+These scripts migrate existing invoice-related Firestore documents to match the separated student/teacher invoice schema used in `lib/schemas/student_invoice_data.dart` and `lib/schemas/teacher_invoice_data.dart`.
+
+## Prerequisites
+
+1. Node.js 18+
+2. Install dependency once:
+
+```bash
+npm install firebase-admin
+```
+
+3. Authenticate with Application Default Credentials or set a service account key:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+```
+
+Optional explicit project override:
+
+```bash
+--project=<your-gcp-project-id>
+```
+
+## Scripts
+
+### 1) Invoice document migration
+
+Dry-run:
+
+```bash
+node scripts/firestore/migrate_invoice_documents.cjs
+```
+
+Apply:
+
+```bash
+node scripts/firestore/migrate_invoice_documents.cjs --apply
+```
+
+What it does:
+- Normalizes `global/archives/invoices/*` docs by `invoiceType`
+- Enforces required fields for student and teacher invoice documents
+- Removes irrelevant cross-type fields
+- Sets `schemaVersion: 2` and `migratedAt`
+
+### 2) User invoice reference normalization
+
+Dry-run:
+
+```bash
+node scripts/firestore/migrate_user_invoice_references.cjs
+```
+
+Apply:
+
+```bash
+node scripts/firestore/migrate_user_invoice_references.cjs --apply
+```
+
+What it does:
+- For students: normalizes `users/{id}.invoiceIds` to `List<String|null>`
+- For teachers/admins: normalizes `users/{id}.invoiceIds` to `Map<String, String>`
+
+## Recommended execution order
+
+1. `migrate_invoice_documents.cjs` (dry-run)
+2. `migrate_user_invoice_references.cjs` (dry-run)
+3. Re-run both with `--apply`
