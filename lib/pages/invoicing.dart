@@ -1213,8 +1213,13 @@ class InvoicingPageState extends State<InvoicingPage> {
         }
       }
       return a.teacherName == b.teacherName &&
-          a.adminName == b.adminName &&
-          a.terms == b.terms;
+          a.address == b.address &&
+          a.agencyName == b.agencyName &&
+          a.addressLine1 == b.addressLine1 &&
+          a.addressLine2 == b.addressLine2 &&
+          a.phoneNum == b.phoneNum &&
+          a.email == b.email &&
+          a.dueDateFormatted == b.dueDateFormatted;
     }
 
     int numUpdated = 0;
@@ -1250,16 +1255,19 @@ class InvoicingPageState extends State<InvoicingPage> {
         );
         final double rate = TeacherPayout.calculateRate(totNumSess);
         final double payout = rate * totNumSess;
+        final generatedAt = DateTime.now();
 
         /// Save or Update
 
         DocumentSnapshot<JSON>? existingInvoice;
         DocumentReference<JSON> docRef;
         final candidate = TeacherInvoiceData(
-          invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
+          invoiceDateFormatted: generatedAt.toTimestampStringShort(),
           address: '',
           amtDue: payout,
-          paidDateFormatted: '',
+          dueDateFormatted: generatedAt
+              .add(const Duration(days: 14))
+              .toTimestampStringShort(),
           invoiceStatus: InvoiceStatus.pendingBilling,
           entries: [
             for (final e in monthEntry.value.entries)
@@ -1273,9 +1281,12 @@ class InvoicingPageState extends State<InvoicingPage> {
               ),
           ],
           invoiceId: '',
-          adminName: 'Jevan',
+          agencyName: TeacherInvoiceData.defaultAgencyName,
           teacherName: teacherData.name,
-          terms: 'Custom',
+          addressLine1: TeacherInvoiceData.defaultAddressLine1,
+          addressLine2: TeacherInvoiceData.defaultAddressLine2,
+          phoneNum: TeacherInvoiceData.defaultPhoneNum,
+          email: TeacherInvoiceData.defaultEmail,
         );
 
         if (teacherData.invoiceIds.containsKey(monthEntry.key)) {

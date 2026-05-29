@@ -34,14 +34,14 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
         (widget.teacherInvoiceData!.amtDue);
     dueDateController.text =
         (widget.studentInvoiceData?.dueDateFormatted) ??
-        (widget.teacherInvoiceData!.paidDateFormatted);
+        (widget.teacherInvoiceData!.dueDateFormatted);
     entries =
         (widget.studentInvoiceData?.entries) ??
         (widget.teacherInvoiceData!.entries);
     for (final e in entries) {
       controllers.add((
-        descController: TextEditingController(text: ''),
-        qtyController: TextEditingController(text: e.qty.toStringAsFixed(2)),
+        descController: TextEditingController(text: e.desc),
+        qtyController: TextEditingController(text: e.qty.toString()),
         rateController: TextEditingController(text: e.rate.toStringAsFixed(2)),
       ));
     }
@@ -49,7 +49,20 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
   }
 
   @override
+  void dispose() {
+    dueDateController.dispose();
+    for (final controllerGroup in controllers) {
+      controllerGroup.descController.dispose();
+      controllerGroup.qtyController.dispose();
+      controllerGroup.rateController.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final currentStudentInvoice = studentInvoiceData;
+    final currentTeacherInvoice = teacherInvoiceData;
     final List<Widget> rows = [];
     for (int i = 0; i < entries.length; i++) {
       rows.addAll(generateFieldsWithOffset(i));
@@ -63,7 +76,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
           child: SingleChildScrollView(
             child: Stack(
               children: [
-                if (widget.studentInvoiceData != null)
+                if (currentStudentInvoice != null)
                   StudentInvoiceWidget(
                     maskEditableFields: true,
                     key: ValueKey(
@@ -71,7 +84,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
                         (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
                       ),
                     ),
-                    studentInvoiceData: widget.studentInvoiceData!,
+                    studentInvoiceData: currentStudentInvoice,
                     total: total,
                   )
                 else
@@ -82,7 +95,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
                         (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
                       ),
                     ),
-                    teacherInvoiceData: widget.teacherInvoiceData!,
+                    teacherInvoiceData: currentTeacherInvoice!,
                     total: total,
                   ),
 
@@ -255,6 +268,7 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
               .toList(),
           'invoiceDateFormatted': DateTime.now().toTimestampStringShort(),
         });
+    if (!mounted) return;
     await showSnackbar(context);
   }
 }

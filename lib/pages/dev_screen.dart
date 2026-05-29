@@ -8,18 +8,24 @@ class DevScreen extends StatelessWidget {
     return Navbar(
       pageTitle: 'Page Title Yeah',
       body: (_) => Center(
-        child: FutureBuilderTemplate(
-          future: (() async => StudentInvoiceData.fromJson(
-            (await firestore
-                    .collection('global')
-                    .doc('archives')
-                    .collection('invoices')
-                    .doc('hsgfKhsmHdEx6NJ1uHn2')
-                    .get())
-                .data()!,
-          ))(),
-          builder: (_, snapshot) => Center(
-            child: InvoicingPage(),
+        child: SingleChildScrollView(
+          child: TeacherInvoiceWidget(
+            teacherInvoiceData: TeacherInvoiceData(
+              invoiceDateFormatted: 'invoiceDateFormatted',
+              address: 'address',
+              amtDue: 200,
+              dueDateFormatted: 'dueDate',
+              invoiceStatus: InvoiceStatus.paymentReceived,
+              entries: [],
+              invoiceId: 'invoiceId',
+              agencyName: 'Name Tutoring Services',
+              teacherName: 'teacherName',
+              addressLine1: 'Address Line 1',
+              addressLine2: 'Address Line 2',
+              phoneNum: '1234 565678',
+              email: 'email@gmail.com',
+            ),
+            total: 200,
           ),
         ),
       ),
