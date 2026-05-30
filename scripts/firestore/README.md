@@ -68,13 +68,13 @@ What it does:
 Dry-run:
 
 ```bash
-node scripts/firestore/migrate_teacher_invoice_schema_v3.cjs
+bash scripts/firestore/migrate_teacher_invoice_schema_v3.sh
 ```
 
 Apply:
 
 ```bash
-node scripts/firestore/migrate_teacher_invoice_schema_v3.cjs --apply
+bash scripts/firestore/migrate_teacher_invoice_schema_v3.sh --apply
 ```
 
 What it does:
@@ -82,6 +82,7 @@ What it does:
 - Uses standard Axis contact defaults for the new teacher invoice issuer fields
 - Derives `dueDateFormatted` as `invoiceDateFormatted + 14 days` when it is missing
 - Removes the old teacher-only fields and sets `schemaVersion: 3` plus `migratedAt`
+- Uses the Firestore REST API directly with `bash` and `curl`
 
 ## Recommended execution order
 

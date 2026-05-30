@@ -25,6 +25,14 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
   TextEditingController teacherEmailController = TextEditingController(
     text: '',
   );
+  TextEditingController agencyNameController = TextEditingController(text: '');
+  TextEditingController addressLine1Controller = TextEditingController(
+    text: '',
+  );
+  TextEditingController addressLine2Controller = TextEditingController(
+    text: '',
+  );
+  TextEditingController phoneNumController = TextEditingController(text: '');
   DocumentSnapshot<JSON>? teacherData;
   bool hasInit = false;
 
@@ -71,6 +79,10 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                       teacher = TeacherData.fromJson(teacherData!.data()!);
                       teacherNameController.text = teacher.name;
                       teacherEmailController.text = teacher.email;
+                      agencyNameController.text = teacher.agencyName;
+                      addressLine1Controller.text = teacher.addressLine1;
+                      addressLine2Controller.text = teacher.addressLine2;
+                      phoneNumController.text = teacher.phoneNum;
                     }
                     for (final k in classesCache.registry.keys) {
                       isClassSelected[k] = teacher != null
@@ -107,6 +119,46 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: teacherEmailController,
+                        style: body2,
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Invoice Display Name',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: agencyNameController,
+                        style: body2,
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Invoice Address Line 1',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: addressLine1Controller,
+                        style: body2,
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Invoice Address Line 2',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: addressLine2Controller,
+                        style: body2,
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Invoice Phone',
+                        style: heading3,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: phoneNumController,
                         style: body2,
                       ),
                       const SizedBox(height: 30),
@@ -190,9 +242,15 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                               TeacherData(
                                 name: teacherNameController.text,
                                 role: teacherData != null
-                                    ? TeacherData.fromJson(teacherData!.data()!).role
+                                    ? TeacherData.fromJson(
+                                        teacherData!.data()!,
+                                      ).role
                                     : 'teacher',
                                 email: teacherEmailController.text,
+                                agencyName: agencyNameController.text,
+                                addressLine1: addressLine1Controller.text,
+                                addressLine2: addressLine2Controller.text,
+                                phoneNum: phoneNumController.text,
                                 classIds: isClassSelected.entries
                                     .where((e) => e.value)
                                     .map((e) => e.key)

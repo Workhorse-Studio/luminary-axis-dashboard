@@ -1281,12 +1281,14 @@ class InvoicingPageState extends State<InvoicingPage> {
               ),
           ],
           invoiceId: '',
-          agencyName: TeacherInvoiceData.defaultAgencyName,
+          agencyName: teacherData.agencyName.isNotEmpty
+              ? teacherData.agencyName
+              : teacherData.name,
           teacherName: teacherData.name,
-          addressLine1: TeacherInvoiceData.defaultAddressLine1,
-          addressLine2: TeacherInvoiceData.defaultAddressLine2,
-          phoneNum: TeacherInvoiceData.defaultPhoneNum,
-          email: TeacherInvoiceData.defaultEmail,
+          addressLine1: teacherData.addressLine1,
+          addressLine2: teacherData.addressLine2,
+          phoneNum: teacherData.phoneNum,
+          email: teacherData.email,
         );
 
         if (teacherData.invoiceIds.containsKey(monthEntry.key)) {

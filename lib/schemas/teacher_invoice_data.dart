@@ -1,12 +1,6 @@
 part of axis_dashboard;
 
 class TeacherInvoiceData extends JSONSerialisable {
-  static const String defaultAgencyName = 'Axis Education Centre';
-  static const String defaultAddressLine1 = '9 King Albert Park #02-08';
-  static const String defaultAddressLine2 = 'Singapore 598332';
-  static const String defaultPhoneNum = '80626728';
-  static const String defaultEmail = 'axiseducationcentre@gmail.com';
-
   final String invoiceId;
   final String invoiceType;
   final String agencyName;
@@ -41,11 +35,14 @@ class TeacherInvoiceData extends JSONSerialisable {
   TeacherInvoiceData.fromJson(JSON json)
     : invoiceType = (json['invoiceType'] as String?) ?? 'teacher',
       invoiceId = (json['invoiceId'] as String?) ?? '',
-      agencyName = (json['agencyName'] as String?) ?? defaultAgencyName,
-      addressLine1 = (json['addressLine1'] as String?) ?? defaultAddressLine1,
-      addressLine2 = (json['addressLine2'] as String?) ?? defaultAddressLine2,
-      phoneNum = (json['phoneNum'] as String?) ?? defaultPhoneNum,
-      email = (json['email'] as String?) ?? defaultEmail,
+      agencyName =
+          (json['agencyName'] as String?) ??
+          (json['teacherName'] as String?) ??
+          '',
+      addressLine1 = (json['addressLine1'] as String?) ?? '',
+      addressLine2 = (json['addressLine2'] as String?) ?? '',
+      phoneNum = (json['phoneNum'] as String?) ?? '',
+      email = (json['email'] as String?) ?? '',
       amtDue = ((json['amtDue'] as num?) ?? 0).toDouble(),
       teacherName = (json['teacherName'] as String?) ?? '',
       address = (json['address'] as String?) ?? '',
