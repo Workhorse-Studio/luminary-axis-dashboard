@@ -9,6 +9,12 @@ class StudentInvoiceWidget extends StatelessWidget {
   final bool showTopHeader;
   final bool showBottomFooter;
   final int startIndex;
+  final Widget Function(BuildContext context, int index, InvoiceEntry entry)?
+  descriptionFieldBuilder;
+  final Widget Function(BuildContext context, int index, InvoiceEntry entry)?
+  quantityFieldBuilder;
+  final Widget Function(BuildContext context, int index, InvoiceEntry entry)?
+  rateFieldBuilder;
 
   const StudentInvoiceWidget({
     required this.studentInvoiceData,
@@ -19,6 +25,9 @@ class StudentInvoiceWidget extends StatelessWidget {
     this.startIndex = 0,
     required this.total,
     this.maskEditableFields = false,
+    this.descriptionFieldBuilder,
+    this.quantityFieldBuilder,
+    this.rateFieldBuilder,
     super.key,
   });
 
@@ -40,6 +49,9 @@ class StudentInvoiceWidget extends StatelessWidget {
       paymentDateLabel: 'Due Date',
       paymentDateFormatted: studentInvoiceData.dueDateFormatted,
       entries: overrideEntries ?? studentInvoiceData.entries,
+      descriptionFieldBuilder: descriptionFieldBuilder,
+      quantityFieldBuilder: quantityFieldBuilder,
+      rateFieldBuilder: rateFieldBuilder,
     );
   }
 }
@@ -502,6 +514,12 @@ class _InvoiceTemplate extends StatelessWidget {
   final String terms;
   final String paymentDateLabel;
   final String paymentDateFormatted;
+  final Widget Function(BuildContext context, int index, InvoiceEntry entry)?
+  descriptionFieldBuilder;
+  final Widget Function(BuildContext context, int index, InvoiceEntry entry)?
+  quantityFieldBuilder;
+  final Widget Function(BuildContext context, int index, InvoiceEntry entry)?
+  rateFieldBuilder;
 
   const _InvoiceTemplate({
     required this.maskEditableFields,
@@ -518,6 +536,9 @@ class _InvoiceTemplate extends StatelessWidget {
     required this.terms,
     required this.paymentDateLabel,
     required this.paymentDateFormatted,
+    this.descriptionFieldBuilder,
+    this.quantityFieldBuilder,
+    this.rateFieldBuilder,
   });
 
   TextStyle handleFonts(TextStyle style) =>
@@ -537,22 +558,27 @@ class _InvoiceTemplate extends StatelessWidget {
               ),
             ),
             DataCell(
-              Text(
-                entries[i].desc,
-                style: handleFonts(body3),
-              ),
+              descriptionFieldBuilder?.call(context, i, entries[i]) ??
+                  Text(
+                    entries[i].desc,
+                    style: handleFonts(body3),
+                  ),
             ),
             DataCell(
-              Text(
-                maskEditableFields ? '' : entries[i].qty.toStringAsFixed(2),
-                style: handleFonts(body3),
-              ),
+              quantityFieldBuilder?.call(context, i, entries[i]) ??
+                  Text(
+                    maskEditableFields ? '' : entries[i].qty.toStringAsFixed(2),
+                    style: handleFonts(body3),
+                  ),
             ),
             DataCell(
-              Text(
-                maskEditableFields ? '' : entries[i].rate.toStringAsFixed(2),
-                style: handleFonts(body3),
-              ),
+              rateFieldBuilder?.call(context, i, entries[i]) ??
+                  Text(
+                    maskEditableFields
+                        ? ''
+                        : entries[i].rate.toStringAsFixed(2),
+                    style: handleFonts(body3),
+                  ),
             ),
             DataCell(
               Text(

@@ -63,47 +63,57 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
   Widget build(BuildContext context) {
     final currentStudentInvoice = studentInvoiceData;
     final currentTeacherInvoice = teacherInvoiceData;
-    final List<Widget> rows = [];
-    for (int i = 0; i < entries.length; i++) {
-      rows.addAll(generateFieldsWithOffset(i));
-    }
     return Material(
       color: Colors.transparent,
-      child: Center(
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
-          height: MediaQuery.of(context).size.height * 0.85,
-          child: SingleChildScrollView(
-            child: Stack(
-              children: [
-                if (currentStudentInvoice != null)
-                  StudentInvoiceWidget(
-                    maskEditableFields: true,
-                    key: ValueKey(
-                      entries.map(
-                        (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double horizontalPadding = constraints.maxWidth > 1440
+              ? 48
+              : 24;
+          final double verticalPadding = constraints.maxHeight > 900 ? 32 : 20;
+          final double maxDialogWidth = min(
+            constraints.maxWidth - horizontalPadding * 2,
+            1200,
+          );
+          final double maxDialogHeight =
+              constraints.maxHeight - verticalPadding * 2;
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxDialogWidth,
+                maxHeight: maxDialogHeight,
+              ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: verticalPadding,
+                ),
+                child: currentStudentInvoice != null
+                    ? StudentInvoiceWidget(
+                        key: ValueKey(
+                          entries.map(
+                            (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
+                          ),
+                        ),
+                        studentInvoiceData: currentStudentInvoice,
+                        total: total,
+                        descriptionFieldBuilder: _buildDescriptionField,
+                        quantityFieldBuilder: _buildQuantityField,
+                        rateFieldBuilder: _buildRateField,
+                      )
+                    : TeacherInvoiceWidget(
+                        key: ValueKey(
+                          entries.map(
+                            (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
+                          ),
+                        ),
+                        teacherInvoiceData: currentTeacherInvoice!,
+                        total: total,
                       ),
-                    ),
-                    studentInvoiceData: currentStudentInvoice,
-                    total: total,
-                  )
-                else
-                  TeacherInvoiceWidget(
-                    maskEditableFields: true,
-                    key: ValueKey(
-                      entries.map(
-                        (e) => "${e.desc}-${e.amt}-${e.qty}-${e.rate}",
-                      ),
-                    ),
-                    teacherInvoiceData: currentTeacherInvoice!,
-                    total: total,
-                  ),
-
-                ...rows,
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -115,94 +125,89 @@ class EditableInvoiceDialogState extends State<EditableInvoiceDialog> {
     updateInvoice(entries);
   }
 
-  List<Widget> generateFieldsWithOffset(int index) => [
-    Positioned(
-      top: (924 + 47 * index) as double,
-      right: 270,
-      width: 50,
-      height: 24,
-      child: SizedBox(
-        height: 100,
-        width: 100,
-        child: Center(
+  Widget _buildDescriptionField(
+    BuildContext context,
+    int index,
+    InvoiceEntry entry,
+  ) => _buildTableField(
+    controller: controllers[index].descController,
+    onChanged: (value) {
+      _updateEntryAndTotal(index, (
+        qty: entry.qty,
+        amt: entry.amt,
+        rate: entry.rate,
+        desc: value,
+      ));
+    },
+  );
+
+  Widget _buildQuantityField(
+    BuildContext context,
+    int index,
+    InvoiceEntry entry,
+  ) => _buildTableField(
+    controller: controllers[index].qtyController,
+    textAlign: TextAlign.right,
+    keyboardType: TextInputType.number,
+    onChanged: (value) {
+      final int parsedQty = int.tryParse(value) ?? 0;
+      _updateEntryAndTotal(index, (
+        qty: parsedQty,
+        amt: parsedQty * entry.rate,
+        rate: entry.rate,
+        desc: entry.desc,
+      ));
+    },
+  );
+
+  Widget _buildRateField(
+    BuildContext context,
+    int index,
+    InvoiceEntry entry,
+  ) => _buildTableField(
+    controller: controllers[index].rateController,
+    textAlign: TextAlign.right,
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    onChanged: (value) {
+      final double parsedRate = double.tryParse(value) ?? 0.0;
+      _updateEntryAndTotal(index, (
+        qty: entry.qty,
+        amt: parsedRate * entry.qty,
+        rate: parsedRate,
+        desc: entry.desc,
+      ));
+    },
+  );
+
+  Widget _buildTableField({
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+    TextAlign textAlign = TextAlign.left,
+    TextInputType? keyboardType,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox(
+          width: constraints.maxWidth,
           child: TextField(
-            controller: controllers[index].qtyController,
+            controller: controller,
             style: body3,
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.only(top: -20, left: 7),
+            textAlign: textAlign,
+            keyboardType: keyboardType,
+            maxLines: 1,
+            decoration: const InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
               enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
             ),
-            onChanged: (value) async {
-              int parsedQty = int.tryParse(value) ?? 0;
-              _updateEntryAndTotal(index, (
-                qty: parsedQty,
-                amt: parsedQty * entries[index].rate,
-                rate: entries[index].rate,
-                desc: entries[index].desc,
-              ));
-            },
+            onChanged: onChanged,
           ),
-        ),
-      ),
-    ),
-    Positioned(
-      top: (924 + 47 * index) as double,
-      right: 174,
-      width: 50,
-      height: 24,
-      child: SizedBox(
-        height: 100,
-        width: 100,
-        child: Center(
-          child: TextField(
-            controller: controllers[index].rateController,
-            style: body3,
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.only(top: -20, left: 7),
-              enabledBorder: InputBorder.none,
-            ),
-            onChanged: (value) async {
-              double parsedRate = double.tryParse(value) ?? 0.0;
-              _updateEntryAndTotal(index, (
-                qty: entries[index].qty,
-                amt: parsedRate * entries[index].qty,
-                rate: parsedRate,
-                desc: entries[index].desc,
-              ));
-            },
-          ),
-        ),
-      ),
-    ),
-    Positioned(
-      top: (918 + 47 * index) as double,
-      right: 400,
-      width: 270,
-      height: 34,
-      child: SizedBox(
-        height: 100,
-        width: 100,
-        child: Center(
-          child: TextField(
-            controller: controllers[index].descController,
-            style: body3,
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.only(top: -20, left: 7),
-              enabledBorder: InputBorder.none,
-            ),
-            onChanged: (value) async {
-              _updateEntryAndTotal(index, (
-                qty: entries[index].qty,
-                amt: entries[index].amt,
-                rate: entries[index].rate,
-                desc: value,
-              ));
-            },
-          ),
-        ),
-      ),
-    ),
-  ];
+        );
+      },
+    );
+  }
 
   Future<void> showSnackbar(BuildContext context) async {
     ScaffoldMessenger.of(

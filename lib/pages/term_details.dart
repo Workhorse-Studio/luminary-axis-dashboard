@@ -148,45 +148,11 @@ class TermDetailsPageState extends State<TermDetailsPage> {
                     ),
                   );
                   if (confirm == null || !confirm) return;
-                  final List<TermData> newData = [
-                    ...globalState!.terms.sublist(
-                      0,
-                      currentTabIndex,
-                    ),
-                    TermData(
-                      termEndDate: endDate.millisecondsSinceEpoch,
-                      termName: globalState!.terms[currentTabIndex].termName,
-                      termStartDate:
-                          globalState!.terms[currentTabIndex].termStartDate,
-                    ),
-                  ];
-                  Duration? delta;
-                  for (
-                    int i = currentTabIndex + 1;
-                    i < globalState!.terms.length;
-                    i++
-                  ) {
-                    delta ??= DateTime.fromMillisecondsSinceEpoch(
-                      globalState!.terms[i].termStartDate,
-                    ).difference(endDate);
-                    if (delta.isNegative) {
-                      newData.add(
-                        TermData(
-                          termEndDate:
-                              globalState!.terms[i].termEndDate +
-                              delta.abs().inMilliseconds +
-                              1000,
-                          termName: globalState!.terms[i].termName,
-                          termStartDate:
-                              globalState!.terms[i].termStartDate +
-                              delta.abs().inMilliseconds +
-                              1000,
-                        ),
-                      );
-                    } else {
-                      break;
-                    }
-                  }
+                  final List<TermData> newData = rebuildTermsAfterEndDateChange(
+                    terms: globalState!.terms,
+                    currentTabIndex: currentTabIndex,
+                    newEndDateMillis: endDate.millisecondsSinceEpoch,
+                  );
                   await firestore.collection('global').doc('state').update({
                     'terms': newData.map((e) => e.toJson()),
                   });

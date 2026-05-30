@@ -173,6 +173,42 @@ int monthKeyToTermIndex(GlobalState gs, String monthKey) {
       : gs.terms.length - 1;
 }
 
+List<TermData> rebuildTermsAfterEndDateChange({
+  required List<TermData> terms,
+  required int currentTabIndex,
+  required int newEndDateMillis,
+}) {
+  final List<TermData> newData = [
+    ...terms.sublist(0, currentTabIndex),
+    TermData(
+      termEndDate: newEndDateMillis,
+      termName: terms[currentTabIndex].termName,
+      termStartDate: terms[currentTabIndex].termStartDate,
+    ),
+  ];
+  if (currentTabIndex >= terms.length - 1) {
+    return newData;
+  }
+
+  final int shiftMillis =
+      newEndDateMillis - terms[currentTabIndex + 1].termStartDate + 1000;
+  if (shiftMillis <= 0) {
+    newData.addAll(terms.sublist(currentTabIndex + 1));
+    return newData;
+  }
+
+  for (final term in terms.sublist(currentTabIndex + 1)) {
+    newData.add(
+      TermData(
+        termEndDate: term.termEndDate + shiftMillis,
+        termName: term.termName,
+        termStartDate: term.termStartDate + shiftMillis,
+      ),
+    );
+  }
+  return newData;
+}
+
 bool hasRolesForRoute(Routes route) =>
     route.requiredRoles.isEmpty ||
     route.requiredRoles.contains(role) ||
