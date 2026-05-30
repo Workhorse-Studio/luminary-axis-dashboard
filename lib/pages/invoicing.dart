@@ -194,6 +194,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                         total: studentInvData.amtPayable,
                       ),
                       context,
+                      timestampLabel: studentInvData.terms,
                     )) {
                       await firestore
                           .collection('global')
@@ -241,6 +242,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                       total: invData.amtDue,
                     ),
                     context,
+                    timestampLabel: formatTeacherInvoiceEmailTimestamp(monthId),
                   )) {
                     await invDoc.reference.update({
                       'invoiceStatus': InvoiceStatus.pendingPayment.name,
@@ -528,6 +530,16 @@ class InvoicingPageState extends State<InvoicingPage> {
     return DateFormat('MMMM y').format(DateTime(y, month));
   }
 
+  String formatTeacherInvoiceEmailTimestamp(String monthId) {
+    final parts = monthId.split('-');
+    final month = (int.tryParse(parts[0]) ?? 1).toString().padLeft(2, '0');
+    final y = ((int.tryParse(parts[1]) ?? year) % 100).toString().padLeft(
+      2,
+      '0',
+    );
+    return '$month/$y';
+  }
+
   String studentRemarksFieldKey({
     required int termIndex,
     required String studentId,
@@ -774,6 +786,9 @@ class InvoicingPageState extends State<InvoicingPage> {
                                         .amtPayable,
                                   ),
                                   context,
+                                  timestampLabel: studentAttendanceStore
+                                      .invoicesData[i][studentData.id]!
+                                      .terms,
                                 )) {
                                   await firestore
                                       .collection('global')
@@ -972,6 +987,8 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   total: invData.amtDue,
                                 ),
                                 context,
+                                timestampLabel:
+                                    formatTeacherInvoiceEmailTimestamp(monthId),
                               );
                             },
                           ),
@@ -1037,8 +1054,9 @@ class InvoicingPageState extends State<InvoicingPage> {
   Future<bool> sendInvoiceEmail(
     String recipientAddress,
     Widget widget,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    required String timestampLabel,
+  }) async {
     try {
       await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
 
@@ -1149,7 +1167,11 @@ class InvoicingPageState extends State<InvoicingPage> {
       );
 
       final overrideResp = await makeRequest(
-        body: '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
+        body: jsonEncode({
+          'op': 'sendInvoice',
+          'recipient': recipientAddress,
+          'timestamp': timestampLabel,
+        }).toJS,
       );
 
       final String msg;
