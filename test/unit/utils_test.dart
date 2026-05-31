@@ -131,35 +131,44 @@ void main() {
       expect(monthKeyToTermIndex(gs, '1-12-2026__s001'), 1);
     });
 
-    test('rebuildTermsAfterEndDateChange preserves unaffected later terms', () {
-      final terms = [
-        TermData(
-          termName: 'T1',
-          termStartDate: DateTime(2026, 1, 1).millisecondsSinceEpoch,
-          termEndDate: DateTime(2026, 3, 31).millisecondsSinceEpoch,
-        ),
-        TermData(
-          termName: 'T2',
-          termStartDate: DateTime(2026, 4, 1).millisecondsSinceEpoch,
-          termEndDate: DateTime(2026, 6, 30).millisecondsSinceEpoch,
-        ),
-        TermData(
-          termName: 'T3',
-          termStartDate: DateTime(2026, 7, 1).millisecondsSinceEpoch,
-          termEndDate: DateTime(2026, 9, 30).millisecondsSinceEpoch,
-        ),
-      ];
+    test(
+      'rebuildTermsAfterEndDateChange pulls later terms earlier to close gaps',
+      () {
+        final terms = [
+          TermData(
+            termName: 'T1',
+            termStartDate: DateTime(2026, 1, 1).millisecondsSinceEpoch,
+            termEndDate: DateTime(2026, 3, 31).millisecondsSinceEpoch,
+          ),
+          TermData(
+            termName: 'T2',
+            termStartDate: DateTime(2026, 4, 1).millisecondsSinceEpoch,
+            termEndDate: DateTime(2026, 6, 30).millisecondsSinceEpoch,
+          ),
+          TermData(
+            termName: 'T3',
+            termStartDate: DateTime(2026, 7, 1).millisecondsSinceEpoch,
+            termEndDate: DateTime(2026, 9, 30).millisecondsSinceEpoch,
+          ),
+        ];
 
-      final updated = rebuildTermsAfterEndDateChange(
-        terms: terms,
-        currentTabIndex: 0,
-        newEndDateMillis: DateTime(2026, 3, 15).millisecondsSinceEpoch,
-      );
+        final updated = rebuildTermsAfterEndDateChange(
+          terms: terms,
+          currentTabIndex: 0,
+          newEndDateMillis: DateTime(2026, 3, 15).millisecondsSinceEpoch,
+        );
+        final shiftMillis =
+            DateTime(2026, 3, 15).millisecondsSinceEpoch -
+            terms[1].termStartDate +
+            1000;
 
-      expect(updated.map((term) => term.termName), ['T1', 'T2', 'T3']);
-      expect(updated[1].termStartDate, terms[1].termStartDate);
-      expect(updated[2].termEndDate, terms[2].termEndDate);
-    });
+        expect(updated.map((term) => term.termName), ['T1', 'T2', 'T3']);
+        expect(updated[1].termStartDate, terms[1].termStartDate + shiftMillis);
+        expect(updated[1].termEndDate, terms[1].termEndDate + shiftMillis);
+        expect(updated[2].termStartDate, terms[2].termStartDate + shiftMillis);
+        expect(updated[2].termEndDate, terms[2].termEndDate + shiftMillis);
+      },
+    );
 
     test('rebuildTermsAfterEndDateChange shifts later terms on overlap', () {
       final terms = [
@@ -192,6 +201,34 @@ void main() {
       expect(updated[1].termStartDate, terms[1].termStartDate + shiftMillis);
       expect(updated[1].termEndDate, terms[1].termEndDate + shiftMillis);
       expect(updated[2].termStartDate, terms[2].termStartDate + shiftMillis);
+    });
+
+    test('rebuildTermsAfterEndDateChange leaves the last term isolated', () {
+      final terms = [
+        TermData(
+          termName: 'T1',
+          termStartDate: DateTime(2026, 1, 1).millisecondsSinceEpoch,
+          termEndDate: DateTime(2026, 3, 31).millisecondsSinceEpoch,
+        ),
+        TermData(
+          termName: 'T2',
+          termStartDate: DateTime(2026, 4, 1).millisecondsSinceEpoch,
+          termEndDate: DateTime(2026, 6, 30).millisecondsSinceEpoch,
+        ),
+      ];
+
+      final updated = rebuildTermsAfterEndDateChange(
+        terms: terms,
+        currentTabIndex: 1,
+        newEndDateMillis: DateTime(2026, 6, 15).millisecondsSinceEpoch,
+      );
+
+      expect(updated[0].termStartDate, terms[0].termStartDate);
+      expect(updated[0].termEndDate, terms[0].termEndDate);
+      expect(
+        updated[1].termEndDate,
+        DateTime(2026, 6, 15).millisecondsSinceEpoch,
+      );
     });
 
     test('DateUtils extension tests', () {

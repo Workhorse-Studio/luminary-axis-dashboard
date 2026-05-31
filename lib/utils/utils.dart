@@ -192,7 +192,7 @@ List<TermData> rebuildTermsAfterEndDateChange({
 
   final int shiftMillis =
       newEndDateMillis - terms[currentTabIndex + 1].termStartDate + 1000;
-  if (shiftMillis <= 0) {
+  if (shiftMillis == 0) {
     newData.addAll(terms.sublist(currentTabIndex + 1));
     return newData;
   }
