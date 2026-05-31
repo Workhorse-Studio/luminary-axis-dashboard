@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:math';
 
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf_maker/pdf_maker.dart' as m;
 import 'package:web/web.dart' as web;
 import 'package:data_table_2/data_table_2.dart';
@@ -29,6 +31,7 @@ part './pages/student_details.dart';
 part './pages/term_details.dart';
 part './pages/onboarding_page.dart';
 part './pages/dev_screen.dart';
+part './pages/financials.dart';
 
 part './components/navbar.dart';
 part './components/protected_page.dart';
@@ -59,7 +62,10 @@ part './schemas/global_state.dart';
 part './schemas/onboarding_student_data.dart';
 part './schemas/term_allocation.dart';
 part './schemas/term_data.dart';
-part './schemas/invoice_data.dart';
+part './schemas/invoice_entry.dart';
+part './schemas/invoice_status.dart';
+part './schemas/student_invoice_data.dart';
+part './schemas/teacher_invoice_data.dart';
 part './schemas/class_template.dart';
 
 part './operations/compute_student_attendance.dart';
@@ -78,7 +84,6 @@ part './firebase/auth.dart';
 
 late String role = '';
 bool isAdmin = false;
-late int termNum;
 final StudentAttendanceStore studentAttendanceStore = StudentAttendanceStore();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,7 +94,6 @@ void main() async {
     firestore;
     auth;
     if (kDebugMode) {
-      termNum = 0;
       role = 'admin';
       await auth.signInWithEmailAndPassword(
         email: 'admin@gmail.com',
@@ -152,7 +156,7 @@ enum Routes {
     '/invoicing',
     'Billings',
     ['admin'],
-    Icons.payments,
+    Icons.request_quote,
   ),
   teachers(
     '/teachers',
@@ -177,13 +181,13 @@ enum Routes {
     'Dev',
     [],
     Icons.code,
-  )
-  /* studentDetails(
-    '/studentDetails',
-    'Student Details',
+  ),
+  financials(
+    '/financials',
+    'Financials',
     ['admin'],
-    Icons.person_pin,
-  ) */
+    Icons.bar_chart,
+  )
   ;
 
   final String slug;
@@ -207,7 +211,7 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
     return TooltipVisibility(
       visible: false,
       child: MaterialApp(
-        initialRoute: kDebugMode ? Routes.dashboard.slug : Routes.login.slug,
+        initialRoute: kDebugMode ? Routes.dev.slug : Routes.login.slug,
         debugShowCheckedModeBanner: false,
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
@@ -216,10 +220,6 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
             redirectOnIncorrectRole: Routes.login,
             child: const DashboardPage(),
           ),
-          /* Routes.students.slug: (_) => ProtectedPage(
-            redirectOnIncorrectRole: Routes.login,
-            child: StudentsPage(),
-          ), */
           Routes.syllabus.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,
             child: SyllabusPage(),
@@ -235,6 +235,10 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           Routes.termDetails.slug: (_) => ProtectedPage(
             redirectOnIncorrectRole: Routes.login,
             child: const TermDetailsPage(),
+          ),
+          Routes.financials.slug: (_) => ProtectedPage(
+            redirectOnIncorrectRole: Routes.login,
+            child: const FinancialsPage(),
           ),
           Routes.login.slug: (_) => LoginPage(),
         },

@@ -15,6 +15,7 @@ class StudentData extends JSONSerialisable {
   final String postalCode;
   final String school;
   final String subjectCombi;
+  final String? referralCode;
 
   const StudentData({
     required this.role,
@@ -29,6 +30,7 @@ class StudentData extends JSONSerialisable {
     required this.postalCode,
     required this.school,
     required this.subjectCombi,
+    this.referralCode,
   });
 
   StudentData.fromJson(JSON json)
@@ -42,6 +44,7 @@ class StudentData extends JSONSerialisable {
       postalCode = json['postalCode'] as String,
       school = json['school'] as String,
       subjectCombi = json['subjectCombi'] as String,
+      referralCode = json['referralCode'] as String?,
       withdrawn = (json['withdrawn'] as Map).map(
         (k, v) => MapEntry(k as String, v as bool),
       ),
@@ -61,5 +64,6 @@ class StudentData extends JSONSerialisable {
     'school': school,
     'postalCode': postalCode,
     'subjectCombi': subjectCombi,
+    'referralCode': referralCode,
   };
 }

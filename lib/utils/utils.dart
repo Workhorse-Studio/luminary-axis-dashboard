@@ -12,17 +12,17 @@ class GenericCache<T> {
     Query? query,
     bool force = false,
   }) async {
-    if (_hasInitAll) {
-      if (!force) return;
-    } else {
-      final res = collection != null
-          ? (await collection.get()).docs
-          : (await query!.get()).docs;
-      for (final item in res) {
-        registry[item.id] = item as T;
-      }
-      _hasInitAll = true;
+    if (_hasInitAll && !force) {
+      return;
     }
+
+    final res = collection != null
+        ? (await collection.get()).docs
+        : (await query!.get()).docs;
+    for (final item in res) {
+      registry[item.id] = item as T;
+    }
+    _hasInitAll = true;
   }
 
   Future<T> get(String id, {bool bypassCache = false}) async {
@@ -45,23 +45,32 @@ Future<({bool ok, JSON? body})> makeRequest({
     'Content-Type': 'application/json',
   },
 }) async {
-  final res = await web.window
-      .fetch(
-        url.toJS,
-        web.RequestInit(
-          method: 'POST',
-          body: body,
-          headers: headers.jsify() as web.Headers,
-          credentials: 'omit',
-        ),
-      )
-      .toDart;
+  try {
+    final res = await web.window
+        .fetch(
+          url.toJS,
+          web.RequestInit(
+            method: 'POST',
+            body: body,
+            headers: headers.jsify() as web.Headers,
+            credentials: 'omit',
+          ),
+        )
+        .toDart;
 
-  final jsonBody = await res.text().toDart;
-  return (
-    ok: res.ok,
-    body: jsonDecode(jsonBody.toDart) as JSON,
-  );
+    final jsonBodyStr = (await res.text().toDart).toDart;
+    JSON? parsedBody;
+    if (jsonBodyStr.trim().isNotEmpty) {
+      parsedBody = jsonDecode(jsonBodyStr) as JSON;
+    }
+    return (
+      ok: res.ok,
+      body: parsedBody,
+    );
+  } catch (e) {
+    print('makeRequest error: $e');
+    return (ok: false, body: null);
+  }
 }
 
 String generateId() => String.fromCharCodes(
@@ -73,12 +82,84 @@ String generateId() => String.fromCharCodes(
   ),
 );
 
+const String attendanceSessionDelimiter = '__s';
+
+String attendanceBaseDateKey(String attendanceKey) {
+  final int i = attendanceKey.indexOf(attendanceSessionDelimiter);
+  return i >= 0 ? attendanceKey.substring(0, i) : attendanceKey;
+}
+
+DateTime attendanceKeyToDateTime(String attendanceKey) {
+  final chunks = attendanceBaseDateKey(attendanceKey).split('-');
+  if (chunks.length != 3) {
+    throw Exception('Invalid attendance key "$attendanceKey"');
+  }
+  return DateTime(
+    int.parse(chunks[2]),
+    int.parse(chunks[1]),
+    int.parse(chunks[0]),
+  );
+}
+
+int attendanceSessionNumber(String attendanceKey) {
+  final int i = attendanceKey.indexOf(attendanceSessionDelimiter);
+  if (i < 0) return 1;
+  return int.tryParse(
+        attendanceKey.substring(i + attendanceSessionDelimiter.length),
+      ) ??
+      1;
+}
+
+String attendanceSessionLabel(String attendanceKey) =>
+    'S${attendanceSessionNumber(attendanceKey)}';
+
+int compareAttendanceKeys(String a, String b) {
+  final int dateCmp = attendanceKeyToDateTime(a).compareTo(
+    attendanceKeyToDateTime(b),
+  );
+  if (dateCmp != 0) {
+    return dateCmp;
+  }
+  return attendanceSessionNumber(a).compareTo(attendanceSessionNumber(b));
+}
+
+String attendanceMonthId(String attendanceKey) {
+  final dt = attendanceKeyToDateTime(attendanceKey);
+  return '${dt.month}-${dt.year}';
+}
+
+String buildAttendanceSessionKey({
+  required DateTime date,
+  required int sessionNumber,
+}) {
+  return '${date.toTimestampStringShort(false)}$attendanceSessionDelimiter'
+      '${sessionNumber.toString().padLeft(3, '0')}';
+}
+
+bool attendanceKeyMatchesDate(String attendanceKey, DateTime date) {
+  final attDt = attendanceKeyToDateTime(attendanceKey);
+  return attDt.year == date.year &&
+      attDt.month == date.month &&
+      attDt.day == date.day;
+}
+
+int nextAttendanceSessionNumberForDate(
+  Iterable<String> attendanceKeys,
+  DateTime date,
+) {
+  int maxSession = 0;
+  for (final key in attendanceKeys) {
+    if (!attendanceKeyMatchesDate(key, date)) continue;
+    final int n = attendanceSessionNumber(key);
+    if (n > maxSession) {
+      maxSession = n;
+    }
+  }
+  return maxSession + 1;
+}
+
 int monthKeyToTermIndex(GlobalState gs, String monthKey) {
-  final tmp = monthKey.split('-').reversed.toList();
-  tmp[1] = tmp[1].padLeft(2, '0');
-  tmp[2] = tmp[2].padLeft(2, '0');
-  final String reversedMonthKey = tmp.join('-');
-  final dt = DateTime.parse(reversedMonthKey);
+  final dt = attendanceKeyToDateTime(monthKey);
   int counter = 0;
   for (final term in gs.terms) {
     if (term.termEndDate >= dt.millisecondsSinceEpoch) {
@@ -90,6 +171,42 @@ int monthKeyToTermIndex(GlobalState gs, String monthKey) {
   return gs.terms.isEmpty
       ? throw Exception('Month key to term index failed')
       : gs.terms.length - 1;
+}
+
+List<TermData> rebuildTermsAfterEndDateChange({
+  required List<TermData> terms,
+  required int currentTabIndex,
+  required int newEndDateMillis,
+}) {
+  final List<TermData> newData = [
+    ...terms.sublist(0, currentTabIndex),
+    TermData(
+      termEndDate: newEndDateMillis,
+      termName: terms[currentTabIndex].termName,
+      termStartDate: terms[currentTabIndex].termStartDate,
+    ),
+  ];
+  if (currentTabIndex >= terms.length - 1) {
+    return newData;
+  }
+
+  final int shiftMillis =
+      newEndDateMillis - terms[currentTabIndex + 1].termStartDate + 1000;
+  if (shiftMillis == 0) {
+    newData.addAll(terms.sublist(currentTabIndex + 1));
+    return newData;
+  }
+
+  for (final term in terms.sublist(currentTabIndex + 1)) {
+    newData.add(
+      TermData(
+        termEndDate: term.termEndDate + shiftMillis,
+        termName: term.termName,
+        termStartDate: term.termStartDate + shiftMillis,
+      ),
+    );
+  }
+  return newData;
 }
 
 bool hasRolesForRoute(Routes route) =>
@@ -108,4 +225,24 @@ extension DateUtils on DateTime {
     month,
     day,
   ).isAtSameMomentAs(DateTime(other.year, other.month, other.day));
+}
+
+bool isStudentCompletelyWithdrawn(
+  String studentId,
+  StudentData sd,
+  GenericCache<DocumentSnapshot<JSON>> classesCache,
+) {
+  bool hasAnyClasses = false;
+  bool hasActiveClasses = false;
+  for (final clEntry in classesCache.registry.entries) {
+    final cd = ClassData.fromJson(clEntry.value.data()!);
+    if (cd.studentIds.contains(studentId)) {
+      hasAnyClasses = true;
+      if (sd.withdrawn[clEntry.key] != true) {
+        hasActiveClasses = true;
+        break;
+      }
+    }
+  }
+  return hasAnyClasses && !hasActiveClasses;
 }

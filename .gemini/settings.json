@@ -1,0 +1,66 @@
+{
+    "mcpServers": {
+        "dart": {
+            "command": "dart",
+            "args": [
+                "mcp-server"
+            ],
+            "chrome-devtools": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "chrome-devtools-mcp@latest"
+                ]
+            },
+            "firebase": {
+                "command": "npx",
+                "args": [
+                    "-y",
+                    "firebase-tools@latest",
+                    "mcp",
+                    "--only",
+                    "auth,firestore"
+                ]
+            }
+        }
+    },
+    "general": {
+        "defaultApprovalMode": "auto_edit",
+        "checkpointing": {
+            "enabled": true
+        },
+        "plan": {
+            "directory": "rhog/gemini_plans"
+        }
+    },
+    "ui": {
+        "footer": {
+            "hideContextPercentage": false
+        },
+        "showMemoryUsage": true
+    },
+    "ide": {
+        "enabled": true
+    },
+    "model": {
+        "name": "gemini-3.1-pro-preview",
+        "compressionThreshold": 0.8
+    },
+    "agents": {
+        "browser": {
+            "confirmSensitiveActions": true
+        }
+    },
+    "tools": {
+        "shell": {
+            "showColor": true
+        }
+    },
+    "security": {
+        "enablePermanentToolApproval": true,
+        "autoAddToPolicyByDefault": true
+    },
+    "experimental": {
+        "modelSteering": true
+    }
+}

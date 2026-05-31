@@ -59,7 +59,7 @@ class StudentAttendanceStore {
     }
   }
 
-  Future<void> run({
+  Future<int> run({
     required GlobalState globalState,
     required GenericCache<DocumentSnapshot<JSON>> classesCache,
     required GenericCache<DocumentSnapshot<JSON>> studentCache,
@@ -68,7 +68,7 @@ class StudentAttendanceStore {
     if (reuseFrom != null &&
         lastRunTs != null &&
         DateTime.now().difference(lastRunTs!) < reuseFrom) {
-      return;
+      return 0;
     } else {
       sessionsPerTerm.clear();
       termReports.clear();
@@ -78,6 +78,23 @@ class StudentAttendanceStore {
         sessionsPerTerm.add(<String, Map<String, int>>{});
         termReports.add(<String, Map<String, List<String?>>>{});
         hasInvoice.add(<String, bool>{});
+      }
+    }
+
+    int numUpdated = 0;
+
+    final allocationsByTerm = <String, TermAllocation>{};
+    for (final term in globalState.terms) {
+      final doc = await firestore
+          .collection('global')
+          .doc('state')
+          .collection('allocations')
+          .doc(term.termName)
+          .get();
+      if (doc.exists && doc.data() != null) {
+        allocationsByTerm[term.termName] = TermAllocation.fromJson(doc.data()!);
+      } else {
+        allocationsByTerm[term.termName] = TermAllocation(sessions: {});
       }
     }
 
@@ -105,8 +122,9 @@ class StudentAttendanceStore {
                   orElse: 0,
                 ) +
                 1;
+            final dateParts = attendanceBaseDateKey(attDay.key).split('-');
             termReports[t][e.key]![clEntry.key]!.add(
-              attDay.key.substring(0, attDay.key.length - 5),
+              '${dateParts[0]}-${dateParts[1]} ${attendanceSessionLabel(attDay.key)}',
             );
           } else {
             termReports[t][e.key]![clEntry.key]!.add('X');
@@ -115,13 +133,63 @@ class StudentAttendanceStore {
       }
     }
     for (int t = 0; t < sessionsPerTerm.length; t++) {
-      final attendanceData = sessionsPerTerm[t];
+      final termReportData = termReports[t];
       final Map<String, StudentInvoiceData> currentTermInvoices = {};
-      for (final studentEntry in attendanceData.entries) {
+      for (final studentEntry in studentCache.registry.entries) {
+        final studentId = studentEntry.key;
+        final sd = StudentData.fromJson(studentEntry.value.data()!);
+
+        if (isStudentCompletelyWithdrawn(studentId, sd, classesCache)) {
+          if (sd.invoiceIds.length > t && sd.invoiceIds[t] != null) {
+            final existingInvoice = await firestore
+                .collection('global')
+                .doc('archives')
+                .collection('invoices')
+                .doc(sd.invoiceIds[t])
+                .get();
+            if (existingInvoice.exists && existingInvoice.data() != null) {
+              currentTermInvoices[studentId] = StudentInvoiceData.fromJson(
+                existingInvoice.data()!,
+              );
+            }
+          }
+          continue;
+        }
+
+        final termName = globalState.terms[t].termName;
+        final termAllocations = allocationsByTerm[termName]!;
+
+        final Map<String, int> relevantClasses = {};
+        for (final clEntry in classesCache.registry.entries) {
+          final classId = clEntry.key;
+          final classData = ClassData.fromJson(clEntry.value.data()!);
+
+          int sessionCount =
+              termAllocations.sessions[classId]?[studentId] ?? -1;
+          if (sessionCount == -1) {
+            final studentReport = termReportData[studentId];
+            if (studentReport != null && studentReport.containsKey(classId)) {
+              sessionCount = studentReport[classId]!
+                  .where((x) => x != 'X')
+                  .length;
+            } else {
+              sessionCount = 0;
+            }
+          }
+
+          if (sessionCount > 0 ||
+              (classData.studentIds.contains(studentId) &&
+                  sd.withdrawn[classId] != true)) {
+            relevantClasses[classId] = sessionCount;
+          }
+        }
+
+        if (relevantClasses.isEmpty &&
+            (sd.invoiceIds.length <= t || sd.invoiceIds[t] == null)) {
+          continue;
+        }
+
         DocumentSnapshot<JSON>? existingInvoice;
-        final sd = StudentData.fromJson(
-          (await studentCache.get(studentEntry.key)).data()!,
-        );
         if (sd.invoiceIds.length > t && sd.invoiceIds[t] != null) {
           existingInvoice = await firestore
               .collection('global')
@@ -130,17 +198,23 @@ class StudentAttendanceStore {
               .doc(sd.invoiceIds[t])
               .get();
         }
-        final List<({double amt, String desc, int qty, double rate})> entries =
-            [];
-        final double rate = studentEntry.value.length >= 3 ? (95 / 2) : 95.00;
-        for (final classEntry in studentEntry.value.entries) {
+        final List<InvoiceEntry> entries = [];
+
+        int classIndex = 0;
+        for (final classEntry in relevantClasses.entries) {
+          final classId = classEntry.key;
+          final sessionCount = classEntry.value;
+
+          final double rate = classIndex < 2 ? 95.00 : (95.00 / 2);
+          classIndex++;
+
           entries.add((
             desc: ClassData.fromJson(
-              (await classesCache.get(classEntry.key)).data()!,
+              (await classesCache.get(classId)).data()!,
             ).name,
             rate: rate,
-            qty: classEntry.value,
-            amt: rate * classEntry.value,
+            qty: sessionCount,
+            amt: rate * sessionCount,
           ));
         }
 
@@ -185,6 +259,8 @@ class StudentAttendanceStore {
           }
         }
 
+        numUpdated++;
+
         currentTermInvoices[studentEntry.key] = candidate;
         await docRef.set(
           currentTermInvoices[studentEntry.key]!.toJson(),
@@ -203,15 +279,14 @@ class StudentAttendanceStore {
 
     if (!_hasInit) _hasInit = true;
     lastRunTs = DateTime.now();
+    return numUpdated;
   }
 }
 
 extension ListUtilsMap<T> on List<T> {
   void ensureLength(int l, {required T map}) {
-    if (l <= length) {
-      for (int i = length - 1; i < l; i++) {
-        add(map);
-      }
+    while (length <= l) {
+      add(map);
     }
   }
 }

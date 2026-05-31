@@ -42,8 +42,23 @@ class InvoicingPageState extends State<InvoicingPage> {
       );
 
   final Map<String, Map<String, Map<String, int>>> sessionsMap = {};
+  final Map<String, TextEditingController> studentRemarksControllers = {};
+  final Map<String, Timer> studentRemarksSaveTimers = {};
 
   int year = DateTime.now().year;
+  String selectedTeacherMonthId =
+      "${DateTime.now().month}-${DateTime.now().year}";
+
+  @override
+  void dispose() {
+    for (final controller in studentRemarksControllers.values) {
+      controller.dispose();
+    }
+    for (final timer in studentRemarksSaveTimers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +71,7 @@ class InvoicingPageState extends State<InvoicingPage> {
             height: 60,
             onPressed: () => setState(() {
               year -= 1;
+              syncSelectedTeacherMonthIdForYear();
             }),
             child: Icon(
               Icons.chevron_left,
@@ -72,6 +88,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                   height: 60,
                   onPressed: () => setState(() {
                     year += 1;
+                    syncSelectedTeacherMonthIdForYear();
                   }),
                   child: Icon(
                     Icons.chevron_right,
@@ -82,6 +99,24 @@ class InvoicingPageState extends State<InvoicingPage> {
                   width: 60,
                   height: 60,
                 ),
+          const SizedBox(width: 16),
+          AxisDropdownButton<String>(
+            key: ValueKey('teacher-month-$year-$selectedTeacherMonthId'),
+            width: 200,
+            seaprateInitialSelectionEntry: false,
+            entries: [
+              for (final monthId in generateMonthIds())
+                (formatMonthIdLabel(monthId), monthId),
+            ],
+            initialSelection: selectedTeacherMonthIdForYear(),
+            onSelected: (monthId) {
+              if (monthId != null) {
+                setState(() {
+                  selectedTeacherMonthId = monthId;
+                });
+              }
+            },
+          ),
         ],
         const SizedBox(width: 40),
         AxisButton.text(
@@ -91,20 +126,26 @@ class InvoicingPageState extends State<InvoicingPage> {
             int numUpdated = 0;
 
             if (currentTabIndex == 0) {
-              await studentAttendanceStore.ensureInit(
-                globalState: globalState!,
-                classesCache: classesCache,
-                studentCache: studentCache,
+              await studentCache.initAll(
+                query: firestore
+                    .collection('users')
+                    .where('role', isEqualTo: 'student'),
+                force: true,
               );
+              await classesCache.initAll(
+                collection: firestore.collection('classes'),
+                force: true,
+              );
+              studentAttendanceStore.markStale();
 
-              await studentAttendanceStore.run(
+              numUpdated = await studentAttendanceStore.run(
                 globalState: globalState!,
                 classesCache: classesCache,
                 studentCache: studentCache,
               );
               setState(() {});
             } else {
-              await fetchUpdatedTeacherInvoices(forceAll: true);
+              numUpdated = await fetchUpdatedTeacherInvoices(forceAll: true);
             }
 
             setState(() {});
@@ -113,6 +154,120 @@ class InvoicingPageState extends State<InvoicingPage> {
                 context,
               ).showSnackBar(
                 SnackBar(content: Text('$numUpdated invoices were updated.')),
+              );
+            }
+          },
+        ),
+        const SizedBox(width: 16),
+        AxisButton.text(
+          icon: Icons.send,
+          label: 'Send All',
+          onPressed: () async {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return const Center(child: CircularProgressIndicator());
+              },
+            );
+
+            int successCount = 0;
+            if (currentTabIndex == 0) {
+              final int currentTermIndex = globalState!.currentTermNum;
+              if (studentAttendanceStore.invoicesData.length >
+                  currentTermIndex) {
+                for (final entry
+                    in studentAttendanceStore
+                        .invoicesData[currentTermIndex]
+                        .entries) {
+                  final studentId = entry.key;
+                  final studentInvData = entry.value;
+                  final studentDoc = await studentCache.get(studentId);
+                  final studentData = StudentData.fromJson(studentDoc.data()!);
+
+                  try {
+                    if (await sendInvoiceEmail(
+                      studentData.email,
+                      StudentInvoiceWidget(
+                        showFonts: false,
+                        studentInvoiceData: studentInvData,
+                        total: studentInvData.amtPayable,
+                      ),
+                      context,
+                      timestampLabel: studentInvData.terms,
+                    )) {
+                      await firestore
+                          .collection('global')
+                          .doc('archives')
+                          .collection('invoices')
+                          .doc(studentInvData.invoiceId)
+                          .update({
+                            'invoiceStatus': InvoiceStatus.pendingPayment.name,
+                          });
+                      successCount++;
+                    }
+                  } catch (e, st) {
+                    print(
+                      'Error sending invoice for ${studentData.name}: $e\n$st',
+                    );
+                  }
+                }
+              }
+            } else {
+              // Teachers tab
+              final monthId = selectedTeacherMonthIdForYear();
+              for (final teacherEntry in teachersCache.registry.entries) {
+                final teacherData = TeacherData.fromJson(
+                  teacherEntry.value.data()!,
+                );
+                final invoiceId = teacherData.invoiceIds[monthId];
+                if (invoiceId == null) continue;
+
+                try {
+                  final invDoc = await firestore
+                      .collection('global')
+                      .doc('archives')
+                      .collection('invoices')
+                      .doc(invoiceId)
+                      .get();
+                  if (!invDoc.exists) continue;
+
+                  final invData = TeacherInvoiceData.fromJson(invDoc.data()!);
+
+                  if (await sendInvoiceEmail(
+                    teacherData.email,
+                    TeacherInvoiceWidget(
+                      showFonts: false,
+                      teacherInvoiceData: invData,
+                      total: invData.amtDue,
+                    ),
+                    context,
+                    timestampLabel: formatTeacherInvoiceEmailTimestamp(monthId),
+                  )) {
+                    await invDoc.reference.update({
+                      'invoiceStatus': InvoiceStatus.pendingPayment.name,
+                    });
+                    successCount++;
+                  }
+                } catch (e, st) {
+                  print(
+                    'Error sending invoice for ${teacherData.name}: $e\n$st',
+                  );
+                }
+              }
+            }
+
+            Navigator.of(context).pop(); // Close the loading dialog
+            setState(() {});
+            if (context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '$successCount invoices were sent successfully.',
+                  ),
+                ),
               );
             }
           },
@@ -130,6 +285,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                   currentTabIndex = index;
                   setState(() {});
                 },
+                dividerColor: AxisColors.blackPurple20.withValues(alpha: 0.35),
                 indicatorColor: AxisColors.lilacPurple20,
                 tabs: [
                   Padding(
@@ -224,6 +380,18 @@ class InvoicingPageState extends State<InvoicingPage> {
       }(),
       builder: (context, _) => DataTable2(
         fixedLeftColumns: 1,
+        dataRowHeight: 110,
+        dividerThickness: 0.2,
+        border: TableBorder(
+          verticalInside: BorderSide(
+            color: AxisColors.blackPurple20.withValues(alpha: 0.35),
+            width: 1,
+          ),
+          horizontalInside: BorderSide(
+            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+            width: 0.5,
+          ),
+        ),
         columns: viewType == 'student'
             ? [
                 DataColumn2(
@@ -278,21 +446,31 @@ class InvoicingPageState extends State<InvoicingPage> {
         rows: [
           if (viewType == 'student')
             for (final student in studentCache.registry.entries)
-              DataRow2(
-                cells: [
-                  DataCell(
-                    Text(
-                      StudentData.fromJson(
-                        student.value.data()!,
-                      ).name,
-                      style: body2,
+              if (!isStudentCompletelyWithdrawn(
+                    student.key,
+                    StudentData.fromJson(student.value.data()!),
+                    classesCache,
+                  ) ||
+                  (studentAttendanceStore.invoicesData.length >
+                          globalState!.currentTermNum &&
+                      studentAttendanceStore
+                          .invoicesData[globalState!.currentTermNum]
+                          .containsKey(student.key)))
+                DataRow2(
+                  cells: [
+                    DataCell(
+                      Text(
+                        StudentData.fromJson(
+                          student.value.data()!,
+                        ).name,
+                        style: body2,
+                      ),
                     ),
-                  ),
-                  ...generateCellsForInvoices(
-                    studentData: student.value,
-                  ),
-                ],
-              ),
+                    ...generateCellsForInvoices(
+                      studentData: student.value,
+                    ),
+                  ],
+                ),
           if (viewType == 'teacher')
             for (final teacher in teachersCache.registry.entries)
               DataRow2(
@@ -319,7 +497,8 @@ class InvoicingPageState extends State<InvoicingPage> {
     final List<String> res = [];
     void generateForYear(int year) {
       for (int i = 1; i < 13; i++) {
-        if (year <= DateTime.now().year && i <= DateTime.now().month) {
+        if (year < DateTime.now().year ||
+            (year == DateTime.now().year && i <= DateTime.now().month)) {
           res.add("$i-$year");
         }
       }
@@ -328,6 +507,115 @@ class InvoicingPageState extends State<InvoicingPage> {
     generateForYear(year);
 
     return res;
+  }
+
+  String selectedTeacherMonthIdForYear() {
+    final monthIds = generateMonthIds();
+    final currentMonthId = "${DateTime.now().month}-${DateTime.now().year}";
+    if (monthIds.isEmpty) return currentMonthId;
+    if (monthIds.contains(selectedTeacherMonthId))
+      return selectedTeacherMonthId;
+    if (monthIds.contains(currentMonthId)) return currentMonthId;
+    return monthIds.last;
+  }
+
+  void syncSelectedTeacherMonthIdForYear() {
+    selectedTeacherMonthId = selectedTeacherMonthIdForYear();
+  }
+
+  String formatMonthIdLabel(String monthId) {
+    final parts = monthId.split('-');
+    final month = int.tryParse(parts[0]) ?? 1;
+    final y = int.tryParse(parts[1]) ?? year;
+    return DateFormat('MMMM y').format(DateTime(y, month));
+  }
+
+  String formatTeacherInvoiceEmailTimestamp(String monthId) {
+    final parts = monthId.split('-');
+    final month = (int.tryParse(parts[0]) ?? 1).toString().padLeft(2, '0');
+    final y = ((int.tryParse(parts[1]) ?? year) % 100).toString().padLeft(
+      2,
+      '0',
+    );
+    return '$month/$y';
+  }
+
+  String studentRemarksFieldKey({
+    required int termIndex,
+    required String studentId,
+  }) => '$studentId::$termIndex';
+
+  TextEditingController getStudentRemarksController({
+    required String fieldKey,
+    required StudentInvoiceData data,
+  }) {
+    final existing = studentRemarksControllers[fieldKey];
+    if (existing != null) {
+      if (existing.text != data.remarks) {
+        existing.text = data.remarks;
+      }
+      return existing;
+    }
+
+    final controller = TextEditingController(text: data.remarks);
+    studentRemarksControllers[fieldKey] = controller;
+    return controller;
+  }
+
+  Future<void> saveStudentRemarks({
+    required int termIndex,
+    required String studentId,
+    required String remarks,
+  }) async {
+    final current = studentAttendanceStore.invoicesData[termIndex][studentId];
+    if (current == null || current.remarks == remarks) return;
+
+    await firestore
+        .collection('global')
+        .doc('archives')
+        .collection('invoices')
+        .doc(current.invoiceId)
+        .update({
+          'remarks': remarks,
+        });
+
+    studentAttendanceStore.invoicesData[termIndex][studentId] =
+        StudentInvoiceData(
+          invoiceDateFormatted: current.invoiceDateFormatted,
+          address: current.address,
+          amtPayable: current.amtPayable,
+          remarks: remarks,
+          dueDateFormatted: current.dueDateFormatted,
+          entries: current.entries,
+          invoiceId: current.invoiceId,
+          parentName: current.parentName,
+          studentName: current.studentName,
+          invoiceStatus: current.invoiceStatus,
+          terms: current.terms,
+        );
+  }
+
+  void scheduleSaveStudentRemarks({
+    required int termIndex,
+    required String studentId,
+    required String fieldKey,
+    required String remarks,
+  }) {
+    studentRemarksSaveTimers[fieldKey]?.cancel();
+    studentRemarksSaveTimers[fieldKey] = Timer(
+      const Duration(milliseconds: 500),
+      () async {
+        try {
+          await saveStudentRemarks(
+            termIndex: termIndex,
+            studentId: studentId,
+            remarks: remarks,
+          );
+        } catch (e, st) {
+          print('Error saving student invoice remarks: $e\n$st');
+        }
+      },
+    );
   }
 
   List<DataCell> generateCellsForInvoices({
@@ -340,9 +628,10 @@ class InvoicingPageState extends State<InvoicingPage> {
         res.add(
           DataCell(
             Center(
-              child: SizedBox(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 width: 770,
-                height: 80,
+                height: 100,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children:
@@ -355,9 +644,60 @@ class InvoicingPageState extends State<InvoicingPage> {
                             "\$${studentAttendanceStore.invoicesData[i][studentData.id]!.amtPayable.toStringAsFixed(2)}",
                             style: body2,
                           ),
+                          const SizedBox(width: 10),
+                          (() {
+                            final studentInvData = studentAttendanceStore
+                                .invoicesData[i][studentData.id]!;
+                            final fieldKey = studentRemarksFieldKey(
+                              termIndex: i,
+                              studentId: studentData.id,
+                            );
+                            return SizedBox(
+                              width: 180,
+                              child: TextField(
+                                key: ValueKey('remarks-$fieldKey'),
+                                controller: getStudentRemarksController(
+                                  fieldKey: fieldKey,
+                                  data: studentInvData,
+                                ),
+                                style: body2,
+                                decoration: InputDecoration(
+                                  hint: Text(
+                                    'Remarks',
+                                    style: body2.copyWith(
+                                      color: AxisColors.blackPurple20
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: AxisColors.lilacPurple20,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: AxisColors.lilacPurple50
+                                          .withValues(
+                                            alpha: 0.7,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                onChanged: (text) {
+                                  scheduleSaveStudentRemarks(
+                                    termIndex: i,
+                                    studentId: studentData.id,
+                                    fieldKey: fieldKey,
+                                    remarks: text,
+                                  );
+                                },
+                              ),
+                            );
+                          })(),
                           const Spacer(),
                           AxisButton.text(
                             width: 100,
+                            height: 60,
                             icon: Icons.edit,
                             label: 'Edit',
                             onPressed: () async {
@@ -372,9 +712,23 @@ class InvoicingPageState extends State<InvoicingPage> {
                                     teacherInvoiceData: null,
                                   ),
                                 );
+
+                                final updatedDoc = await firestore
+                                    .collection('global')
+                                    .doc('archives')
+                                    .collection('invoices')
+                                    .doc(studentInvData.invoiceId)
+                                    .get();
+                                studentAttendanceStore
+                                        .invoicesData[i][studentData.id] =
+                                    StudentInvoiceData.fromJson(
+                                      updatedDoc.data()!,
+                                    );
+                                setState(() {});
                               }
                             },
                           ),
+                          const SizedBox(width: 16),
                           AxisDropdownButton<InvoiceStatus>(
                             width: 270,
                             seaprateInitialSelectionEntry: false,
@@ -411,54 +765,69 @@ class InvoicingPageState extends State<InvoicingPage> {
                               }
                             },
                           ),
+                          const SizedBox(width: 16),
                           AxisButton.text(
                             width: 140,
+                            height: 60,
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
-                              if (await sendInvoiceEmail(
-                                StudentData.fromJson(studentData.data()!).email,
-                                InvoiceWidget(
-                                  showFonts: false,
-                                  studentInvoiceData: studentAttendanceStore
-                                      .invoicesData[i][studentData.id]!,
-                                  teacherInvoiceData: null,
-                                  total: studentAttendanceStore
+                              try {
+                                if (await sendInvoiceEmail(
+                                  StudentData.fromJson(
+                                    studentData.data()!,
+                                  ).email,
+                                  StudentInvoiceWidget(
+                                    showFonts: false,
+                                    studentInvoiceData: studentAttendanceStore
+                                        .invoicesData[i][studentData.id]!,
+                                    total: studentAttendanceStore
+                                        .invoicesData[i][studentData.id]!
+                                        .amtPayable,
+                                  ),
+                                  context,
+                                  timestampLabel: studentAttendanceStore
                                       .invoicesData[i][studentData.id]!
-                                      .amtPayable,
-                                ),
-                                context,
-                              )) {
-                                await firestore
-                                    .collection('global')
-                                    .doc('archives')
-                                    .collection('invoices')
-                                    .doc(
-                                      studentAttendanceStore
-                                          .invoicesData[i][studentData.id]!
-                                          .invoiceId,
-                                    )
-                                    .update({
-                                      'invoiceStatus':
-                                          InvoiceStatus.pendingPayment.name,
-                                    });
-                                studentAttendanceStore
-                                        .invoicesData[i][studentData.id] =
-                                    StudentInvoiceData.fromJson(
-                                      (await firestore
-                                              .collection('global')
-                                              .doc('archives')
-                                              .collection('invoices')
-                                              .doc(
-                                                studentAttendanceStore
-                                                    .invoicesData[i][studentData
-                                                        .id]!
-                                                    .invoiceId,
-                                              )
-                                              .get())
-                                          .data()!,
-                                    );
-                                setState(() {});
+                                      .terms,
+                                )) {
+                                  await firestore
+                                      .collection('global')
+                                      .doc('archives')
+                                      .collection('invoices')
+                                      .doc(
+                                        studentAttendanceStore
+                                            .invoicesData[i][studentData.id]!
+                                            .invoiceId,
+                                      )
+                                      .update({
+                                        'invoiceStatus':
+                                            InvoiceStatus.pendingPayment.name,
+                                      });
+                                  studentAttendanceStore
+                                      .invoicesData[i][studentData
+                                      .id] = StudentInvoiceData.fromJson(
+                                    (await firestore
+                                            .collection('global')
+                                            .doc('archives')
+                                            .collection('invoices')
+                                            .doc(
+                                              studentAttendanceStore
+                                                  .invoicesData[i][studentData
+                                                      .id]!
+                                                  .invoiceId,
+                                            )
+                                            .get())
+                                        .data()!,
+                                  );
+                                  setState(() {});
+                                }
+                              } catch (e, st) {
+                                print('Error in Student Send Button: $e\n$st');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Send Error: $e')),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -487,10 +856,11 @@ class InvoicingPageState extends State<InvoicingPage> {
                           child: SizedBox(
                             width: MediaQuery.of(context).size.width * 0.7,
                             height: MediaQuery.of(context).size.height * 0.85,
-                            child: InvoiceWidget(
-                              studentInvoiceData: studentInvData,
-                              teacherInvoiceData: null,
-                              total: studentInvData.amtPayable,
+                            child: SingleChildScrollView(
+                              child: StudentInvoiceWidget(
+                                studentInvoiceData: studentInvData,
+                                total: studentInvData.amtPayable,
+                              ),
                             ),
                           ),
                         ),
@@ -510,9 +880,10 @@ class InvoicingPageState extends State<InvoicingPage> {
                     sessionsMap.isNotEmpty &&
                     sessionsMap[teacherData.id]!.containsKey(monthId)
                 ? Center(
-                    child: SizedBox(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       width: 510,
-                      height: 80,
+                      height: 100,
                       child: Row(
                         children: [
                           const SizedBox(width: 10),
@@ -535,79 +906,89 @@ class InvoicingPageState extends State<InvoicingPage> {
                           const SizedBox(width: 20),
                           FutureBuilderTemplate(
                             future: () async {
-                              final doc = (await firestore
+                              final invoiceId = TeacherData.fromJson(
+                                teacherData.data()!,
+                              ).invoiceIds[monthId];
+                              if (invoiceId == null) return null;
+                              final doc = await firestore
                                   .collection('global')
                                   .doc('archives')
                                   .collection('invoices')
-                                  .doc(
-                                    TeacherData.fromJson(
-                                      teacherData.data()!,
-                                    ).invoiceIds[monthId],
-                                  )
-                                  .get());
+                                  .doc(invoiceId)
+                                  .get();
+                              if (!doc.exists || doc.data() == null)
+                                return null;
                               return (
                                 doc,
                                 TeacherInvoiceData.fromJson(doc.data()!),
                               );
                             }(),
                             builder: (context, snapshot) =>
-                                AxisDropdownButton<InvoiceStatus>(
-                                  width: 270,
-                                  entries: [
-                                    for (final status in InvoiceStatus.values)
-                                      (status.label, status),
-                                  ],
-                                  seaprateInitialSelectionEntry: false,
-                                  initalLabel:
-                                      snapshot.data!.$2.invoiceStatus.label,
-                                  initialSelection:
-                                      snapshot.data!.$2.invoiceStatus,
-                                  onSelected: (invoiceStatus) async {
-                                    if (invoiceStatus != null) {
-                                      await snapshot.data!.$1.reference.update({
-                                        'invoiceStatus': invoiceStatus.name,
-                                      });
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Status updated!'),
-                                          ),
-                                        );
+                                snapshot.data == null
+                                ? const SizedBox(width: 270)
+                                : AxisDropdownButton<InvoiceStatus>(
+                                    width: 270,
+                                    entries: [
+                                      for (final status in InvoiceStatus.values)
+                                        (status.label, status),
+                                    ],
+                                    seaprateInitialSelectionEntry: false,
+                                    initalLabel:
+                                        snapshot.data!.$2.invoiceStatus.label,
+                                    initialSelection:
+                                        snapshot.data!.$2.invoiceStatus,
+                                    onSelected: (invoiceStatus) async {
+                                      if (invoiceStatus != null) {
+                                        await snapshot.data!.$1.reference
+                                            .update({
+                                              'invoiceStatus':
+                                                  invoiceStatus.name,
+                                            });
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Status updated!'),
+                                            ),
+                                          );
+                                        }
                                       }
-                                    }
-                                  },
-                                ),
+                                    },
+                                  ),
                           ),
+                          const SizedBox(width: 16),
                           const Spacer(),
                           AxisButton.text(
                             width: 140,
+                            height: 60,
                             icon: Icons.send,
                             label: 'Send',
                             onPressed: () async {
+                              final invoiceId = TeacherData.fromJson(
+                                teacherData.data()!,
+                              ).invoiceIds[monthId];
+                              if (invoiceId == null) return;
+                              final doc = await firestore
+                                  .collection('global')
+                                  .doc('archives')
+                                  .collection('invoices')
+                                  .doc(invoiceId)
+                                  .get();
+                              if (!doc.exists || doc.data() == null) return;
                               final invData = TeacherInvoiceData.fromJson(
-                                (await firestore
-                                        .collection('global')
-                                        .doc('archives')
-                                        .collection('invoices')
-                                        .doc(
-                                          TeacherData.fromJson(
-                                            teacherData.data()!,
-                                          ).invoiceIds[monthId],
-                                        )
-                                        .get())
-                                    .data()!,
+                                doc.data()!,
                               );
                               await sendInvoiceEmail(
                                 TeacherData.fromJson(teacherData.data()!).email,
-                                InvoiceWidget(
+                                TeacherInvoiceWidget(
                                   showFonts: false,
-                                  studentInvoiceData: null,
                                   teacherInvoiceData: invData,
                                   total: invData.amtDue,
                                 ),
                                 context,
+                                timestampLabel:
+                                    formatTeacherInvoiceEmailTimestamp(monthId),
                               );
                             },
                           ),
@@ -617,19 +998,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                   )
                 : Text(''),
             onTap: () async {
-              final teacherInvData = TeacherInvoiceData.fromJson(
-                (await firestore
-                        .collection('global')
-                        .doc('archives')
-                        .collection('invoices')
-                        .doc(
-                          TeacherData.fromJson(
-                            teacherData!.data()!,
-                          ).invoiceIds[monthId],
-                        )
-                        .get())
-                    .data()!,
-              );
+              final invoiceId = TeacherData.fromJson(
+                teacherData!.data()!,
+              ).invoiceIds[monthId];
+              if (invoiceId == null) return;
+              final doc = await firestore
+                  .collection('global')
+                  .doc('archives')
+                  .collection('invoices')
+                  .doc(invoiceId)
+                  .get();
+              if (!doc.exists || doc.data() == null) return;
+
+              final teacherInvData = TeacherInvoiceData.fromJson(doc.data()!);
 
               if (context.mounted) {
                 await showDialog(
@@ -638,14 +1019,16 @@ class InvoicingPageState extends State<InvoicingPage> {
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.7,
                       height: MediaQuery.of(context).size.height * 0.85,
-                      child: InvoiceWidget(
-                        studentInvoiceData: null,
-                        teacherInvoiceData: teacherInvData,
-                        total: teacherInvData.amtDue,
+                      child: SingleChildScrollView(
+                        child: TeacherInvoiceWidget(
+                          teacherInvoiceData: teacherInvData,
+                          total: teacherInvData.amtDue,
+                        ),
                       ),
                     ),
                   ),
                 );
+                setState(() {});
               }
             },
           ),
@@ -670,62 +1053,172 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   Future<bool> sendInvoiceEmail(
     String recipientAddress,
-    InvoiceWidget widget,
-    BuildContext context,
-  ) async {
-    await precacheImage(AssetImage('images/axis_logo.png'), context);
-    final bytes = await m.PDFMaker().createPDF(
-      IWBlankPage(child: widget),
-      setup: m.PageSetup(
-        context: context,
-        quality: 2.0,
-        scale: 1.5,
-        pageFormat: m.PageFormat.a4,
-        margins: 10,
-      ),
-    );
+    Widget widget,
+    BuildContext context, {
+    required String timestampLabel,
+  }) async {
+    try {
+      await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
 
-    final file = web.File(
-      [
-        bytes.buffer.toJS as JSAny,
-      ].toJS,
-      'invoice.pdf',
-    );
+      late final List<InvoiceEntry> allEntries;
+      late final Widget firstPageWidget;
+      late final Widget Function({
+        required List<InvoiceEntry> entries,
+        required bool isFirstPage,
+        required bool isLastPage,
+        required int startIndex,
+      })
+      pagedWidgetBuilder;
 
-    final overrideResp = await makeRequest(
-      body: '{"op": "sendInvoice", "recipient": "$recipientAddress"}'.toJS,
-    );
-
-    final String msg;
-    if (!overrideResp.ok) {
-      msg = 'Pre-flight request to LAD server failed.';
-      return false;
-    } else {
-      final response = await web.window
-          .fetch(
-            'http://localhost:8088'.toJS,
-            web.RequestInit(
-              method: 'POST',
-              body: file,
-            ),
-          )
-          .toDart;
-
-      if (response.ok) {
-        msg = 'Invoice sent successfully!';
+      if (widget is StudentInvoiceWidget) {
+        allEntries =
+            widget.overrideEntries ?? widget.studentInvoiceData.entries;
+        firstPageWidget = widget;
+        pagedWidgetBuilder =
+            ({
+              required List<InvoiceEntry> entries,
+              required bool isFirstPage,
+              required bool isLastPage,
+              required int startIndex,
+            }) => StudentInvoiceWidget(
+              studentInvoiceData: widget.studentInvoiceData,
+              overrideEntries: entries,
+              showFonts: widget.showFonts,
+              showTopHeader: isFirstPage,
+              showBottomFooter: isLastPage,
+              startIndex: startIndex,
+              total: widget.total,
+              maskEditableFields: widget.maskEditableFields,
+            );
+      } else if (widget is TeacherInvoiceWidget) {
+        allEntries =
+            widget.overrideEntries ?? widget.teacherInvoiceData.entries;
+        firstPageWidget = widget;
+        pagedWidgetBuilder =
+            ({
+              required List<InvoiceEntry> entries,
+              required bool isFirstPage,
+              required bool isLastPage,
+              required int startIndex,
+            }) => TeacherInvoiceWidget(
+              teacherInvoiceData: widget.teacherInvoiceData,
+              overrideEntries: entries,
+              showFonts: widget.showFonts,
+              showTopHeader: isFirstPage,
+              showBottomFooter: isLastPage,
+              startIndex: startIndex,
+              total: widget.total,
+              maskEditableFields: widget.maskEditableFields,
+            );
       } else {
-        msg = 'LAD server encountered an issue while sending the invoice.';
+        throw ArgumentError(
+          'Unsupported invoice widget type: ${widget.runtimeType}',
+        );
       }
+
+      final List<IWBlankPage> pages = [];
+      if (allEntries.length <= 2) {
+        // Fits comfortably on a single page with header and footer
+        pages.add(IWBlankPage(child: firstPageWidget));
+      } else {
+        // Split into multiple pages
+        int i = 0;
+        while (i < allEntries.length) {
+          final bool isFirstPage = i == 0;
+          final int chunkSize = isFirstPage ? 2 : 12;
+          final int end = (i + chunkSize < allEntries.length)
+              ? i + chunkSize
+              : allEntries.length;
+
+          final chunk = allEntries.sublist(i, end);
+          final bool isLastPage = end == allEntries.length;
+
+          pages.add(
+            IWBlankPage(
+              child: pagedWidgetBuilder(
+                entries: chunk,
+                isFirstPage: isFirstPage,
+                isLastPage: isLastPage,
+                startIndex: i,
+              ),
+            ),
+          );
+
+          i = end;
+        }
+      }
+
+      final bytes = await m.PDFMaker().createMultiPagePDF(
+        pages,
+        setup: m.PageSetup(
+          context: context,
+          quality: 2.0,
+          scale: 1.5,
+          pageFormat: m.PageFormat.a4,
+          margins: 10,
+        ),
+      );
+
+      final file = web.File(
+        [
+          bytes.toJS as JSAny,
+        ].toJS,
+        'invoice.pdf',
+      );
+
+      final overrideResp = await makeRequest(
+        body: jsonEncode({
+          'op': 'sendInvoice',
+          'recipient': recipientAddress,
+          'timestamp': timestampLabel,
+        }).toJS,
+      );
+
+      final String msg;
+      if (!overrideResp.ok) {
+        msg = 'Pre-flight request to LAD server failed.';
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        }
+        return false;
+      } else {
+        final response = await web.window
+            .fetch(
+              'https://axis-server-850501828016.asia-southeast1.run.app/api/'
+                  .toJS,
+              web.RequestInit(
+                method: 'POST',
+                body: file,
+              ),
+            )
+            .toDart;
+
+        if (response.ok) {
+          msg = 'Invoice sent successfully!';
+        } else {
+          msg = 'LAD server encountered an issue while sending the invoice.';
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        }
+        return response.ok;
+      }
+    } catch (e, st) {
+      print('Error sending invoice email: $e\n$st');
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate/send invoice: $e')),
+        );
       }
-      return response.ok;
+      return false;
     }
   }
 
-  Future<void> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {
+  Future<int> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {
     bool invoicePayloadMatches(
       TeacherInvoiceData a,
       TeacherInvoiceData b,
@@ -742,10 +1235,16 @@ class InvoicingPageState extends State<InvoicingPage> {
         }
       }
       return a.teacherName == b.teacherName &&
-          a.adminName == b.adminName &&
-          a.terms == b.terms;
+          a.address == b.address &&
+          a.agencyName == b.agencyName &&
+          a.addressLine1 == b.addressLine1 &&
+          a.addressLine2 == b.addressLine2 &&
+          a.phoneNum == b.phoneNum &&
+          a.email == b.email &&
+          a.dueDateFormatted == b.dueDateFormatted;
     }
 
+    int numUpdated = 0;
     final Map<String, Map<String, Map<String, int>>> newSessions = {};
     final mIds = generateMonthIds();
     for (final teacherEntry in teachersCache.registry.entries) {
@@ -762,7 +1261,7 @@ class InvoicingPageState extends State<InvoicingPage> {
 
         for (final attEntry in classData.attendance.entries) {
           if (attEntry.value.isEmpty) continue;
-          final String monthId = attEntry.key.split('-').sublist(1).join('-');
+          final String monthId = attendanceMonthId(attEntry.key);
           if (!newSessions[teacherEntry.key]![monthId]!.containsKey(clId)) {
             newSessions[teacherEntry.key]![monthId]![clId] = 0;
           }
@@ -772,22 +1271,25 @@ class InvoicingPageState extends State<InvoicingPage> {
         }
       }
       for (final monthEntry in newSessions[teacherEntry.key]!.entries) {
-        final int totNumSess = newSessions[teacherEntry.key]!.values.fold(
+        final int totNumSess = monthEntry.value.values.fold(
           0,
-          (a, b) => a + b.values.fold(0, (c, d) => c + d),
+          (a, b) => a + b,
         );
         final double rate = TeacherPayout.calculateRate(totNumSess);
         final double payout = rate * totNumSess;
+        final generatedAt = DateTime.now();
 
         /// Save or Update
 
         DocumentSnapshot<JSON>? existingInvoice;
         DocumentReference<JSON> docRef;
         final candidate = TeacherInvoiceData(
-          invoiceDateFormatted: DateTime.now().toTimestampStringShort(),
+          invoiceDateFormatted: generatedAt.toTimestampStringShort(),
           address: '',
           amtDue: payout,
-          paidDateFormatted: '',
+          dueDateFormatted: generatedAt
+              .add(const Duration(days: 14))
+              .toTimestampStringShort(),
           invoiceStatus: InvoiceStatus.pendingBilling,
           entries: [
             for (final e in monthEntry.value.entries)
@@ -801,9 +1303,14 @@ class InvoicingPageState extends State<InvoicingPage> {
               ),
           ],
           invoiceId: '',
-          adminName: 'Jevan',
+          agencyName: teacherData.agencyName.isNotEmpty
+              ? teacherData.agencyName
+              : teacherData.name,
           teacherName: teacherData.name,
-          terms: 'Custom',
+          addressLine1: teacherData.addressLine1,
+          addressLine2: teacherData.addressLine2,
+          phoneNum: teacherData.phoneNum,
+          email: teacherData.email,
         );
 
         if (teacherData.invoiceIds.containsKey(monthEntry.key)) {
@@ -814,10 +1321,12 @@ class InvoicingPageState extends State<InvoicingPage> {
               .doc(teacherData.invoiceIds[monthEntry.key]);
           existingInvoice = await docRef.get();
           final existing = TeacherInvoiceData.fromJson(existingInvoice.data()!);
-          if (invoicePayloadMatches(existing, candidate)) {
+          if (!forceAll && invoicePayloadMatches(existing, candidate)) {
             continue;
           }
         }
+
+        numUpdated++;
         docRef = firestore
             .collection('global')
             .doc('archives')
@@ -838,11 +1347,13 @@ class InvoicingPageState extends State<InvoicingPage> {
     sessionsMap
       ..clear()
       ..addAll(newSessions);
+
+    return numUpdated;
   }
 }
 
 class IWBlankPage extends m.BlankPage {
-  final InvoiceWidget child;
+  final Widget child;
   const IWBlankPage({
     required this.child,
     super.key,
@@ -850,11 +1361,9 @@ class IWBlankPage extends m.BlankPage {
 
   @override
   Widget createPageContent(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: child,
-      ),
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: child,
     );
   }
 }

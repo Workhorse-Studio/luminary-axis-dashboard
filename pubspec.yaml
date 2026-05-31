@@ -39,12 +39,13 @@ dependencies:
   firebase_core: ^4.4.0
   firebase_ui_auth: ^3.0.1
   flutter_neumorphic_plus: ^3.5.0
-  google_sign_in: ^7.2.0
   pdf: ^3.11.3
   data_table_2: ^2.7.2
   web: ^1.1.1
   flutter_to_pdf: ^0.4.1
   pdf_maker: ^1.1.0
+  fl_chart: ^1.2.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

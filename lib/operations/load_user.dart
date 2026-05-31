@@ -8,9 +8,6 @@ Future<JSON?> loadUser() async {
   if (userData != null) {
     role = userData['role'];
     isAdmin = role == 'admin';
-    termNum = GlobalState.fromJson(
-      (await firestore.collection('global').doc('state').get()).data()!,
-    ).currentTermNum;
   }
   return userData;
 }

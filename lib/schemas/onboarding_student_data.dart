@@ -10,6 +10,7 @@ class OnboardingStudentData extends JSONSerialisable {
   final String postalCode;
   final String school;
   final String subjectCombi;
+  final String? referralCode;
   final List<String> classes;
 
   const OnboardingStudentData({
@@ -22,6 +23,7 @@ class OnboardingStudentData extends JSONSerialisable {
     required this.postalCode,
     required this.school,
     required this.subjectCombi,
+    this.referralCode,
     required this.classes,
   });
 
@@ -34,8 +36,9 @@ class OnboardingStudentData extends JSONSerialisable {
       address = json['address'] as String,
       postalCode = json['postalCode'] as String,
       school = json['school'] as String,
-      classes = (json['classes'] as List).cast(),
-      subjectCombi = json['subjectCombi'] as String;
+      classes = (json['classes'] as List).cast<String>().toList(),
+      subjectCombi = json['subjectCombi'] as String,
+      referralCode = json['referralCode'] as String?;
   @override
   JSON toJson() => {
     'studentName': studentName,
@@ -47,6 +50,7 @@ class OnboardingStudentData extends JSONSerialisable {
     'school': school,
     'postalCode': postalCode,
     'subjectCombi': subjectCombi,
+    'referralCode': referralCode,
     'classes': classes,
   };
 }

@@ -67,9 +67,10 @@ class TeachersPageState extends State<TeachersPage> {
         return Navbar(
           pageTitle: 'Teachers',
           actions: [
-            AxisDropdownButton(
+            AxisDropdownButton<int>(
               width: 140,
               entries: termEntries,
+              initialSelection: currentTermIndex,
               onSelected: (newData) => setState(() {
                 if (newData != null) currentTermIndex = newData;
               }),
@@ -93,6 +94,7 @@ class TeachersPageState extends State<TeachersPage> {
                         studentAttendanceStore.sessionsPerTerm.length)
                       for (final tDoc in teachersData) ...[
                         FutureBuilderTemplate(
+                          key: ValueKey('teacher-card-${tDoc.id}-$currentTermIndex'),
                           future: () async {
                             await studentAttendanceStore.ensureInit(
                               classesCache: classesCache,
@@ -100,20 +102,28 @@ class TeachersPageState extends State<TeachersPage> {
                               globalState: globalState,
                             );
                             return (
-                              [
-                                for (final clEntry
-                                    in studentAttendanceStore
-                                        .sessionsPerTerm[currentTermIndex]
-                                        .entries)
-                                  if (TeacherData.fromJson(
-                                    tDoc.data(),
-                                  ).classIds.contains(clEntry.key))
-                                    clEntry.value.values.fold(
-                                      0,
-                                      (a, b) => a + b,
-                                    ),
-                              ].fold(0, (a, b) => a + b),
-                              TermReportWidget(
+                              (() {
+                                int total = 0;
+                                final teacherDataJson = tDoc.data();
+                                final teacherClasses = TeacherData.fromJson(teacherDataJson).classIds;
+
+                                if (teacherDataJson['priorSessionCount'] != null) {
+                                  total += (teacherDataJson['priorSessionCount'] as num).toInt();
+                                }
+
+                                for (final clId in teacherClasses) {
+                                  final cdJson = classesCache.registry[clId]?.data();
+                                  if (cdJson != null) {
+                                    final cd = ClassData.fromJson(cdJson);
+                                    for (final date in cd.attendance.keys) {
+                                      if (monthKeyToTermIndex(globalState, date) <= currentTermIndex) {
+                                        total++;
+                                      }
+                                    }
+                                  }
+                                }
+                                return total;
+                              })(),                              TermReportWidget(
                                 teacherId: tDoc.id,
                                 termIndex: currentTermIndex,
                               ),
