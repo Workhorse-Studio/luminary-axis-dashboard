@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:math';
 
+import 'package:arm_tooling/arm_tooling.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf_maker/pdf_maker.dart' as m;
@@ -13,6 +14,7 @@ import 'package:data_table_2/data_table_2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart' as auth_ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -80,6 +82,8 @@ part './utils/utils.dart';
 
 part './firebase/firestore.dart';
 part './firebase/auth.dart';
+part './firebase/storage.dart';
+part './arm/arm.dart';
 
 late String role = '';
 bool isAdmin = false;
@@ -88,47 +92,46 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: options);
+  initializeArmClient();
 
-  try {
-    firestore;
-    auth;
-    if (kDebugMode) {
-      role = 'admin';
-      await auth.signInWithEmailAndPassword(
-        email: 'admin@gmail.com',
-        password: 'admin123',
-      );
-      isAdmin = true;
-    }
-    Future<void> clearInvoicesProc() async {
-      final students =
-          (await firestore
-                  .collection('users')
-                  .where('role', isEqualTo: 'student')
-                  .get())
-              .docs;
-      final teachers =
-          (await firestore
-                  .collection('users')
-                  .where('role', whereIn: ['admin', 'teacher'])
-                  .get())
-              .docs;
-      for (final student in students) {
-        await student.reference.update({
-          'invoiceIds': [null, null, null],
-        });
+  await ArmBootstrap.runGuarded(
+    client: armClient,
+    body: () async {
+      try {
+        firestore;
+        auth;
+        armClient.addBreadcrumb(
+          'Firebase services initialized',
+          category: 'startup',
+        );
+        if (kDebugMode) {
+          role = 'admin';
+          await auth.signInWithEmailAndPassword(
+            email: 'admin@gmail.com',
+            password: 'admin123',
+          );
+          isAdmin = true;
+          armClient.addBreadcrumb(
+            'Signed into debug admin account',
+            category: 'auth',
+          );
+        }
+      } catch (e, st) {
+        print(e);
+        print(st);
+        await armClient.captureException(
+          error: e,
+          stackTrace: st,
+          feature: 'app_bootstrap',
+          operation: 'initialize_runtime',
+          severity: ArmSeverity.serious,
+          category: 'startup',
+          handled: true,
+        );
       }
-      for (final teacher in teachers) {
-        await teacher.reference.update({'invoiceIds': {}});
-      }
-    }
-
-    // await clearInvoicesProc();
-  } catch (e, st) {
-    print(e);
-    print(st);
-  }
-  runApp(const AxisDashboardApp());
+      runApp(const AxisDashboardApp());
+    },
+  );
 }
 
 enum Routes {
@@ -186,8 +189,7 @@ enum Routes {
     'Financials',
     ['admin'],
     Icons.bar_chart,
-  )
-  ;
+  );
 
   final String slug;
   final String label;
@@ -212,6 +214,11 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
       child: MaterialApp(
         initialRoute: kDebugMode ? Routes.dev.slug : Routes.login.slug,
         debugShowCheckedModeBanner: false,
+        navigatorObservers: [armNavigationObserver],
+        builder: (context, child) => ArmCaptureBoundary(
+          controller: armCaptureBoundaryController,
+          child: child ?? const SizedBox.shrink(),
+        ),
         routes: {
           if (kDebugMode) Routes.dev.slug: (_) => const DevScreen(),
           Routes.onboarding.slug: (_) => const OnboardingPage(),
@@ -258,6 +265,12 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
               ),
             ),
           ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: AxisColors.blackPurple50,
+            shape: Border(
+              bottom: BorderSide(color: AxisColors.blackPurple30Blur),
+            ),
+          ),
           dropdownMenuTheme: DropdownMenuThemeData(
             inputDecorationTheme: InputDecorationTheme(
               enabledBorder: OutlineInputBorder(
@@ -272,12 +285,6 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-            ),
-          ),
-          appBarTheme: AppBarTheme(
-            backgroundColor: AxisColors.blackPurple50,
-            shape: Border(
-              bottom: BorderSide(color: AxisColors.blackPurple30Blur),
             ),
           ),
         ),

@@ -587,92 +587,130 @@ class DashboardPageState extends State<DashboardPage> {
                           );
                           final String msg;
                           if (tData != null) {
-                            final res = await makeRequest(
-                              body: jsonEncode({
-                                'op': 'registerTeacher',
-                                'name': tData.name,
-                                'email': tData.email,
-                              }).toJS,
-                            );
-                            if (res.ok) {
-                              if (res.body != null &&
-                                  res.body!.containsKey('uid')) {
-                                final String uid = res.body!['uid'] as String;
-                                for (final template
-                                    in tData.offeredClassTemplates) {
-                                  bool exists = false;
-                                  for (final clId in tData.classIds) {
-                                    final clDoc = await classesCache.get(clId);
-                                    if (!clDoc.exists) continue;
-                                    if (ClassData.fromJson(
-                                          clDoc.data()!,
-                                        ).templateReference ==
-                                        template) {
-                                      exists = true;
-                                      break;
+                            String? clientCaseId;
+                            String? serverCaseId;
+                            try {
+                              await runArmTrackedAction<void>(
+                                feature: 'teacher_management',
+                                operation: 'register_teacher',
+                                severity: ArmSeverity.serious,
+                                category: 'data_integrity',
+                                captureScreenshot: true,
+                                tags: <String, dynamic>{
+                                  'teacherEmail': tData.email,
+                                  'classTemplateCount':
+                                      tData.offeredClassTemplates.length,
+                                },
+                                recoverySnapshotBuilder: () =>
+                                    <String, dynamic>{
+                                      'teacher': <String, dynamic>{
+                                        'name': tData.name,
+                                        'email': tData.email,
+                                        'classIds': tData.classIds,
+                                        'offeredClassTemplates':
+                                            tData.offeredClassTemplates,
+                                      },
+                                    },
+                                onReported: (result) {
+                                  clientCaseId = result.caseId;
+                                },
+                                action: () async {
+                                  final res = await makeRequest(
+                                    body: jsonEncode({
+                                      'op': 'registerTeacher',
+                                      'name': tData.name,
+                                      'email': tData.email,
+                                    }).toJS,
+                                  );
+                                  serverCaseId = res.armCaseId;
+                                  if (!res.ok ||
+                                      res.body == null ||
+                                      !res.body!.containsKey('uid')) {
+                                    throw StateError(
+                                      'Teacher registration request failed.',
+                                    );
+                                  }
+
+                                  final String uid = res.body!['uid'] as String;
+                                  for (final template
+                                      in tData.offeredClassTemplates) {
+                                    bool exists = false;
+                                    for (final clId in tData.classIds) {
+                                      final clDoc = await classesCache.get(
+                                        clId,
+                                      );
+                                      if (!clDoc.exists) continue;
+                                      if (ClassData.fromJson(
+                                            clDoc.data()!,
+                                          ).templateReference ==
+                                          template) {
+                                        exists = true;
+                                        break;
+                                      }
+                                    }
+                                    if (!exists) {
+                                      final docRef = await firestore
+                                          .collection(
+                                            'classes',
+                                          )
+                                          .add(
+                                            ClassData(
+                                              name: ClassTemplate.fromJson(
+                                                (await (firestore
+                                                            .collection(
+                                                              'templates',
+                                                            )
+                                                            .doc(
+                                                              template,
+                                                            ))
+                                                        .get())
+                                                    .data()!,
+                                              ).className,
+                                              studentIds: const [],
+                                              templateReference: template,
+                                              attendance: {},
+                                            ).toJson(),
+                                          );
+                                      classesCache.registry[docRef.id] =
+                                          await docRef.get();
+                                      await firestore
+                                          .collection('users')
+                                          .doc(
+                                            uid,
+                                          )
+                                          .set(tData.toJson());
+                                      await firestore
+                                          .collection('users')
+                                          .doc(
+                                            uid,
+                                          )
+                                          .update(
+                                            {
+                                              'classes': tData.classIds
+                                                ..add(
+                                                  docRef.id,
+                                                ),
+                                            },
+                                          );
                                     }
                                   }
-                                  if (!exists) {
-                                    final docRef = await firestore
-                                        .collection(
-                                          'classes',
-                                        )
-                                        .add(
-                                          ClassData(
-                                            name: ClassTemplate.fromJson(
-                                              (await (firestore
-                                                          .collection(
-                                                            'templates',
-                                                          )
-                                                          .doc(
-                                                            template,
-                                                          ))
-                                                      .get())
-                                                  .data()!,
-                                            ).className,
-                                            studentIds: const [],
-                                            templateReference: template,
-                                            attendance: {},
-                                          ).toJson(),
-                                        );
-                                    classesCache.registry[docRef.id] =
-                                        await docRef.get();
-                                    await firestore
-                                        .collection('users')
-                                        .doc(
-                                          uid,
-                                        )
-                                        .set(tData.toJson());
-                                    await firestore
-                                        .collection('users')
-                                        .doc(
-                                          uid,
-                                        )
-                                        .update(
-                                          {
-                                            'classes': tData.classIds
-                                              ..add(
-                                                docRef.id,
-                                              ),
-                                          },
-                                        );
-                                  }
-                                }
-                                msg = 'New teacher added successfully!';
-                                final docRef = firestore
-                                    .collection('users')
-                                    .doc(uid);
-                                await docRef.set(tData.toJson());
-                                teachersCache.registry[docRef.id] = await docRef
-                                    .get();
-                                setState(() {});
-                              } else {
-                                msg =
-                                    'Something went wrong on the client-side when setting teacher data.';
-                              }
-                            } else {
-                              msg =
-                                  'An error occurred on the server-side when creating the teacher account.';
+                                  final docRef = firestore
+                                      .collection('users')
+                                      .doc(uid);
+                                  await docRef.set(tData.toJson());
+                                  teachersCache.registry[docRef.id] =
+                                      await docRef.get();
+                                },
+                              );
+                              msg = 'New teacher added successfully!';
+                              setState(() {});
+                            } catch (_) {
+                              showArmSnackBar(
+                                context,
+                                'Could not add teacher.',
+                                caseId: serverCaseId ?? clientCaseId,
+                              );
+                              return;
                             }
                           } else {
                             msg = 'Action cancelled.';
@@ -798,84 +836,121 @@ class DashboardPageState extends State<DashboardPage> {
                             poDoc.id,
                           ) &&
                           assignedTeachers[poDoc.id] != null) {
-                        final uid = await onboardStudent(obd);
+                        String? clientCaseId;
+                        try {
+                          late final String nextMessage;
+                          await runArmTrackedAction<void>(
+                            feature: 'student_onboarding',
+                            operation: 'approve_pending_onboarding',
+                            severity: ArmSeverity.serious,
+                            category: 'data_integrity',
+                            captureScreenshot: true,
+                            tags: <String, dynamic>{
+                              'pendingOnboardingId': poDoc.id,
+                              'classTemplateId': tempId,
+                              'assignedTeacherId':
+                                  assignedTeachers[poDoc.id]![tempId],
+                            },
+                            recoverySnapshotBuilder: () => <String, dynamic>{
+                              'pendingOnboardingId': poDoc.id,
+                              'studentName': obd.studentName,
+                              'email': obd.email,
+                              'remainingClasses': obd.classes,
+                            },
+                            onReported: (result) {
+                              clientCaseId = result.caseId;
+                            },
+                            action: () async {
+                              final uid = await onboardStudent(obd);
 
-                        final td = TeacherData.fromJson(
-                          (await firestore
-                                  .collection(
-                                    'users',
-                                  )
-                                  .doc(
-                                    assignedTeachers[poDoc.id]![tempId],
-                                  )
-                                  .get())
-                              .data()!,
-                        );
-                        bool found = false;
-                        for (final clId in td.classIds) {
-                          final clRef = (await classesCache.get(clId));
-                          final cd = ClassData.fromJson(
-                            clRef.data()!,
-                          );
-                          if (cd.templateReference == tempId) {
-                            await clRef.reference.update({
-                              'students': cd.studentIds..add(uid),
-                            });
-                            final termDr = firestore
-                                .collection('global')
-                                .doc('state')
-                                .collection('allocations')
-                                .doc(
-                                  globalState!
-                                      .terms[globalState!.currentTermNum]
-                                      .termName,
+                              final td = TeacherData.fromJson(
+                                (await firestore
+                                        .collection(
+                                          'users',
+                                        )
+                                        .doc(
+                                          assignedTeachers[poDoc.id]![tempId],
+                                        )
+                                        .get())
+                                    .data()!,
+                              );
+                              bool found = false;
+                              for (final clId in td.classIds) {
+                                final clRef = await classesCache.get(clId);
+                                final cd = ClassData.fromJson(
+                                  clRef.data()!,
                                 );
-                            if ((await termDr.get()).exists) {
-                              await termDr.update({'$clId.$uid': 0});
-                            } else {
-                              await termDr.set({
-                                clId: {uid: 0},
-                              });
-                            }
-                            await firestore.collection('users').doc(uid).update(
-                              {'withdrawn.$clId': false},
-                            );
+                                if (cd.templateReference == tempId) {
+                                  await clRef.reference.update({
+                                    'students': cd.studentIds..add(uid),
+                                  });
+                                  final termDr = firestore
+                                      .collection('global')
+                                      .doc('state')
+                                      .collection('allocations')
+                                      .doc(
+                                        globalState!
+                                            .terms[globalState!.currentTermNum]
+                                            .termName,
+                                      );
+                                  if ((await termDr.get()).exists) {
+                                    await termDr.update({'$clId.$uid': 0});
+                                  } else {
+                                    await termDr.set({
+                                      clId: {uid: 0},
+                                    });
+                                  }
+                                  await firestore
+                                      .collection('users')
+                                      .doc(uid)
+                                      .update({'withdrawn.$clId': false});
 
-                            found = true;
-                            break;
-                          }
-                        }
-                        final template = ClassTemplate.fromJson(
-                          (await firestore
-                                  .collection('templates')
-                                  .doc(tempId)
-                                  .get())
-                              .data()!,
-                        );
-                        if (!found) {
-                          msg =
-                              'The selected teacher does not teach any ${template.className} classes.';
-                        } else {
-                          obd.classes.remove(tempId);
-                          if (obd.classes.isEmpty) {
-                            await firestore
-                                .collection('global')
-                                .doc('state')
-                                .collection('pendingOnboarding')
-                                .doc(poDoc.id)
-                                .delete();
-                          } else {
-                            await firestore
-                                .collection('global')
-                                .doc('state')
-                                .collection('pendingOnboarding')
-                                .doc(poDoc.id)
-                                .update({'classes': obd.classes});
-                          }
-                          msg = 'Student has been onboarded';
-                        }
+                                  found = true;
+                                  break;
+                                }
+                              }
+                              final template = ClassTemplate.fromJson(
+                                (await firestore
+                                        .collection('templates')
+                                        .doc(tempId)
+                                        .get())
+                                    .data()!,
+                              );
+                              if (!found) {
+                                nextMessage =
+                                    'The selected teacher does not teach any ${template.className} classes.';
+                                return;
+                              }
 
-                        setState(() {});
+                              obd.classes.remove(tempId);
+                              if (obd.classes.isEmpty) {
+                                await firestore
+                                    .collection('global')
+                                    .doc('state')
+                                    .collection('pendingOnboarding')
+                                    .doc(poDoc.id)
+                                    .delete();
+                              } else {
+                                await firestore
+                                    .collection('global')
+                                    .doc('state')
+                                    .collection('pendingOnboarding')
+                                    .doc(poDoc.id)
+                                    .update({'classes': obd.classes});
+                              }
+                              nextMessage = 'Student has been onboarded';
+                            },
+                          );
+                          msg = nextMessage;
+                          setState(() {});
+                        } catch (_) {
+                          showArmSnackBar(
+                            context,
+                            'Failed to approve onboarding submission.',
+                            caseId: clientCaseId,
+                          );
+                          return;
+                        }
                       } else {
                         msg =
                             "Please select a teacher to assign to this student.";

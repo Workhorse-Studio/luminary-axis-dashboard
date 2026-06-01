@@ -37,7 +37,7 @@ class GenericCache<T> {
 const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
 Random _rnd = Random();
 
-Future<({bool ok, JSON? body})> makeRequest({
+Future<({bool ok, JSON? body, String? armCaseId})> makeRequest({
   String url = 'https://axis-server-850501828016.asia-southeast1.run.app/api/',
   String method = 'POST',
   required JSAny body,
@@ -46,11 +46,16 @@ Future<({bool ok, JSON? body})> makeRequest({
   },
 }) async {
   try {
+    armClient.addBreadcrumb(
+      'HTTP $method $url started',
+      category: 'network',
+      data: <String, dynamic>{'url': url, 'method': method},
+    );
     final res = await web.window
         .fetch(
           url.toJS,
           web.RequestInit(
-            method: 'POST',
+            method: method,
             body: body,
             headers: headers.jsify() as web.Headers,
             credentials: 'omit',
@@ -60,16 +65,32 @@ Future<({bool ok, JSON? body})> makeRequest({
 
     final jsonBodyStr = (await res.text().toDart).toDart;
     JSON? parsedBody;
+    final armCaseId = res.headers.get('x-arm-case-id');
     if (jsonBodyStr.trim().isNotEmpty) {
       parsedBody = jsonDecode(jsonBodyStr) as JSON;
     }
+    armClient.addBreadcrumb(
+      'HTTP $method $url completed',
+      category: 'network',
+      data: <String, dynamic>{
+        'ok': res.ok,
+        if (armCaseId != null) 'armCaseId': armCaseId,
+      },
+    );
     return (
       ok: res.ok,
       body: parsedBody,
+      armCaseId: armCaseId,
     );
   } catch (e) {
     print('makeRequest error: $e');
-    return (ok: false, body: null);
+    armClient.addBreadcrumb(
+      'HTTP $method $url threw',
+      level: 'error',
+      category: 'network',
+      data: <String, dynamic>{'error': e.toString()},
+    );
+    return (ok: false, body: null, armCaseId: null);
   }
 }
 

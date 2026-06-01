@@ -1057,163 +1057,182 @@ class InvoicingPageState extends State<InvoicingPage> {
     BuildContext context, {
     required String timestampLabel,
   }) async {
+    String? clientCaseId;
+    String? serverCaseId;
     try {
-      await precacheImage(AssetImage('assets/images/axis_logo.png'), context);
+      await runArmTrackedAction<void>(
+        feature: 'invoicing',
+        operation: 'send_invoice_email',
+        severity: ArmSeverity.moderate,
+        category: 'external_integration',
+        captureScreenshot: true,
+        tags: <String, dynamic>{
+          'recipient': recipientAddress,
+          'widgetType': widget.runtimeType.toString(),
+        },
+        recoverySnapshotBuilder: () => <String, dynamic>{
+          'recipient': recipientAddress,
+          'timestampLabel': timestampLabel,
+          'widgetType': widget.runtimeType.toString(),
+        },
+        onReported: (result) {
+          clientCaseId = result.caseId;
+        },
+        action: () async {
+          await precacheImage(
+            AssetImage('assets/images/axis_logo.png'),
+            context,
+          );
 
-      late final List<InvoiceEntry> allEntries;
-      late final Widget firstPageWidget;
-      late final Widget Function({
-        required List<InvoiceEntry> entries,
-        required bool isFirstPage,
-        required bool isLastPage,
-        required int startIndex,
-      })
-      pagedWidgetBuilder;
+          late final List<InvoiceEntry> allEntries;
+          late final Widget firstPageWidget;
+          late final Widget Function({
+            required List<InvoiceEntry> entries,
+            required bool isFirstPage,
+            required bool isLastPage,
+            required int startIndex,
+          })
+          pagedWidgetBuilder;
 
-      if (widget is StudentInvoiceWidget) {
-        allEntries =
-            widget.overrideEntries ?? widget.studentInvoiceData.entries;
-        firstPageWidget = widget;
-        pagedWidgetBuilder =
-            ({
-              required List<InvoiceEntry> entries,
-              required bool isFirstPage,
-              required bool isLastPage,
-              required int startIndex,
-            }) => StudentInvoiceWidget(
-              studentInvoiceData: widget.studentInvoiceData,
-              overrideEntries: entries,
-              showFonts: widget.showFonts,
-              showTopHeader: isFirstPage,
-              showBottomFooter: isLastPage,
-              startIndex: startIndex,
-              total: widget.total,
-              maskEditableFields: widget.maskEditableFields,
+          if (widget is StudentInvoiceWidget) {
+            allEntries =
+                widget.overrideEntries ?? widget.studentInvoiceData.entries;
+            firstPageWidget = widget;
+            pagedWidgetBuilder =
+                ({
+                  required List<InvoiceEntry> entries,
+                  required bool isFirstPage,
+                  required bool isLastPage,
+                  required int startIndex,
+                }) => StudentInvoiceWidget(
+                  studentInvoiceData: widget.studentInvoiceData,
+                  overrideEntries: entries,
+                  showFonts: widget.showFonts,
+                  showTopHeader: isFirstPage,
+                  showBottomFooter: isLastPage,
+                  startIndex: startIndex,
+                  total: widget.total,
+                  maskEditableFields: widget.maskEditableFields,
+                );
+          } else if (widget is TeacherInvoiceWidget) {
+            allEntries =
+                widget.overrideEntries ?? widget.teacherInvoiceData.entries;
+            firstPageWidget = widget;
+            pagedWidgetBuilder =
+                ({
+                  required List<InvoiceEntry> entries,
+                  required bool isFirstPage,
+                  required bool isLastPage,
+                  required int startIndex,
+                }) => TeacherInvoiceWidget(
+                  teacherInvoiceData: widget.teacherInvoiceData,
+                  overrideEntries: entries,
+                  showFonts: widget.showFonts,
+                  showTopHeader: isFirstPage,
+                  showBottomFooter: isLastPage,
+                  startIndex: startIndex,
+                  total: widget.total,
+                  maskEditableFields: widget.maskEditableFields,
+                );
+          } else {
+            throw ArgumentError(
+              'Unsupported invoice widget type: ${widget.runtimeType}',
             );
-      } else if (widget is TeacherInvoiceWidget) {
-        allEntries =
-            widget.overrideEntries ?? widget.teacherInvoiceData.entries;
-        firstPageWidget = widget;
-        pagedWidgetBuilder =
-            ({
-              required List<InvoiceEntry> entries,
-              required bool isFirstPage,
-              required bool isLastPage,
-              required int startIndex,
-            }) => TeacherInvoiceWidget(
-              teacherInvoiceData: widget.teacherInvoiceData,
-              overrideEntries: entries,
-              showFonts: widget.showFonts,
-              showTopHeader: isFirstPage,
-              showBottomFooter: isLastPage,
-              startIndex: startIndex,
-              total: widget.total,
-              maskEditableFields: widget.maskEditableFields,
-            );
-      } else {
-        throw ArgumentError(
-          'Unsupported invoice widget type: ${widget.runtimeType}',
-        );
-      }
+          }
 
-      final List<IWBlankPage> pages = [];
-      if (allEntries.length <= 2) {
-        // Fits comfortably on a single page with header and footer
-        pages.add(IWBlankPage(child: firstPageWidget));
-      } else {
-        // Split into multiple pages
-        int i = 0;
-        while (i < allEntries.length) {
-          final bool isFirstPage = i == 0;
-          final int chunkSize = isFirstPage ? 2 : 12;
-          final int end = (i + chunkSize < allEntries.length)
-              ? i + chunkSize
-              : allEntries.length;
+          final List<IWBlankPage> pages = [];
+          if (allEntries.length <= 2) {
+            pages.add(IWBlankPage(child: firstPageWidget));
+          } else {
+            int i = 0;
+            while (i < allEntries.length) {
+              final bool isFirstPage = i == 0;
+              final int chunkSize = isFirstPage ? 2 : 12;
+              final int end = (i + chunkSize < allEntries.length)
+                  ? i + chunkSize
+                  : allEntries.length;
 
-          final chunk = allEntries.sublist(i, end);
-          final bool isLastPage = end == allEntries.length;
+              final chunk = allEntries.sublist(i, end);
+              final bool isLastPage = end == allEntries.length;
 
-          pages.add(
-            IWBlankPage(
-              child: pagedWidgetBuilder(
-                entries: chunk,
-                isFirstPage: isFirstPage,
-                isLastPage: isLastPage,
-                startIndex: i,
-              ),
+              pages.add(
+                IWBlankPage(
+                  child: pagedWidgetBuilder(
+                    entries: chunk,
+                    isFirstPage: isFirstPage,
+                    isLastPage: isLastPage,
+                    startIndex: i,
+                  ),
+                ),
+              );
+
+              i = end;
+            }
+          }
+
+          final bytes = await m.PDFMaker().createMultiPagePDF(
+            pages,
+            setup: m.PageSetup(
+              context: context,
+              quality: 2.0,
+              scale: 1.5,
+              pageFormat: m.PageFormat.a4,
+              margins: 10,
             ),
           );
 
-          i = end;
-        }
-      }
+          final file = web.File(
+            [
+              bytes.toJS as JSAny,
+            ].toJS,
+            'invoice.pdf',
+          );
 
-      final bytes = await m.PDFMaker().createMultiPagePDF(
-        pages,
-        setup: m.PageSetup(
-          context: context,
-          quality: 2.0,
-          scale: 1.5,
-          pageFormat: m.PageFormat.a4,
-          margins: 10,
-        ),
+          final overrideResp = await makeRequest(
+            body: jsonEncode({
+              'op': 'sendInvoice',
+              'recipient': recipientAddress,
+              'timestamp': timestampLabel,
+            }).toJS,
+          );
+          serverCaseId = overrideResp.armCaseId;
+          if (!overrideResp.ok) {
+            throw StateError('Pre-flight request to LAD server failed.');
+          }
+
+          final response = await web.window
+              .fetch(
+                'https://axis-server-850501828016.asia-southeast1.run.app/api/'
+                    .toJS,
+                web.RequestInit(
+                  method: 'POST',
+                  body: file,
+                ),
+              )
+              .toDart;
+          serverCaseId = response.headers.get('x-arm-case-id') ?? serverCaseId;
+          if (!response.ok) {
+            throw StateError(
+              'LAD server encountered an issue while sending the invoice.',
+            );
+          }
+        },
       );
-
-      final file = web.File(
-        [
-          bytes.toJS as JSAny,
-        ].toJS,
-        'invoice.pdf',
-      );
-
-      final overrideResp = await makeRequest(
-        body: jsonEncode({
-          'op': 'sendInvoice',
-          'recipient': recipientAddress,
-          'timestamp': timestampLabel,
-        }).toJS,
-      );
-
-      final String msg;
-      if (!overrideResp.ok) {
-        msg = 'Pre-flight request to LAD server failed.';
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(msg)));
-        }
-        return false;
-      } else {
-        final response = await web.window
-            .fetch(
-              'https://axis-server-850501828016.asia-southeast1.run.app/api/'
-                  .toJS,
-              web.RequestInit(
-                method: 'POST',
-                body: file,
-              ),
-            )
-            .toDart;
-
-        if (response.ok) {
-          msg = 'Invoice sent successfully!';
-        } else {
-          msg = 'LAD server encountered an issue while sending the invoice.';
-        }
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(msg)));
-        }
-        return response.ok;
-      }
-    } catch (e, st) {
-      print('Error sending invoice email: $e\n$st');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate/send invoice: $e')),
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(
+          const SnackBar(content: Text('Invoice sent successfully!')),
         );
       }
+      return true;
+    } catch (e, st) {
+      print('Error sending invoice email: $e\n$st');
+      showArmSnackBar(
+        context,
+        'Failed to generate/send invoice.',
+        caseId: serverCaseId ?? clientCaseId,
+      );
       return false;
     }
   }

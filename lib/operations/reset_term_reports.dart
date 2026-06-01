@@ -14,9 +14,19 @@ class ResetTermReportsOperation {
   });
 
   Future<void> executeInSequence(String termName) async {
-    await archiveAllClassAttendanceSheets(termName);
-    // await rollOverTeacherSessionCounts();
-    await resetAllClassAttendanceSheets();
+    await runArmTrackedAction<void>(
+      feature: 'term_management',
+      operation: 'reset_term_reports',
+      severity: ArmSeverity.serious,
+      category: 'data_integrity',
+      tags: <String, dynamic>{'termName': termName},
+      recoverySnapshotBuilder: () => <String, dynamic>{'termName': termName},
+      action: () async {
+        await archiveAllClassAttendanceSheets(termName);
+        // await rollOverTeacherSessionCounts();
+        await resetAllClassAttendanceSheets();
+      },
+    );
   }
 
   Future<void> archiveAllClassAttendanceSheets(String termName) async {

@@ -82,7 +82,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               'Full Name',
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -102,7 +104,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               'Student Contact Number',
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -126,7 +130,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               'Invoicing Email',
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -145,7 +151,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               "School Name",
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -169,7 +177,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               "Parent's Name",
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -188,7 +198,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               "Parent's Contact Number",
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -213,7 +225,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               "Full Address",
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -233,7 +247,9 @@ class OnboardingPageState extends State<OnboardingPage> {
                             Text(
                               "Postal Code",
                               style: heading3.copyWith(
-                                color: AxisColors.lilacPurple50.withValues(alpha: 0.9),
+                                color: AxisColors.lilacPurple50.withValues(
+                                  alpha: 0.9,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -312,35 +328,73 @@ class OnboardingPageState extends State<OnboardingPage> {
                     width: 90,
                     onPressed: () async {
                       final String msg;
+                      String? clientCaseId;
                       if (nameController.text != '' &&
                           hpController.text != '' &&
                           parentsHpController.text != '' &&
                           parentsNameController.text != '' &&
                           selections.isNotEmpty) {
-                        await firestore
-                            .collection('global')
-                            .doc('state')
-                            .collection('pendingOnboarding')
-                            .add(
-                              OnboardingStudentData(
-                                studentContactNo: hpController.text,
-                                studentName: nameController.text,
-                                email: emailController.text,
-                                parentContactNo: parentsNameController.text,
-                                parentName: parentsHpController.text,
-                                school: schoolController.text,
-                                address: addressController.text,
-                                postalCode: postalCodeController.text,
-                                subjectCombi: subjectCombi.text,
-                                referralCode:
-                                    referralCodeController.text.trim().isEmpty
-                                    ? null
-                                    : referralCodeController.text.trim(),
-                                classes: selections.map((s) => s.id).toList(),
-                              ).toJson(),
-                            );
-                        msg =
-                            "Onboarding information submitted for admin's review successfully.";
+                        try {
+                          await runArmTrackedAction<void>(
+                            feature: 'student_onboarding',
+                            operation: 'submit_pending_onboarding',
+                            severity: ArmSeverity.moderate,
+                            category: 'data_integrity',
+                            captureScreenshot: true,
+                            tags: <String, dynamic>{
+                              'selectedClassCount': selections.length,
+                            },
+                            recoverySnapshotBuilder: () => <String, dynamic>{
+                              'studentName': nameController.text.trim(),
+                              'email': emailController.text.trim(),
+                              'parentName': parentsNameController.text.trim(),
+                              'selectedClassIds': selections
+                                  .map((selection) => selection.id)
+                                  .toList(growable: false),
+                            },
+                            onReported: (result) {
+                              clientCaseId = result.caseId;
+                            },
+                            action: () async {
+                              await firestore
+                                  .collection('global')
+                                  .doc('state')
+                                  .collection('pendingOnboarding')
+                                  .add(
+                                    OnboardingStudentData(
+                                      studentContactNo: hpController.text,
+                                      studentName: nameController.text,
+                                      email: emailController.text,
+                                      parentContactNo:
+                                          parentsNameController.text,
+                                      parentName: parentsHpController.text,
+                                      school: schoolController.text,
+                                      address: addressController.text,
+                                      postalCode: postalCodeController.text,
+                                      subjectCombi: subjectCombi.text,
+                                      referralCode:
+                                          referralCodeController.text
+                                              .trim()
+                                              .isEmpty
+                                          ? null
+                                          : referralCodeController.text.trim(),
+                                      classes: selections
+                                          .map((s) => s.id)
+                                          .toList(),
+                                    ).toJson(),
+                                  );
+                            },
+                          );
+                          msg =
+                              "Onboarding information submitted for admin's review successfully.";
+                        } catch (_) {
+                          showArmSnackBar(
+                            context,
+                            'Failed to submit onboarding information.',
+                            caseId: clientCaseId,
+                          );
+                          return;
+                        }
                       } else {
                         msg =
                             "Ensure no fields are empty, and all questions are answered.";
