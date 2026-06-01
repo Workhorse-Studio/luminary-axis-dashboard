@@ -2,25 +2,27 @@ part of axis_dashboard;
 
 final menuEntryStyle = ButtonStyle(
   foregroundColor: WidgetStatePropertyAll(
-    StakentColors.textPrimary,
+    AxisColors.lilacPurple20,
   ),
-  textStyle: WidgetStatePropertyAll(StakentTextStyles.labelMedium),
+  textStyle: WidgetStatePropertyAll(buttonLabel),
   backgroundColor: WidgetStateColor.resolveWith((states) {
     if (states.contains(WidgetState.hovered)) {
-      return StakentColors.surfaceHover;
+      return Color.alphaBlend(
+        AxisColors.lilacPurple20.withValues(alpha: 0.1),
+        AxisColors.blackPurple30,
+      );
     } else {
-      return StakentColors.surfaceInput;
+      return AxisColors.blackPurple30;
     }
   }),
 );
 
 final BoxDecoration dialogForegroundDecoration = BoxDecoration(
-  borderRadius: BorderRadius.circular(16),
-  border: Border.all(color: StakentColors.borderSubtle),
-  color: StakentColors.bgElevated,
+  borderRadius: BorderRadius.circular(10),
+  border: Border.all(color: AxisColors.blackPurple20),
 );
 
 Widget axisIcon(IconData iconData) => Icon(
   iconData,
-  color: StakentColors.textSecondary,
+  color: AxisColors.blackPurple30.withValues(alpha: 0.4),
 );

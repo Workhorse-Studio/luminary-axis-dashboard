@@ -17,38 +17,18 @@ class Navbar extends StatefulWidget {
 }
 
 class NavbarState extends State<Navbar> {
-  late final StreamSubscription sub;
+  late final sub;
 
   @override
   void initState() {
     sub = auth.authStateChanges().listen((_) {
-      if (mounted) setState(() {});
+      setState(() {});
     });
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentRoute =
-        ModalRoute.of(context)?.settings.name ?? Routes.dashboard.slug;
-
-    // Generate navigation items for sidebar
-    final navItems = Routes.values
-        .where(
-          (r) =>
-              !const [Routes.login, Routes.dev, Routes.students].contains(r) &&
-              hasRolesForRoute(r),
-        )
-        .map(
-          (r) => NavItem(
-            label: r.label,
-            icon: r.icon,
-            route: r.slug,
-            isNew: r == Routes.invoicing, // Example badge
-          ),
-        )
-        .toList();
-
     return Scaffold(
       backgroundColor: AxisColors.blackPurple50,
       body: Builder(builder: widget.body),
@@ -169,8 +149,8 @@ class NavbarState extends State<Navbar> {
   }
 
   @override
-  void dispose() {
-    sub.cancel();
+  void dispose() async {
+    await sub.cancel();
     super.dispose();
   }
 }

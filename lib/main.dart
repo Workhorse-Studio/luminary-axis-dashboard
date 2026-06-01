@@ -19,7 +19,6 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:flutter_to_pdf/export_frame.dart' as pdf;
 import 'options.dart';
-import 'components_v2/stakent_design_system.dart';
 
 part './pages/dashboard.dart';
 part './pages/syllabus.dart';
@@ -242,49 +241,43 @@ class AxisDashboardAppState extends State<AxisDashboardApp> {
           ),
           Routes.login.slug: (_) => LoginPage(),
         },
-                theme: ThemeData(
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: StakentColors.bgPrimary,
-          dialogBackgroundColor: StakentColors.bgElevated,
-          canvasColor: StakentColors.bgSecondary,
-          appBarTheme: AppBarTheme(
-            backgroundColor: StakentColors.bgSecondary,
-            elevation: 0,
-            shape: Border(
-              bottom: BorderSide(color: StakentColors.borderSubtle),
-            ),
-          ),
+        theme: ThemeData(
           iconButtonTheme: IconButtonThemeData(
             style: ButtonStyle(
               backgroundColor: WidgetStateColor.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return StakentColors.surfacePressed;
+                  return AxisColors.blackPurple30.withValues(alpha: 0.35);
                 } else if (states.contains(WidgetState.hovered)) {
-                  return StakentColors.surfaceHover;
+                  return AxisColors.blackPurple30.withValues(alpha: 0.4);
                 } else {
                   return Colors.transparent;
                 }
               }),
               iconColor: WidgetStatePropertyAll(
-                StakentColors.textSecondary,
+                AxisColors.blackPurple20,
               ),
             ),
           ),
           dropdownMenuTheme: DropdownMenuThemeData(
             inputDecorationTheme: InputDecorationTheme(
-              fillColor: StakentColors.surfaceInput,
-              filled: true,
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: StakentColors.borderSubtle),
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: AxisColors.blackPurple20),
               ),
+
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: StakentColors.purplePrimary),
+                borderRadius: BorderRadius.circular(20),
+                borderSide: BorderSide(color: AxisColors.blackPurple20),
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(20),
               ),
+            ),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: AxisColors.blackPurple50,
+            shape: Border(
+              bottom: BorderSide(color: AxisColors.blackPurple30Blur),
             ),
           ),
         ),
