@@ -17,9 +17,30 @@ class AttendanceDialogState extends State<AttendanceDialog> {
   List<({StudentData data, String id})> studentsData = [];
   AttendanceType selectedBulkType = AttendanceType.presentPhysical;
   final Set<String> selectedStudentIds = {};
-  int nextSessionNumber = 1;
-  List<String> existingSessionLabels = [];
+  Map<String, int> sessionsLoggedByStudent = {};
   DateTime date = DateTime.now();
+  int refreshNonce = 0;
+
+  int _sessionsLoggedForStudent({
+    required Map<String, Map<String, AttendanceType>> attendance,
+    required Iterable<String> sessionKeys,
+    required String studentId,
+  }) => sessionKeys.where((sessionKey) {
+    return attendance[sessionKey]?[studentId]?.isPresent ?? false;
+  }).length;
+
+  String? _latestPresentSessionKeyForStudent({
+    required Map<String, Map<String, AttendanceType>> attendance,
+    required Iterable<String> sessionKeys,
+    required String studentId,
+  }) {
+    for (final sessionKey in sessionKeys) {
+      if (attendance[sessionKey]?[studentId]?.isPresent ?? false) {
+        return sessionKey;
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +52,7 @@ class AttendanceDialogState extends State<AttendanceDialog> {
         child: Scaffold(
           backgroundColor: AxisColors.blackPurple50,
           body: FutureBuilderTemplate(
-            key: ValueKey(date),
+            key: ValueKey((date, refreshNonce)),
             future: () async {
               final classDoc = await firestore
                   .collection('classes')
@@ -66,19 +87,19 @@ class AttendanceDialogState extends State<AttendanceDialog> {
               selectedStudentIds.removeWhere(
                 (id) => !studentsData.any((student) => student.id == id),
               );
-              nextSessionNumber = nextAttendanceSessionNumberForDate(
-                classData.attendance.keys,
-                date,
-              );
-              existingSessionLabels =
+              final sessionKeysForDate =
                   classData.attendance.keys
                       .where((k) => attendanceKeyMatchesDate(k, date))
                       .toList()
                     ..sort(compareAttendanceKeys);
-              existingSessionLabels = [
-                for (final k in existingSessionLabels)
-                  attendanceSessionLabel(k),
-              ];
+              sessionsLoggedByStudent = {
+                for (final student in fetchedStudentsData)
+                  student.id: _sessionsLoggedForStudent(
+                    attendance: classData.attendance,
+                    sessionKeys: sessionKeysForDate,
+                    studentId: student.id,
+                  ),
+              };
               return 0;
             }(),
             builder: (ctx, snapshot) {
@@ -88,6 +109,11 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   selectedStudentIds.length == studentsData.length;
               final bool hasPartialSelection =
                   selectedStudentIds.isNotEmpty && !allSelected;
+              final bool canDeleteSelected =
+                  selectedStudentIds.isNotEmpty &&
+                  selectedStudentIds.every(
+                    (id) => (sessionsLoggedByStudent[id] ?? 0) > 0,
+                  );
 
               return Stack(
                 children: [
@@ -149,6 +175,14 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                             ),
                             DataColumn(
                               label: Text(
+                                'Sessions Logged',
+                                style: body2.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            DataColumn(
+                              label: Text(
                                 'School',
                                 style: body2.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -180,6 +214,12 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                                   DataCell(
                                     Text(
                                       student.data.name,
+                                      style: body2,
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      '${sessionsLoggedByStudent[student.id] ?? 0}',
                                       style: body2,
                                     ),
                                   ),
@@ -270,18 +310,6 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                                   }),
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Text(
-                                'Next Session: S$nextSessionNumber',
-                                style: body2,
-                              ),
-                              if (existingSessionLabels.isNotEmpty) ...[
-                                const SizedBox(width: 16),
-                                Text(
-                                  'Existing: ${existingSessionLabels.join(', ')}',
-                                  style: body2,
-                                ),
-                              ],
                               const Spacer(),
                               AxisButton.text(
                                 width: 200,
@@ -340,9 +368,120 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                                             });
                                         studentAttendanceStore.markStale();
                                         if (context.mounted) {
-                                          Navigator.of(
-                                            ctx,
-                                          ).pop(true);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Attendance updated successfully!',
+                                              ),
+                                            ),
+                                          );
+                                          setState(() {
+                                            refreshNonce += 1;
+                                          });
+                                        }
+                                      },
+                              ),
+                              const SizedBox(width: 12),
+                              AxisButton.text(
+                                width: 220,
+                                label:
+                                    'Delete Session (${selectedStudentIds.length})',
+                                icon: Icons.playlist_remove,
+                                onPressed: !canDeleteSelected
+                                    ? null
+                                    : () async {
+                                        final classDoc = await firestore
+                                            .collection('classes')
+                                            .doc(widget.classId)
+                                            .get();
+                                        final classData = ClassData.fromJson(
+                                          classDoc.data()!,
+                                        );
+                                        final sessionKeysForDate =
+                                            classData.attendance.keys
+                                                .where(
+                                                  (key) =>
+                                                      attendanceKeyMatchesDate(
+                                                        key,
+                                                        date,
+                                                      ),
+                                                )
+                                                .toList()
+                                              ..sort(
+                                                (a, b) => compareAttendanceKeys(
+                                                  b,
+                                                  a,
+                                                ),
+                                              );
+                                        final updatedAttendance = {
+                                          for (final entry
+                                              in classData.attendance.entries)
+                                            entry.key:
+                                                Map<
+                                                  String,
+                                                  AttendanceType
+                                                >.from(
+                                                  entry.value,
+                                                ),
+                                        };
+
+                                        for (final studentId
+                                            in selectedStudentIds) {
+                                          final sessionKey =
+                                              _latestPresentSessionKeyForStudent(
+                                                attendance: updatedAttendance,
+                                                sessionKeys: sessionKeysForDate,
+                                                studentId: studentId,
+                                              );
+                                          if (sessionKey == null) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'One or more selected students no longer has a session to delete.',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                            return;
+                                          }
+
+                                          updatedAttendance[sessionKey]![studentId] =
+                                              AttendanceType.absent;
+                                        }
+
+                                        updatedAttendance.removeWhere(
+                                          (_, attendanceByStudent) =>
+                                              attendanceByStudent.values.every(
+                                                (status) => !status.isPresent,
+                                              ),
+                                        );
+
+                                        await firestore
+                                            .collection('classes')
+                                            .doc(widget.classId)
+                                            .update({
+                                              'attendance': updatedAttendance
+                                                  .toJson(),
+                                            });
+                                        studentAttendanceStore.markStale();
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Attendance updated successfully!',
+                                              ),
+                                            ),
+                                          );
+                                          setState(() {
+                                            refreshNonce += 1;
+                                          });
                                         }
                                       },
                               ),

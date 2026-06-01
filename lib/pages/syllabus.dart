@@ -70,22 +70,13 @@ class SyllabusPageState extends State<SyllabusPage> {
                               label: 'Manage Attendance',
                               icon: Icons.ballot,
                               onPressed: () async {
-                                final bool? result = await showDialog(
+                                await showDialog(
                                   context: context,
                                   builder: (_) =>
                                       AttendanceDialog(classId: cl.$1),
                                 );
-                                final String msg;
-                                if (result != null) {
-                                  msg = "Attendance updated successfully!";
-                                  setState(() {});
-                                } else {
-                                  msg = "Attendance taking aborted";
-                                }
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(
-                                    context,
-                                  ).showSnackBar(SnackBar(content: Text(msg)));
+                                  setState(() {});
                                 }
                               },
                             ),
