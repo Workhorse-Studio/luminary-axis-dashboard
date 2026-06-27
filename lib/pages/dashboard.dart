@@ -623,15 +623,26 @@ class DashboardPageState extends State<DashboardPage> {
                                     }).toJS,
                                   );
                                   serverCaseId = res.armCaseId;
-                                  if (!res.ok ||
-                                      res.body == null ||
-                                      !res.body!.containsKey('uid')) {
-                                    throw StateError(
-                                      'Teacher registration request failed.',
+                                  if (!res.ok) {
+                                    throwArmResponseFailure(
+                                      statusCode: res.statusCode,
+                                      body: res.body,
+                                      rawBody: res.rawBody,
+                                      armCaseId: res.armCaseId,
                                     );
                                   }
+                                  final body = res.body;
+                                  if (body == null ||
+                                      !body.containsKey('uid')) {
+                                    throw body ??
+                                        <String, Object?>{
+                                          'statusCode': res.statusCode,
+                                          if (res.rawBody.trim().isNotEmpty)
+                                            'rawBody': res.rawBody,
+                                        };
+                                  }
 
-                                  final String uid = res.body!['uid'] as String;
+                                  final String uid = body['uid'] as String;
                                   for (final template
                                       in tData.offeredClassTemplates) {
                                     bool exists = false;

@@ -232,7 +232,9 @@ class InvoicingPageState extends State<InvoicingPage> {
                       .get();
                   if (!invDoc.exists) continue;
 
-                  final invData = TeacherInvoiceData.fromJson(invDoc.data()!);
+                  final invData = TeacherInvoiceData.fromJson(
+                    invDoc.data()!,
+                  ).withAgencyDetailsFromTeacher(teacherData);
 
                   if (await sendInvoiceEmail(
                     teacherData.email,
@@ -547,19 +549,78 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   TextEditingController getStudentRemarksController({
     required String fieldKey,
-    required StudentInvoiceData data,
+    String initialText = '',
+    bool syncExistingText = false,
   }) {
     final existing = studentRemarksControllers[fieldKey];
     if (existing != null) {
-      if (existing.text != data.remarks) {
-        existing.text = data.remarks;
+      if (syncExistingText && existing.text != initialText) {
+        existing.text = initialText;
       }
       return existing;
     }
 
-    final controller = TextEditingController(text: data.remarks);
+    final controller = TextEditingController(text: initialText);
     studentRemarksControllers[fieldKey] = controller;
     return controller;
+  }
+
+  Widget buildStudentRemarksField({
+    required int termIndex,
+    required String studentId,
+    StudentInvoiceData? studentInvData,
+  }) {
+    final fieldKey = studentRemarksFieldKey(
+      termIndex: termIndex,
+      studentId: studentId,
+    );
+    final hasInvoice = studentInvData != null;
+
+    return SizedBox(
+      width: 180,
+      child: TextField(
+        key: ValueKey('remarks-$fieldKey'),
+        controller: getStudentRemarksController(
+          fieldKey: fieldKey,
+          initialText: studentInvData?.remarks ?? '',
+          syncExistingText: hasInvoice,
+        ),
+        style: body2,
+        readOnly: !hasInvoice,
+        decoration: InputDecoration(
+          hint: Text(
+            hasInvoice ? 'Remarks' : 'No invoice yet',
+            style: body2.copyWith(
+              color: AxisColors.blackPurple20.withValues(alpha: 0.5),
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: hasInvoice
+                  ? AxisColors.lilacPurple20
+                  : AxisColors.blackPurple20.withValues(alpha: 0.35),
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: hasInvoice
+                  ? AxisColors.lilacPurple50.withValues(alpha: 0.7)
+                  : AxisColors.blackPurple20.withValues(alpha: 0.35),
+            ),
+          ),
+        ),
+        onChanged: hasInvoice
+            ? (text) {
+                scheduleSaveStudentRemarks(
+                  termIndex: termIndex,
+                  studentId: studentId,
+                  fieldKey: fieldKey,
+                  remarks: text,
+                );
+              }
+            : null,
+      ),
+    );
   }
 
   Future<void> saveStudentRemarks({
@@ -625,6 +686,8 @@ class InvoicingPageState extends State<InvoicingPage> {
     final List<DataCell> res = [];
     if (studentData != null) {
       for (int i = 0; i < globalState!.terms.length; i++) {
+        final studentInvData =
+            studentAttendanceStore.invoicesData[i][studentData.id];
         res.add(
           DataCell(
             Center(
@@ -634,66 +697,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                 height: 100,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children:
-                      studentAttendanceStore.invoicesData[i].containsKey(
-                        studentData.id,
-                      )
+                  children: studentInvData != null
                       ? [
                           const SizedBox(width: 10),
                           Text(
-                            "\$${studentAttendanceStore.invoicesData[i][studentData.id]!.amtPayable.toStringAsFixed(2)}",
+                            "\$${studentInvData.amtPayable.toStringAsFixed(2)}",
                             style: body2,
                           ),
                           const SizedBox(width: 10),
-                          (() {
-                            final studentInvData = studentAttendanceStore
-                                .invoicesData[i][studentData.id]!;
-                            final fieldKey = studentRemarksFieldKey(
-                              termIndex: i,
-                              studentId: studentData.id,
-                            );
-                            return SizedBox(
-                              width: 180,
-                              child: TextField(
-                                key: ValueKey('remarks-$fieldKey'),
-                                controller: getStudentRemarksController(
-                                  fieldKey: fieldKey,
-                                  data: studentInvData,
-                                ),
-                                style: body2,
-                                decoration: InputDecoration(
-                                  hint: Text(
-                                    'Remarks',
-                                    style: body2.copyWith(
-                                      color: AxisColors.blackPurple20
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: AxisColors.lilacPurple20,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: AxisColors.lilacPurple50
-                                          .withValues(
-                                            alpha: 0.7,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                onChanged: (text) {
-                                  scheduleSaveStudentRemarks(
-                                    termIndex: i,
-                                    studentId: studentData.id,
-                                    fieldKey: fieldKey,
-                                    remarks: text,
-                                  );
-                                },
-                              ),
-                            );
-                          })(),
+                          buildStudentRemarksField(
+                            termIndex: i,
+                            studentId: studentData.id,
+                            studentInvData: studentInvData,
+                          ),
                           const Spacer(),
                           AxisButton.text(
                             width: 100,
@@ -701,9 +717,6 @@ class InvoicingPageState extends State<InvoicingPage> {
                             icon: Icons.edit,
                             label: 'Edit',
                             onPressed: () async {
-                              final studentInvData = studentAttendanceStore
-                                  .invoicesData[i][studentData.id]!;
-
                               if (context.mounted) {
                                 await showDialog(
                                   context: context,
@@ -833,22 +846,19 @@ class InvoicingPageState extends State<InvoicingPage> {
                           ),
                         ]
                       : [
-                          Text(
-                            'No Invoice',
-                            style: body2,
+                          const SizedBox(width: 10),
+                          buildStudentRemarksField(
+                            termIndex: i,
+                            studentId: studentData.id,
                           ),
+                          const SizedBox(width: 16),
+                          Text('No Invoice', style: body2),
                         ],
                 ),
               ),
             ),
-            onTap:
-                studentAttendanceStore.invoicesData[i].containsKey(
-                  studentData.id,
-                )
+            onTap: studentInvData != null
                 ? () async {
-                    final studentInvData =
-                        studentAttendanceStore.invoicesData[i][studentData.id]!;
-
                     if (context.mounted) {
                       await showDialog(
                         context: context,
@@ -976,11 +986,17 @@ class InvoicingPageState extends State<InvoicingPage> {
                                   .doc(invoiceId)
                                   .get();
                               if (!doc.exists || doc.data() == null) return;
-                              final invData = TeacherInvoiceData.fromJson(
-                                doc.data()!,
+                              final currentTeacherData = TeacherData.fromJson(
+                                teacherData.data()!,
                               );
+                              final invData =
+                                  TeacherInvoiceData.fromJson(
+                                    doc.data()!,
+                                  ).withAgencyDetailsFromTeacher(
+                                    currentTeacherData,
+                                  );
                               await sendInvoiceEmail(
-                                TeacherData.fromJson(teacherData.data()!).email,
+                                currentTeacherData.email,
                                 TeacherInvoiceWidget(
                                   showFonts: false,
                                   teacherInvoiceData: invData,
@@ -1010,7 +1026,12 @@ class InvoicingPageState extends State<InvoicingPage> {
                   .get();
               if (!doc.exists || doc.data() == null) return;
 
-              final teacherInvData = TeacherInvoiceData.fromJson(doc.data()!);
+              final teacherInvData =
+                  TeacherInvoiceData.fromJson(
+                    doc.data()!,
+                  ).withAgencyDetailsFromTeacher(
+                    TeacherData.fromJson(teacherData.data()!),
+                  );
 
               if (context.mounted) {
                 await showDialog(
@@ -1193,11 +1214,17 @@ class InvoicingPageState extends State<InvoicingPage> {
               'op': 'sendInvoice',
               'recipient': recipientAddress,
               'timestamp': timestampLabel,
+              'includeFeeStructure': widget is StudentInvoiceWidget,
             }).toJS,
           );
           serverCaseId = overrideResp.armCaseId;
           if (!overrideResp.ok) {
-            throw StateError('Pre-flight request to LAD server failed.');
+            throwArmResponseFailure(
+              statusCode: overrideResp.statusCode,
+              body: overrideResp.body,
+              rawBody: overrideResp.rawBody,
+              armCaseId: overrideResp.armCaseId,
+            );
           }
 
           final response = await web.window
@@ -1212,8 +1239,12 @@ class InvoicingPageState extends State<InvoicingPage> {
               .toDart;
           serverCaseId = response.headers.get('x-arm-case-id') ?? serverCaseId;
           if (!response.ok) {
-            throw StateError(
-              'LAD server encountered an issue while sending the invoice.',
+            final rawBody = (await response.text().toDart).toDart;
+            throwArmResponseFailure(
+              statusCode: response.status,
+              body: tryDecodeJsonObject(rawBody),
+              rawBody: rawBody,
+              armCaseId: serverCaseId,
             );
           }
         },
@@ -1253,13 +1284,10 @@ class InvoicingPageState extends State<InvoicingPage> {
           return false;
         }
       }
-      return a.teacherName == b.teacherName &&
-          a.address == b.address &&
-          a.agencyName == b.agencyName &&
-          a.addressLine1 == b.addressLine1 &&
-          a.addressLine2 == b.addressLine2 &&
-          a.phoneNum == b.phoneNum &&
-          a.email == b.email &&
+      return a.agencyName == b.agencyName &&
+          a.agencyContact == b.agencyContact &&
+          a.agencyEmail == b.agencyEmail &&
+          a.agencyAddress == b.agencyAddress &&
           a.dueDateFormatted == b.dueDateFormatted;
     }
 
@@ -1304,7 +1332,6 @@ class InvoicingPageState extends State<InvoicingPage> {
         DocumentReference<JSON> docRef;
         final candidate = TeacherInvoiceData(
           invoiceDateFormatted: generatedAt.toTimestampStringShort(),
-          address: '',
           amtDue: payout,
           dueDateFormatted: generatedAt
               .add(const Duration(days: 14))
@@ -1325,11 +1352,9 @@ class InvoicingPageState extends State<InvoicingPage> {
           agencyName: teacherData.agencyName.isNotEmpty
               ? teacherData.agencyName
               : teacherData.name,
-          teacherName: teacherData.name,
-          addressLine1: teacherData.addressLine1,
-          addressLine2: teacherData.addressLine2,
-          phoneNum: teacherData.phoneNum,
-          email: teacherData.email,
+          agencyContact: teacherData.agencyContact,
+          agencyEmail: teacherData.agencyEmail,
+          agencyAddress: teacherData.agencyAddress,
         );
 
         if (teacherData.invoiceIds.containsKey(monthEntry.key)) {

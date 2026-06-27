@@ -6,6 +6,35 @@ final ArmCaptureBoundaryController armCaptureBoundaryController =
 final NavigatorObserver armNavigationObserver = _ArmNavigationObserver();
 String _currentArmRoute = kDebugMode ? Routes.dev.slug : Routes.login.slug;
 
+class ArmLinkedServerFailure implements Exception {
+  const ArmLinkedServerFailure({
+    required this.caseId,
+    this.statusCode,
+    this.body,
+    this.rawBody,
+  });
+
+  final String caseId;
+  final int? statusCode;
+  final JSON? body;
+  final String? rawBody;
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+    'caseId': caseId,
+    if (statusCode != null) 'statusCode': statusCode,
+    if (body != null) 'body': body,
+    if (rawBody != null && rawBody!.trim().isNotEmpty) 'rawBody': rawBody,
+  };
+
+  @override
+  String toString() => jsonEncode(<String, dynamic>{
+    'serverArmCaseId': caseId,
+    if (statusCode != null) 'statusCode': statusCode,
+    if (body != null) 'body': body,
+    if (rawBody != null && rawBody!.trim().isNotEmpty) 'rawBody': rawBody,
+  });
+}
+
 void initializeArmClient() {
   armClient = ArmClient(
     sink: FirebaseArmSink(
@@ -49,9 +78,10 @@ Future<T> runArmTrackedAction<T>({
   bool captureScreenshot = false,
   FutureOr<void> Function(ArmCaptureResult result)? onReported,
 }) {
-  return armClient.runTracked<T>(
+  return _runArmTrackedAction<T>(
     feature: feature,
     operation: operation,
+    action: action,
     severity: severity,
     category: category,
     tags: tags,
@@ -59,7 +89,6 @@ Future<T> runArmTrackedAction<T>({
     screenshotCapture:
         screenshotCapture ??
         (captureScreenshot ? armCaptureBoundaryController.capturePng : null),
-    action: action,
     onReported: onReported,
   );
 }
@@ -125,6 +154,68 @@ class _ArmNavigationObserver extends NavigatorObserver {
     if (settingsName != null && settingsName.isNotEmpty) {
       return settingsName;
     }
-    return route == null ? null : route.runtimeType.toString();
+    return route?.runtimeType.toString();
+  }
+}
+
+Future<T> _runArmTrackedAction<T>({
+  required String feature,
+  required String operation,
+  required Future<T> Function() action,
+  required ArmSeverity severity,
+  required String category,
+  required Map<String, dynamic>? tags,
+  required ArmSnapshotBuilder? recoverySnapshotBuilder,
+  required ArmScreenshotCapture? screenshotCapture,
+  required FutureOr<void> Function(ArmCaptureResult result)? onReported,
+}) async {
+  try {
+    armClient.addBreadcrumb(
+      '$feature.$operation started',
+      level: 'info',
+      category: 'operation',
+    );
+    final result = await action();
+    armClient.addBreadcrumb(
+      '$feature.$operation completed',
+      level: 'info',
+      category: 'operation',
+    );
+    return result;
+  } catch (error, stackTrace) {
+    if (error is ArmLinkedServerFailure) {
+      armClient.addBreadcrumb(
+        '$feature.$operation linked to server ARM case',
+        level: 'warn',
+        category: 'arm',
+        data: error.toMap(),
+      );
+      rethrow;
+    }
+
+    try {
+      final capture = await armClient.captureException(
+        error: error,
+        stackTrace: stackTrace,
+        feature: feature,
+        operation: operation,
+        severity: severity,
+        category: category,
+        tags: tags,
+        recoverySnapshotBuilder: recoverySnapshotBuilder,
+        screenshotCapture: screenshotCapture,
+        handled: true,
+      );
+      if (onReported != null) {
+        await onReported(capture);
+      }
+    } catch (captureError) {
+      armClient.addBreadcrumb(
+        'ARM capture failed: $captureError',
+        level: 'error',
+        category: 'arm',
+      );
+    }
+    rethrow;
   }
 }

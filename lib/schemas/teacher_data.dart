@@ -6,9 +6,9 @@ class TeacherData extends JSONSerialisable {
   final String name;
   final String email;
   final String agencyName;
-  final String addressLine1;
-  final String addressLine2;
-  final String phoneNum;
+  final String agencyContact;
+  final String agencyEmail;
+  final String agencyAddress;
   final List<String> offeredClassTemplates;
 
   /// Maps a month's ID to the invoice ID of the teacher for that term
@@ -20,9 +20,9 @@ class TeacherData extends JSONSerialisable {
     required this.classIds,
     required this.email,
     this.agencyName = '',
-    this.addressLine1 = '',
-    this.addressLine2 = '',
-    this.phoneNum = '',
+    this.agencyContact = '',
+    this.agencyEmail = '',
+    this.agencyAddress = '',
     required this.invoiceIds,
     required this.offeredClassTemplates,
   });
@@ -32,9 +32,10 @@ class TeacherData extends JSONSerialisable {
       role = json['role'] as String,
       email = json['email'] as String,
       agencyName = (json['agencyName'] as String?) ?? (json['name'] as String),
-      addressLine1 = (json['addressLine1'] as String?) ?? '',
-      addressLine2 = (json['addressLine2'] as String?) ?? '',
-      phoneNum = (json['phoneNum'] as String?) ?? '',
+      agencyContact = (json['agencyContact'] as String?) ?? '',
+      agencyEmail =
+          (json['agencyEmail'] as String?) ?? (json['email'] as String?) ?? '',
+      agencyAddress = (json['agencyAddress'] as String?) ?? '',
       invoiceIds = (json['invoiceIds'] as Map).cast(),
       offeredClassTemplates = (json['offeredClassTemplates'] as List).cast(),
       classIds = (json['classes'] as List).cast();
@@ -47,9 +48,9 @@ class TeacherData extends JSONSerialisable {
     'classes': classIds,
     'email': email,
     'agencyName': agencyName,
-    'addressLine1': addressLine1,
-    'addressLine2': addressLine2,
-    'phoneNum': phoneNum,
+    'agencyContact': agencyContact,
+    'agencyEmail': agencyEmail,
+    'agencyAddress': agencyAddress,
     'offeredClassTemplates': offeredClassTemplates,
   };
 }

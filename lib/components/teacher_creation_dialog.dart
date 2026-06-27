@@ -26,13 +26,15 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
     text: '',
   );
   TextEditingController agencyNameController = TextEditingController(text: '');
-  TextEditingController addressLine1Controller = TextEditingController(
+  TextEditingController agencyContactController = TextEditingController(
     text: '',
   );
-  TextEditingController addressLine2Controller = TextEditingController(
+  TextEditingController agencyEmailController = TextEditingController(
     text: '',
   );
-  TextEditingController phoneNumController = TextEditingController(text: '');
+  TextEditingController agencyAddressController = TextEditingController(
+    text: '',
+  );
   DocumentSnapshot<JSON>? teacherData;
   bool hasInit = false;
 
@@ -80,9 +82,9 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                       teacherNameController.text = teacher.name;
                       teacherEmailController.text = teacher.email;
                       agencyNameController.text = teacher.agencyName;
-                      addressLine1Controller.text = teacher.addressLine1;
-                      addressLine2Controller.text = teacher.addressLine2;
-                      phoneNumController.text = teacher.phoneNum;
+                      agencyContactController.text = teacher.agencyContact;
+                      agencyEmailController.text = teacher.agencyEmail;
+                      agencyAddressController.text = teacher.agencyAddress;
                     }
                     for (final k in classesCache.registry.keys) {
                       isClassSelected[k] = teacher != null
@@ -123,7 +125,7 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                       ),
                       const SizedBox(height: 30),
                       Text(
-                        'Invoice Display Name',
+                        'Teaching Agency Name',
                         style: heading3,
                       ),
                       const SizedBox(height: 10),
@@ -133,33 +135,34 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                       ),
                       const SizedBox(height: 30),
                       Text(
-                        'Invoice Address Line 1',
+                        'Teaching Agency Contact',
                         style: heading3,
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        controller: addressLine1Controller,
+                        controller: agencyContactController,
                         style: body2,
                       ),
                       const SizedBox(height: 30),
                       Text(
-                        'Invoice Address Line 2',
+                        'Teaching Agency Email',
                         style: heading3,
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        controller: addressLine2Controller,
+                        controller: agencyEmailController,
                         style: body2,
                       ),
                       const SizedBox(height: 30),
                       Text(
-                        'Invoice Phone',
+                        'Teaching Agency Address',
                         style: heading3,
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        controller: phoneNumController,
+                        controller: agencyAddressController,
                         style: body2,
+                        maxLines: 3,
                       ),
                       const SizedBox(height: 30),
 
@@ -248,9 +251,9 @@ class TeacherCreationDialogState extends State<TeacherCreationDialog> {
                                     : 'teacher',
                                 email: teacherEmailController.text,
                                 agencyName: agencyNameController.text,
-                                addressLine1: addressLine1Controller.text,
-                                addressLine2: addressLine2Controller.text,
-                                phoneNum: phoneNumController.text,
+                                agencyContact: agencyContactController.text,
+                                agencyEmail: agencyEmailController.text,
+                                agencyAddress: agencyAddressController.text,
                                 classIds: isClassSelected.entries
                                     .where((e) => e.value)
                                     .map((e) => e.key)

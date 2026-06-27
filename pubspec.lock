@@ -60,10 +60,20 @@ packages:
   arm_tooling:
     dependency: "direct main"
     description:
-      name: arm_tooling
-      sha256: "33e7759d77e6d526c7ec6789f441e0ece8d0054bc05d2564786ba835afe47dee"
-      url: "https://pub.dev"
-    source: hosted
+      path: tooling
+      ref: HEAD
+      resolved-ref: "4b341e7b5b14c1c82b706a801c0303f530691b04"
+      url: "https://github.com/Citadel-Platform/ARM.git"
+    source: git
+    version: "0.1.0"
+  arm_tooling_core:
+    dependency: transitive
+    description:
+      path: tooling_core
+      ref: "4b341e7b5b14c1c82b706a801c0303f530691b04"
+      resolved-ref: "4b341e7b5b14c1c82b706a801c0303f530691b04"
+      url: "https://github.com/Citadel-Platform/ARM.git"
+    source: git
     version: "0.1.0"
   async:
     dependency: transitive

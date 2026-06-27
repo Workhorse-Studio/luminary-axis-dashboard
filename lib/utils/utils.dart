@@ -37,7 +37,16 @@ class GenericCache<T> {
 const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
 Random _rnd = Random();
 
-Future<({bool ok, JSON? body, String? armCaseId})> makeRequest({
+Future<
+  ({
+    bool ok,
+    JSON? body,
+    String? armCaseId,
+    int statusCode,
+    String rawBody,
+  })
+>
+makeRequest({
   String url = 'https://axis-server-850501828016.asia-southeast1.run.app/api/',
   String method = 'POST',
   required JSAny body,
@@ -74,24 +83,87 @@ Future<({bool ok, JSON? body, String? armCaseId})> makeRequest({
       category: 'network',
       data: <String, dynamic>{
         'ok': res.ok,
-        if (armCaseId != null) 'armCaseId': armCaseId,
+        'statusCode': res.status,
+        if (armCaseId case final String caseId?) 'armCaseId': caseId,
       },
     );
     return (
       ok: res.ok,
       body: parsedBody,
       armCaseId: armCaseId,
+      statusCode: res.status,
+      rawBody: jsonBodyStr,
     );
-  } catch (e) {
+  } catch (e, st) {
     print('makeRequest error: $e');
     armClient.addBreadcrumb(
       'HTTP $method $url threw',
       level: 'error',
       category: 'network',
-      data: <String, dynamic>{'error': e.toString()},
     );
-    return (ok: false, body: null, armCaseId: null);
+    Error.throwWithStackTrace(e, st);
   }
+}
+
+Never throwArmResponseFailure({
+  required int statusCode,
+  JSON? body,
+  String rawBody = '',
+  String? armCaseId,
+}) {
+  if (armCaseId != null && armCaseId.isNotEmpty) {
+    throw ArmLinkedServerFailure(
+      caseId: armCaseId,
+      statusCode: statusCode,
+      body: body,
+      rawBody: rawBody,
+    );
+  }
+  throw buildArmResponseFailure(
+    statusCode: statusCode,
+    body: body,
+    rawBody: rawBody,
+  );
+}
+
+Object buildArmResponseFailure({
+  required int statusCode,
+  JSON? body,
+  String rawBody = '',
+}) {
+  if (body != null) {
+    if (body['exception'] case final Object exception?) {
+      return exception;
+    }
+    if (body['error'] case final Object error?) {
+      return error;
+    }
+    return <String, Object?>{
+      'statusCode': statusCode,
+      'body': body,
+    };
+  }
+
+  final trimmedBody = rawBody.trim();
+  if (trimmedBody.isNotEmpty) {
+    final parsedBody = tryDecodeJsonObject(trimmedBody);
+    if (parsedBody != null) {
+      return buildArmResponseFailure(statusCode: statusCode, body: parsedBody);
+    }
+    return trimmedBody;
+  }
+
+  return <String, Object?>{'statusCode': statusCode};
+}
+
+JSON? tryDecodeJsonObject(String rawBody) {
+  try {
+    final decoded = jsonDecode(rawBody);
+    if (decoded is Map<String, dynamic>) {
+      return decoded.cast<String, Object?>();
+    }
+  } catch (_) {}
+  return null;
 }
 
 String generateId() => String.fromCharCodes(

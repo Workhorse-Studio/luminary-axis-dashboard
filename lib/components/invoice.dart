@@ -57,6 +57,11 @@ class StudentInvoiceWidget extends StatelessWidget {
 }
 
 class TeacherInvoiceWidget extends StatelessWidget {
+  static const String _axisAgencyName = 'Axis Education Centre';
+  static const String _axisAgencyEmail = 'axiseducationcentre@gmail.com';
+  static const String _axisAgencyAddress = '9 King Albert Park #02-08';
+  static const String _axisAgencyContact = '98775800';
+
   final bool maskEditableFields;
   final TeacherInvoiceData teacherInvoiceData;
   final List<InvoiceEntry>? overrideEntries;
@@ -84,24 +89,21 @@ class TeacherInvoiceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayEntries = overrideEntries ?? teacherInvoiceData.entries;
-    final issuerLines = <String>{
+    final teacherAgencyLines = <String>[
       teacherInvoiceData.agencyName,
-      teacherInvoiceData.addressLine1,
-      teacherInvoiceData.addressLine2,
-      teacherInvoiceData.phoneNum,
-      teacherInvoiceData.email,
-    }.where((line) => line.trim().isNotEmpty).toList();
-    final billToLines = <String>{
-      teacherInvoiceData.teacherName,
-      teacherInvoiceData.address,
-      teacherInvoiceData.addressLine1,
-      teacherInvoiceData.addressLine2,
-      teacherInvoiceData.phoneNum,
-      teacherInvoiceData.email,
-    }.where((line) => line.trim().isNotEmpty).toList();
-    final effectiveBillToLines = billToLines.isEmpty
-        ? issuerLines
-        : billToLines;
+      teacherInvoiceData.agencyContact,
+      teacherInvoiceData.agencyEmail,
+      ...teacherInvoiceData.agencyAddress
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty),
+    ].where((line) => line.trim().isNotEmpty).toList();
+    final axisBillToLines = const <String>[
+      _axisAgencyEmail,
+      _axisAgencyName,
+      _axisAgencyAddress,
+      _axisAgencyContact,
+    ];
 
     TableCell buildCell(
       String text, {
@@ -242,7 +244,7 @@ class TeacherInvoiceWidget extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          for (final line in issuerLines) ...[
+                          for (final line in teacherAgencyLines) ...[
                             Text(
                               line,
                               textAlign: TextAlign.right,
@@ -342,7 +344,7 @@ class TeacherInvoiceWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        for (final line in effectiveBillToLines) ...[
+                        for (final line in axisBillToLines) ...[
                           Text(
                             line,
                             textAlign: TextAlign.right,
@@ -546,6 +548,10 @@ class _InvoiceTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedTerms = terms.trim();
+    final showTermsLine =
+        normalizedTerms.isNotEmpty &&
+        normalizedTerms.toLowerCase() != 'custom';
     final List<DataRow> invoiceRows = [];
     for (int i = 0; i < entries.length; i++) {
       invoiceRows.add(
@@ -719,9 +725,10 @@ class _InvoiceTemplate extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 100),
-                      for (final line in [
+                      for (final line in <String>[
                         'Invoice Date: ${invoiceDateFormatted.padLeft(40, ' ')}',
-                        'Terms:    ${terms.padLeft(40, ' ')}',
+                        if (showTermsLine)
+                          'Terms:    ${normalizedTerms.padLeft(40, ' ')}',
                         '$paymentDateLabel: ${paymentDateFormatted.padLeft(40, ' ')}',
                       ]) ...[
                         Text(

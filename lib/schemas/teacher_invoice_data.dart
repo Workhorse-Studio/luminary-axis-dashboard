@@ -4,13 +4,10 @@ class TeacherInvoiceData extends JSONSerialisable {
   final String invoiceId;
   final String invoiceType;
   final String agencyName;
-  final String addressLine1;
-  final String addressLine2;
-  final String phoneNum;
-  final String email;
+  final String agencyContact;
+  final String agencyEmail;
+  final String agencyAddress;
   final double amtDue;
-  final String teacherName;
-  final String address;
   final String invoiceDateFormatted;
   final String dueDateFormatted;
   final InvoiceStatus invoiceStatus;
@@ -18,39 +15,27 @@ class TeacherInvoiceData extends JSONSerialisable {
 
   const TeacherInvoiceData({
     required this.invoiceDateFormatted,
-    required this.address,
     required this.amtDue,
     required this.dueDateFormatted,
     required this.invoiceStatus,
     required this.entries,
     required this.invoiceId,
     required this.agencyName,
-    required this.teacherName,
-    required this.addressLine1,
-    required this.addressLine2,
-    required this.phoneNum,
-    required this.email,
+    required this.agencyContact,
+    required this.agencyEmail,
+    required this.agencyAddress,
   }) : invoiceType = 'teacher';
 
   TeacherInvoiceData.fromJson(JSON json)
     : invoiceType = (json['invoiceType'] as String?) ?? 'teacher',
       invoiceId = (json['invoiceId'] as String?) ?? '',
-      agencyName =
-          (json['agencyName'] as String?) ??
-          (json['teacherName'] as String?) ??
-          '',
-      addressLine1 = (json['addressLine1'] as String?) ?? '',
-      addressLine2 = (json['addressLine2'] as String?) ?? '',
-      phoneNum = (json['phoneNum'] as String?) ?? '',
-      email = (json['email'] as String?) ?? '',
+      agencyName = (json['agencyName'] as String?) ?? '',
+      agencyContact = (json['agencyContact'] as String?) ?? '',
+      agencyEmail = (json['agencyEmail'] as String?) ?? '',
+      agencyAddress = (json['agencyAddress'] as String?) ?? '',
       amtDue = ((json['amtDue'] as num?) ?? 0).toDouble(),
-      teacherName = (json['teacherName'] as String?) ?? '',
-      address = (json['address'] as String?) ?? '',
       invoiceDateFormatted = (json['invoiceDateFormatted'] as String?) ?? '',
-      dueDateFormatted =
-          (json['dueDateFormatted'] as String?) ??
-          (json['paidDateFormatted'] as String?) ??
-          '',
+      dueDateFormatted = (json['dueDateFormatted'] as String?) ?? '',
       invoiceStatus = InvoiceStatus.fromJson(
         (json['invoiceStatus'] as String?) ?? InvoiceStatus.pendingBilling.name,
       ),
@@ -66,18 +51,31 @@ class TeacherInvoiceData extends JSONSerialisable {
           )
           .toList();
 
+  TeacherInvoiceData withAgencyDetailsFromTeacher(TeacherData teacherData) =>
+      TeacherInvoiceData(
+        invoiceDateFormatted: invoiceDateFormatted,
+        amtDue: amtDue,
+        dueDateFormatted: dueDateFormatted,
+        invoiceStatus: invoiceStatus,
+        entries: entries,
+        invoiceId: invoiceId,
+        agencyName: teacherData.agencyName.isNotEmpty
+            ? teacherData.agencyName
+            : teacherData.name,
+        agencyContact: teacherData.agencyContact,
+        agencyEmail: teacherData.agencyEmail,
+        agencyAddress: teacherData.agencyAddress,
+      );
+
   @override
   JSON toJson() => {
     'invoiceType': invoiceType,
     'invoiceId': invoiceId,
     'agencyName': agencyName,
-    'addressLine1': addressLine1,
-    'addressLine2': addressLine2,
-    'phoneNum': phoneNum,
-    'email': email,
+    'agencyContact': agencyContact,
+    'agencyEmail': agencyEmail,
+    'agencyAddress': agencyAddress,
     'amtDue': amtDue,
-    'teacherName': teacherName,
-    'address': address,
     'invoiceDateFormatted': invoiceDateFormatted,
     'dueDateFormatted': dueDateFormatted,
     'invoiceStatus': invoiceStatus.name,

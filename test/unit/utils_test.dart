@@ -242,5 +242,36 @@ void main() {
       final dt3 = DateTime(2023, 10, 6);
       expect(dt.isSameDayAs(dt3), isFalse);
     });
+
+    test('buildArmResponseFailure keeps raw exception strings intact', () {
+      final failure = buildArmResponseFailure(
+        statusCode: 500,
+        body: <String, Object?>{
+          'exception': 'FirebaseAuthAdminException: email-already-exists',
+        },
+      );
+
+      expect(
+        failure,
+        'FirebaseAuthAdminException: email-already-exists',
+      );
+    });
+
+    test('throwArmResponseFailure links to server ARM case IDs', () {
+      expect(
+        () => throwArmResponseFailure(
+          statusCode: 500,
+          body: <String, Object?>{'error': 'Internal server error'},
+          armCaseId: 'ARM-20260625-ABC12345',
+        ),
+        throwsA(
+          isA<ArmLinkedServerFailure>().having(
+            (error) => error.caseId,
+            'caseId',
+            'ARM-20260625-ABC12345',
+          ),
+        ),
+      );
+    });
   });
 }

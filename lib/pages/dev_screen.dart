@@ -12,7 +12,6 @@ class DevScreen extends StatelessWidget {
           child: TeacherInvoiceWidget(
             teacherInvoiceData: TeacherInvoiceData(
               invoiceDateFormatted: '1 Month 2026',
-              address: 'Name Tutoring Services\nEmail',
               amtDue: 150,
               dueDateFormatted: '7 Month 2026',
               invoiceStatus: InvoiceStatus.paymentReceived,
@@ -32,11 +31,9 @@ class DevScreen extends StatelessWidget {
               ],
               invoiceId: 'INV-2026-001',
               agencyName: 'Name Tutoring Services',
-              teacherName: 'Name Tutoring Services',
-              addressLine1: 'Street Address',
-              addressLine2: 'City, State, Zip/Postal Code',
-              phoneNum: 'Phone',
-              email: 'Email',
+              agencyContact: 'Phone',
+              agencyEmail: 'Email',
+              agencyAddress: 'Street Address\nCity, State, Zip/Postal Code',
             ),
             total: 150,
           ),

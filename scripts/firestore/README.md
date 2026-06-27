@@ -84,9 +84,29 @@ What it does:
 - Removes the old teacher-only fields and sets `schemaVersion: 3` plus `migratedAt`
 - Uses the Firestore REST API directly with `bash` and `curl`
 
+### 4) Teacher schema legacy-field prune
+
+Dry-run:
+
+```bash
+node scripts/firestore/prune_teacher_schema_legacy_fields_v1.cjs
+```
+
+Apply:
+
+```bash
+node scripts/firestore/prune_teacher_schema_legacy_fields_v1.cjs --apply
+```
+
+What it does:
+- For `users/*` teacher documents: keeps the current `TeacherData` Firestore shape and removes the legacy aliases `addressLine1`, `addressLine2`, `phoneNum`, and `classIds`
+- For `global/archives/invoices/*` teacher documents: keeps the current `TeacherInvoiceData` Firestore shape and removes `teacherName`, `address`, `addressLine1`, `addressLine2`, `phoneNum`, `email`, `adminName`, `terms`, `paidDateFormatted`, `schemaVersion`, and `migratedAt`
+- Normalizes the canonical agency fields before deleting the removed ones, so dry-run/apply is safe against partially migrated teacher records
+
 ## Recommended execution order
 
 1. `migrate_invoice_documents.cjs` (dry-run)
 2. `migrate_user_invoice_references.cjs` (dry-run)
 3. `migrate_teacher_invoice_schema_v3.cjs` (dry-run)
-4. Re-run the needed scripts with `--apply`
+4. `prune_teacher_schema_legacy_fields_v1.cjs` (dry-run)
+5. Re-run the needed scripts with `--apply`
