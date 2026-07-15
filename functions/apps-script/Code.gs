@@ -17,7 +17,15 @@ const READ_ONLY_HEADERS = new Set([
   "_syncStatus",
 ]);
 
-/** Run once from the bound Apps Script editor as the trigger-owner account. */
+/** Adds setup to the bound spreadsheet UI, where prompts are supported. */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("Axis Sync")
+    .addItem("Set up sync", "setupSheetSync")
+    .addToUi();
+}
+
+/** Run from Axis Sync > Set up sync as the trigger-owner account. */
 function setupSheetSync() {
   const ui = SpreadsheetApp.getUi();
   const endpointPrompt = ui.prompt(

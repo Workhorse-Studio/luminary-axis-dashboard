@@ -65,9 +65,14 @@ After deployment:
    records the scopes Apps Script will infer during authorization.
 3. Run `../scripts/copy_sheet_sync_secret.sh` locally to place the secret on the
    clipboard.
-4. Run `setupSheetSync()` in Apps Script. Leave the endpoint prompt blank to use
-   the deployed default, paste the secret at the second prompt, and authorize the
-   requested permissions as `siddharth.chitikela@gmail.com`.
+4. Save the Apps Script project, return to the spreadsheet, and reload the page.
+5. Select **Axis Sync > Set up sync** from the spreadsheet menu. Leave the
+   endpoint prompt blank to use the deployed default, paste the secret at the
+   second prompt, and authorize the requested permissions as
+   `siddharth.chitikela@gmail.com`.
+
+Do not run `setupSheetSync()` from the Apps Script editor: that execution context
+does not have access to the spreadsheet UI required by the setup prompts.
 
 The setup function replaces any prior `handleSheetEdit` trigger, so it is safe to
 run again after updating the Apps Script source.
