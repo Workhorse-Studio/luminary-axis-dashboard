@@ -34,6 +34,24 @@ class GenericCache<T> {
   }
 }
 
+Future<void> upsertCurrentTermAllocation({
+  required String classId,
+  required String studentId,
+  required int sessionCount,
+}) async {
+  final gs = GlobalState.fromJson(
+    (await firestore.collection('global').doc('state').get()).data()!,
+  );
+  await firestore
+      .collection('global')
+      .doc('state')
+      .collection('allocations')
+      .doc(gs.terms[gs.currentTermNum].termName)
+      .set({
+        classId: {studentId: sessionCount},
+      }, SetOptions(merge: true));
+}
+
 const _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
 Random _rnd = Random();
 

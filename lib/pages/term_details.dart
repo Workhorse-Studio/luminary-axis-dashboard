@@ -603,10 +603,17 @@ class TermDetailsPageState extends State<TermDetailsPage> {
 
                     /* int startIndex = 1;
                                         int numEntriesAdded = 0; */
-                    for (final stId in classData.studentIds) {
+                    final studentIds = {
+                      ...classData.studentIds,
+                      ...?allocData.sessions[cd.id]?.keys,
+                    };
+                    for (final stId in studentIds) {
                       final sd = (await studentsCache.get(
                         stId,
                       ));
+                      if (!sd.exists || sd.data() == null) {
+                        continue;
+                      }
                       final studentData = StudentData.fromJson(
                         sd.data()!,
                       );

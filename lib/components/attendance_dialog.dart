@@ -59,23 +59,22 @@ class AttendanceDialogState extends State<AttendanceDialog> {
                   .doc(widget.classId)
                   .get();
               final classData = ClassData.fromJson(classDoc.data()!);
-              final fetchedStudentsData = classData.studentIds.isEmpty
-                  ? const <({StudentData data, String id})>[]
-                  : (await firestore
-                            .collection('users')
-                            .where(
-                              FieldPath.documentId,
-                              whereIn: classData.studentIds,
-                            )
-                            .get())
-                        .docs
-                        .map(
-                          (doc) => (
-                            data: StudentData.fromJson(doc.data()),
-                            id: doc.id,
-                          ),
-                        )
-                        .toList();
+              final fetchedStudentsData = <({StudentData data, String id})>[];
+              for (final studentId in classData.studentIds.toSet()) {
+                final studentDoc = await firestore
+                    .collection('users')
+                    .doc(studentId)
+                    .get();
+                final studentJson = studentDoc.data();
+                if (!studentDoc.exists || studentJson == null) {
+                  continue;
+                }
+                final studentData = StudentData.fromJson(studentJson);
+                if (studentData.withdrawn[widget.classId] == true) {
+                  continue;
+                }
+                fetchedStudentsData.add((data: studentData, id: studentDoc.id));
+              }
               fetchedStudentsData.sort(
                 (a, b) => a.data.name.toLowerCase().compareTo(
                   b.data.name.toLowerCase(),

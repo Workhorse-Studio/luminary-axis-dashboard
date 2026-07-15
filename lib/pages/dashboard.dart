@@ -491,80 +491,100 @@ class DashboardPageState extends State<DashboardPage> {
                                                 ],
                                               ),
 
-                                              if (TeacherData.fromJson(
-                                                teacherEntry.value.data()!,
-                                              ).classIds.isEmpty)
-                                                Text(
-                                                  'No classes taught.',
-                                                  style: body2,
-                                                ),
-                                              for (final clId
-                                                  in TeacherData.fromJson(
-                                                    teacherEntry.value.data()!,
-                                                  ).classIds) ...[
-                                                const SizedBox(height: 20),
-                                                Container(
-                                                  width: double.infinity,
-                                                  height: 40,
-
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          5,
-                                                        ),
-                                                    border: Border.all(
-                                                      color: AxisColors
-                                                          .blackPurple30,
-                                                    ),
-                                                    color: AxisColors
-                                                        .blackPurple30
-                                                        .withValues(alpha: 0.6),
-                                                  ),
-                                                  child: Padding(
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                          10,
-                                                        ),
-                                                    child: FutureBuilderTemplate(
-                                                      future: () async {
-                                                        return ClassData.fromJson(
-                                                          (await classesCache
-                                                                  .get(
-                                                                    clId,
-                                                                  ))
-                                                              .data()!,
+                                              FutureBuilderTemplate(
+                                                future: () async {
+                                                  final resolvedClasses =
+                                                      <ClassData>[];
+                                                  for (final clId
+                                                      in TeacherData.fromJson(
+                                                        teacherEntry.value
+                                                            .data()!,
+                                                      ).classIds) {
+                                                    final clDoc =
+                                                        await classesCache.get(
+                                                          clId,
                                                         );
-                                                      }(),
-                                                      builder:
-                                                          (
-                                                            context,
-                                                            snapshot,
-                                                          ) => Row(
-                                                            children: [
-                                                              Text(
-                                                                snapshot
-                                                                    .data!
-                                                                    .name,
-                                                                style: body2,
-                                                              ),
-                                                              const Spacer(),
-                                                              Text(
-                                                                "${snapshot.data!.studentIds.length} students",
-                                                                style: body2.copyWith(
-                                                                  color: body2
-                                                                      .color!
-                                                                      .withValues(
-                                                                        alpha:
-                                                                            0.2,
-                                                                      ),
+                                                    if (!clDoc.exists) {
+                                                      continue;
+                                                    }
+                                                    final data = clDoc.data();
+                                                    if (data == null) {
+                                                      continue;
+                                                    }
+                                                    resolvedClasses.add(
+                                                      ClassData.fromJson(data),
+                                                    );
+                                                  }
+                                                  return resolvedClasses;
+                                                }(),
+                                                builder: (context, snapshot) {
+                                                  final resolvedClasses =
+                                                      snapshot.data!;
+                                                  if (resolvedClasses.isEmpty) {
+                                                    return Text(
+                                                      'No classes taught.',
+                                                      style: body2,
+                                                    );
+                                                  }
+                                                  return Column(
+                                                    children: [
+                                                      for (final classData
+                                                          in resolvedClasses) ...[
+                                                        const SizedBox(
+                                                          height: 20,
+                                                        ),
+                                                        Container(
+                                                          width:
+                                                              double.infinity,
+                                                          height: 40,
+                                                          decoration: BoxDecoration(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  5,
                                                                 ),
-                                                              ),
-                                                            ],
+                                                            border: Border.all(
+                                                              color: AxisColors
+                                                                  .blackPurple30,
+                                                            ),
+                                                            color: AxisColors
+                                                                .blackPurple30
+                                                                .withValues(
+                                                                  alpha: 0.6,
+                                                                ),
                                                           ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  10,
+                                                                ),
+                                                            child: Row(
+                                                              children: [
+                                                                Text(
+                                                                  classData
+                                                                      .name,
+                                                                  style: body2,
+                                                                ),
+                                                                const Spacer(),
+                                                                Text(
+                                                                  "${classData.studentIds.length} students",
+                                                                  style: body2.copyWith(
+                                                                    color: body2
+                                                                        .color!
+                                                                        .withValues(
+                                                                          alpha:
+                                                                              0.2,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  );
+                                                },
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -888,29 +908,29 @@ class DashboardPageState extends State<DashboardPage> {
                               bool found = false;
                               for (final clId in td.classIds) {
                                 final clRef = await classesCache.get(clId);
+                                if (!clRef.exists) {
+                                  continue;
+                                }
+                                final clData = clRef.data();
+                                if (clData == null) {
+                                  continue;
+                                }
                                 final cd = ClassData.fromJson(
-                                  clRef.data()!,
+                                  clData,
                                 );
                                 if (cd.templateReference == tempId) {
                                   await clRef.reference.update({
-                                    'students': cd.studentIds..add(uid),
+                                    'students': FieldValue.arrayUnion([uid]),
                                   });
-                                  final termDr = firestore
-                                      .collection('global')
-                                      .doc('state')
-                                      .collection('allocations')
-                                      .doc(
-                                        globalState!
-                                            .terms[globalState!.currentTermNum]
-                                            .termName,
-                                      );
-                                  if ((await termDr.get()).exists) {
-                                    await termDr.update({'$clId.$uid': 0});
-                                  } else {
-                                    await termDr.set({
-                                      clId: {uid: 0},
-                                    });
-                                  }
+                                  await classesCache.get(
+                                    clId,
+                                    bypassCache: true,
+                                  );
+                                  await upsertCurrentTermAllocation(
+                                    classId: clId,
+                                    studentId: uid,
+                                    sessionCount: 0,
+                                  );
                                   await firestore
                                       .collection('users')
                                       .doc(uid)

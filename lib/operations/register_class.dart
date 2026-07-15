@@ -22,13 +22,16 @@ Future<void> registerStudentForClass({
     action: () async {
       await firestore.collection('users').doc(studentId).update({
         'initialSessionCount.$classId': initialSessionsCount,
+        'withdrawn.$classId': false,
       });
-      final clData = ClassData.fromJson(
-        (await firestore.collection('classes').doc(classId).get()).data()!,
-      );
       await firestore.collection('classes').doc(classId).update({
-        'students': clData.studentIds..add(studentId),
+        'students': FieldValue.arrayUnion([studentId]),
       });
+      await upsertCurrentTermAllocation(
+        classId: classId,
+        studentId: studentId,
+        sessionCount: initialSessionsCount,
+      );
     },
   );
 }
