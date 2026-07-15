@@ -46,5 +46,16 @@ app.*.map.json
 
 options.dart
 
+# Firebase Functions build and local secrets
+functions/lib/
+functions/node_modules/
+functions/.secret.local
+functions/.env
+functions/.env.*
+
+# Local diagnostics and incident snapshots
+firepit-log.txt
+tmp/
+
 assets/fonts/Urbanist/licenses
 public/

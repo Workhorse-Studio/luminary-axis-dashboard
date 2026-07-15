@@ -11,11 +11,13 @@ These scripts migrate existing invoice-related Firestore documents to match the 
 npm install firebase-admin
 ```
 
-3. Authenticate with Application Default Credentials or set a service account key:
+3. Authenticate with Application Default Credentials:
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+gcloud auth application-default login
 ```
+
+Do not download a service-account key for these local maintenance scripts.
 
 Optional explicit project override:
 
@@ -107,6 +109,6 @@ What it does:
 
 1. `migrate_invoice_documents.cjs` (dry-run)
 2. `migrate_user_invoice_references.cjs` (dry-run)
-3. `migrate_teacher_invoice_schema_v3.cjs` (dry-run)
+3. `migrate_teacher_invoice_schema_v3.sh` (dry-run)
 4. `prune_teacher_schema_legacy_fields_v1.cjs` (dry-run)
 5. Re-run the needed scripts with `--apply`

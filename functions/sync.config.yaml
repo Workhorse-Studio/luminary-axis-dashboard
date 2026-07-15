@@ -1,0 +1,32 @@
+projectId: luminary-axis-dashboard
+region: asia-southeast1
+spreadsheetId: 1cvl09kZW8GXxHxtMd83o4-nTScMywpeiPGds2y0VK4U
+runtimeServiceAccount: ghseet-connector@luminary-axis-dashboard.iam.gserviceaccount.com
+sheetOwnerEmail: siddharth.chitikela@gmail.com
+
+managedSheets:
+  - id: users
+    title: users
+    firestorePattern: users/{docId}
+  - id: classes
+    title: classes
+    firestorePattern: classes/{docId}
+  - id: templates
+    title: templates
+    firestorePattern: templates/{docId}
+  - id: invoices
+    title: global_state_invoices
+    firestorePattern: global/state/invoices/{docId}
+  - id: allocations
+    title: global_state_allocations
+    firestorePattern: global/state/allocations/{docId}
+  - id: pendingOnboarding
+    title: global_state_pendingOnboarding
+    firestorePattern: global/state/pendingOnboarding/{docId}
+  - id: globalState
+    title: global_state
+    firestorePattern: global/state
+  - id: classArchives
+    title: classes_archives
+    firestorePattern: classes/{parentId}/archives/{docId}
+    parentId: true

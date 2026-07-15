@@ -32,13 +32,22 @@ Attendance
 - Multi-state attendance-taking (per-day, not per-session) and historical attendance modification
 - View all (for admins) or own (for teachers) term reports
 
-### Scripts
+## Development
 
-`Google Sheet Sync`
-- Beta state
-- Synchronise database with Google Sheet, paving the way for user-friendly access to raw data and preventing vendor lock-in. Future automation also possible.
+```sh
+flutter pub get
+flutter analyze
+flutter test
+```
 
-`Automated Onboarding`
-- Beta state
-- Ingests an Excel sheet in a specific format of student data, and adds them to the pool of students waiting to be onboarded on to the new Dashboard platform.
+## Operations
 
+- Firestore and Google Sheets synchronization is implemented in Firebase
+  Functions v2. See [`functions/README.md`](functions/README.md) for architecture,
+  deployment, destructive bootstrap, and Apps Script authorization.
+- Tracked Firestore repair and schema migration utilities live in
+  [`scripts/firestore`](scripts/firestore/README.md). They default to dry-run and
+  should be reviewed against a current backup before using an `--apply` option.
+- Function deployment configuration is tracked in
+  [`functions/sync.config.yaml`](functions/sync.config.yaml); secrets remain in
+  Secret Manager.
