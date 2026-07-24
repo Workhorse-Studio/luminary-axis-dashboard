@@ -45,6 +45,7 @@ part './components/class_creation_dialog.dart';
 part './components/teacher_creation_dialog.dart';
 part './components/invoice.dart';
 part './components/editable_invoice_dialog.dart';
+part './components/manual_invoice_dialog.dart';
 part './components/term_report_widget.dart';
 
 part './design_system/colors.dart';

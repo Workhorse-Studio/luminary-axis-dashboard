@@ -2,6 +2,44 @@ import 'package:axis_dashboard/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('createManualStudentInvoice', () {
+    test('builds a transient invoice from only the supplied entries', () {
+      final generatedAt = DateTime(2026, 7, 24, 10, 30);
+      final student = StudentData(
+        role: 'student',
+        name: 'Alice Tan',
+        email: 'alice@example.com',
+        invoiceIds: const [],
+        studentContactNo: '12345678',
+        parentContactNo: '87654321',
+        parentName: 'Parent Tan',
+        withdrawn: const {},
+        address: '1 Test Street',
+        postalCode: '123456',
+        school: 'Test School',
+        subjectCombi: 'Math',
+      );
+      final entries = <InvoiceEntry>[
+        (desc: 'Custom workshop', qty: 2, rate: 75, amt: 150),
+        (desc: 'Materials', qty: 1, rate: 20, amt: 20),
+      ];
+
+      final invoice = createManualStudentInvoice(
+        student: student,
+        entries: entries,
+        generatedAt: generatedAt,
+      );
+
+      expect(invoice.entries, same(entries));
+      expect(invoice.amtPayable, 170);
+      expect(invoice.studentName, 'Alice Tan');
+      expect(invoice.parentName, 'Parent Tan');
+      expect(invoice.invoiceDateFormatted, '24-07-2026');
+      expect(invoice.dueDateFormatted, '31-07-2026');
+      expect(invoice.invoiceId, 'MANUAL-${generatedAt.millisecondsSinceEpoch}');
+    });
+  });
+
   group('invoiceNameMatchesSearch', () {
     test('matches case-insensitive name fragments', () {
       expect(invoiceNameMatchesSearch('Alice Tan', 'ALIce'), isTrue);

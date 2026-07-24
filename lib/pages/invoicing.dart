@@ -240,6 +240,15 @@ class InvoicingPageState extends State<InvoicingPage> {
             ),
           ),
         ),
+        if (currentTabIndex == 0) ...[
+          const SizedBox(width: 16),
+          AxisButton.text(
+            key: const ValueKey('manual-invoice-open'),
+            icon: Icons.note_add_outlined,
+            label: 'Manual Invoice',
+            onPressed: _showManualInvoiceDialog,
+          ),
+        ],
         const SizedBox(width: 16),
         AxisButton.text(
           icon: Icons.refresh,
@@ -399,9 +408,7 @@ class InvoicingPageState extends State<InvoicingPage> {
       ],
       body: (context) => DefaultTabController(
         length: 2,
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width,
-          height: MediaQuery.of(context).size.height,
+        child: SizedBox.expand(
           child: Column(
             children: [
               TabBar(
@@ -436,9 +443,7 @@ class InvoicingPageState extends State<InvoicingPage> {
                   ),
                 ],
               ),
-              SizedBox(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height - 190,
+              Expanded(
                 child: Align(
                   alignment: Alignment.topLeft,
                   child: TabBarView(
@@ -692,6 +697,37 @@ class InvoicingPageState extends State<InvoicingPage> {
         studentId: studentId,
         studentData: studentDocument,
         classIdToTeacherNameMap: classIdToTeacherNameMap,
+      ),
+    );
+  }
+
+  Future<void> _showManualInvoiceDialog() async {
+    await studentCache.initAll(
+      query: firestore.collection('users').where('role', isEqualTo: 'student'),
+    );
+    if (!mounted) return;
+
+    final students =
+        studentCache.registry.values
+            .map((document) => StudentData.fromJson(document.data()!))
+            .toList()
+          ..sort((left, right) => left.name.compareTo(right.name));
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => ManualInvoiceDialog(
+        students: students,
+        onSend: (student, invoice) => sendInvoiceEmail(
+          student.email,
+          StudentInvoiceWidget(
+            showFonts: false,
+            studentInvoiceData: invoice,
+            total: invoice.amtPayable,
+          ),
+          context,
+          timestampLabel: 'Manual Invoice ${invoice.invoiceDateFormatted}',
+        ),
       ),
     );
   }
@@ -1271,6 +1307,7 @@ class InvoicingPageState extends State<InvoicingPage> {
     Widget widget,
     BuildContext context, {
     required String timestampLabel,
+    ValueChanged<String>? onProgress,
   }) async {
     String? clientCaseId;
     String? serverCaseId;
@@ -1294,10 +1331,12 @@ class InvoicingPageState extends State<InvoicingPage> {
           clientCaseId = result.caseId;
         },
         action: () async {
+          onProgress?.call('started');
           await precacheImage(
             AssetImage('assets/images/axis_logo.png'),
             context,
           );
+          onProgress?.call('asset_precached');
 
           late final List<InvoiceEntry> allEntries;
           late final Widget firstPageWidget;
@@ -1384,6 +1423,7 @@ class InvoicingPageState extends State<InvoicingPage> {
               i = end;
             }
           }
+          onProgress?.call('pages_prepared');
 
           final bytes = await m.PDFMaker().createMultiPagePDF(
             pages,
@@ -1395,6 +1435,7 @@ class InvoicingPageState extends State<InvoicingPage> {
               margins: 10,
             ),
           );
+          onProgress?.call('pdf_generated');
 
           final file = web.File(
             [
@@ -1420,6 +1461,7 @@ class InvoicingPageState extends State<InvoicingPage> {
               armCaseId: overrideResp.armCaseId,
             );
           }
+          onProgress?.call('server_prepared');
 
           final response = await web.window
               .fetch(
@@ -1441,6 +1483,7 @@ class InvoicingPageState extends State<InvoicingPage> {
               armCaseId: serverCaseId,
             );
           }
+          onProgress?.call('pdf_uploaded');
         },
       );
       if (context.mounted) {
