@@ -85,14 +85,19 @@ class AxisButtonState extends State<AxisButton> {
     return GestureDetector(
       onTapDown: (_) {
         if (!enabled) return;
-        buttonState = ButtonState.pressed;
-        setState(() {});
+        if (buttonState != ButtonState.pressed) {
+          setState(() => buttonState = ButtonState.pressed);
+        }
       },
       onTapUp: (_) {
         if (!enabled) return;
-        buttonState = ButtonState.none;
-        setState(() {});
+        setState(() => buttonState = ButtonState.none);
         widget.onPressed?.call();
+      },
+      onTapCancel: () {
+        if (enabled && buttonState == ButtonState.pressed) {
+          setState(() => buttonState = ButtonState.none);
+        }
       },
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -110,8 +115,8 @@ class AxisButtonState extends State<AxisButton> {
         },
         child: Center(
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeOutQuint,
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
             width: widget.width,
             height: widget.height,
             decoration: BoxDecoration(

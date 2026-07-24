@@ -1,5 +1,81 @@
 part of axis_dashboard;
 
+bool invoiceNameMatchesSearch(String name, String query) {
+  final normalizedName = name.toLowerCase().trim();
+  final normalizedQuery = query.toLowerCase().trim();
+  if (normalizedQuery.isEmpty) return true;
+
+  final nameTerms = normalizedName
+      .split(RegExp(r'\s+'))
+      .where((term) => term.isNotEmpty);
+  final queryTerms = normalizedQuery
+      .split(RegExp(r'\s+'))
+      .where((term) => term.isNotEmpty);
+
+  return queryTerms.every(
+    (queryTerm) =>
+        normalizedName.contains(queryTerm) ||
+        nameTerms.any(
+          (nameTerm) =>
+              _invoiceSearchEditDistance(nameTerm, queryTerm) <=
+              (queryTerm.length < 3 ? 0 : (queryTerm.length >= 7 ? 2 : 1)),
+        ),
+  );
+}
+
+int _invoiceSearchEditDistance(String left, String right) {
+  if (left == right) return 0;
+  if (left.isEmpty) return right.length;
+  if (right.isEmpty) return left.length;
+
+  var previous = List<int>.generate(right.length + 1, (index) => index);
+  for (var leftIndex = 0; leftIndex < left.length; leftIndex++) {
+    final current = List<int>.filled(right.length + 1, 0);
+    current[0] = leftIndex + 1;
+    for (var rightIndex = 0; rightIndex < right.length; rightIndex++) {
+      final substitutionCost = left[leftIndex] == right[rightIndex] ? 0 : 1;
+      current[rightIndex + 1] = min(
+        min(current[rightIndex] + 1, previous[rightIndex + 1] + 1),
+        previous[rightIndex] + substitutionCost,
+      );
+    }
+    previous = current;
+  }
+  return previous.last;
+}
+
+class _InvoicePartyRow {
+  final String id;
+  final String name;
+  final DocumentSnapshot<JSON> document;
+
+  const _InvoicePartyRow({
+    required this.id,
+    required this.name,
+    required this.document,
+  });
+}
+
+class _InvoiceRowsSource extends DataTableSource {
+  final List<_InvoicePartyRow> rows;
+  final DataRow Function(_InvoicePartyRow row, int index) rowBuilder;
+
+  _InvoiceRowsSource({required this.rows, required this.rowBuilder});
+
+  @override
+  DataRow? getRow(int index) =>
+      index < rows.length ? rowBuilder(rows[index], index) : null;
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => rows.length;
+
+  @override
+  int get selectedRowCount => 0;
+}
+
 class InvoicingPage extends StatefulWidget {
   const InvoicingPage({super.key});
 
@@ -9,6 +85,7 @@ class InvoicingPage extends StatefulWidget {
 
 class InvoicingPageState extends State<InvoicingPage> {
   int currentTabIndex = 0;
+  final TextEditingController searchController = TextEditingController();
   final Map<String, pdf.ExportFrame> frames = {};
   final GenericCache<DocumentSnapshot<JSON>> studentCache = GenericCache(
     (studentId) async =>
@@ -42,8 +119,13 @@ class InvoicingPageState extends State<InvoicingPage> {
       );
 
   final Map<String, Map<String, Map<String, int>>> sessionsMap = {};
+  final Map<String, String> classIdToTeacherNameMap = {};
   final Map<String, TextEditingController> studentRemarksControllers = {};
   final Map<String, Timer> studentRemarksSaveTimers = {};
+  Future<Map<String, DocumentSnapshot<JSON>>>? _studentTabFuture;
+  Future<Map<String, DocumentSnapshot<JSON>>>? _teacherTabFuture;
+  Timer? _searchTimer;
+  String _searchQuery = '';
 
   int year = DateTime.now().year;
   String selectedTeacherMonthId =
@@ -51,6 +133,8 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   @override
   void dispose() {
+    searchController.dispose();
+    _searchTimer?.cancel();
     for (final controller in studentRemarksControllers.values) {
       controller.dispose();
     }
@@ -118,7 +202,45 @@ class InvoicingPageState extends State<InvoicingPage> {
             },
           ),
         ],
-        const SizedBox(width: 40),
+        const SizedBox(width: 24),
+        SizedBox(
+          width: 240,
+          height: 50,
+          child: TextField(
+            key: const ValueKey('invoice-name-search'),
+            controller: searchController,
+            onChanged: _scheduleSearch,
+            onSubmitted: _applySearch,
+            style: body2,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Search by name',
+              hintStyle: body2.copyWith(
+                color: AxisColors.blackPurple20.withValues(alpha: 0.5),
+              ),
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: () {
+                        searchController.clear();
+                        _applySearch('');
+                      },
+                      icon: const Icon(Icons.close),
+                    ),
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: AxisColors.lilacPurple20),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(
+                  color: AxisColors.lilacPurple50.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
         AxisButton.text(
           icon: Icons.refresh,
           label: 'Refresh Invoices',
@@ -337,160 +459,239 @@ class InvoicingPageState extends State<InvoicingPage> {
 
   Widget generateTabView(String viewType) {
     return FutureBuilderTemplate(
-      future: () async {
-        if (viewType == 'student') {
-          globalState ??= GlobalState.fromJson(
-            (await firestore.collection('global').doc('state').get()).data()!,
-          );
-          await studentCache.initAll(
-            query: firestore
-                .collection('users')
-                .where('role', isEqualTo: 'student'),
-          );
-          await studentInvoicesCache.initAll(
-            query: firestore
-                .collection('global')
-                .doc('archives')
-                .collection('invoices')
-                .where('invoiceType', isEqualTo: 'student'),
-          );
-          await studentAttendanceStore.ensureInit(
-            globalState: globalState!,
-            classesCache: classesCache,
-            studentCache: studentCache,
-          );
-          return studentCache.registry;
-        } else {
-          await classesCache.initAll(
-            collection: firestore.collection('classes'),
-          );
-          await teachersCache.initAll(
-            query: firestore
-                .collection('users')
-                .where('role', isEqualTo: 'teacher'),
-          );
-          await teachersInvoiceCache.initAll(
-            query: firestore
-                .collection('global')
-                .doc('archives')
-                .collection('invoices')
-                .where('invoiceType', isEqualTo: 'teacher'),
-          );
-          if (sessionsMap.isEmpty) await fetchUpdatedTeacherInvoices();
-          return teachersCache.registry;
-        }
-      }(),
-      builder: (context, _) => DataTable2(
-        fixedLeftColumns: 1,
-        dataRowHeight: 110,
-        dividerThickness: 0.2,
-        border: TableBorder(
-          verticalInside: BorderSide(
-            color: AxisColors.blackPurple20.withValues(alpha: 0.35),
-            width: 1,
+      future: _tabFuture(viewType),
+      builder: (context, _) {
+        final rows = _visibleRows(viewType);
+        final theme = Theme.of(context);
+        return Theme(
+          data: theme.copyWith(
+            textTheme: theme.textTheme.copyWith(bodySmall: body2),
           ),
-          horizontalInside: BorderSide(
-            color: AxisColors.blackPurple20.withValues(alpha: 0.15),
-            width: 0.5,
-          ),
-        ),
-        columns: viewType == 'student'
-            ? [
-                DataColumn2(
-                  fixedWidth: 160,
-                  label: Text(
-                    'Name',
-                    style: body2.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: body2.fontSize! + 8,
-                    ),
-                  ),
-                ),
-                for (final term in globalState!.terms)
-                  DataColumn2(
-                    minWidth: 780,
-                    label: Center(
-                      child: Text(
-                        term.termName,
+          child: PaginatedDataTable2(
+            key: ValueKey('$viewType-$year-$_searchQuery'),
+            source: _InvoiceRowsSource(
+              rows: rows,
+              rowBuilder: (row, index) => _buildInvoiceRow(viewType, row),
+            ),
+            autoRowsToHeight: true,
+            renderEmptyRowsInTheEnd: false,
+            showCheckboxColumn: false,
+            showFirstLastButtons: true,
+            wrapInCard: false,
+            empty: Center(
+              child: Text(
+                _searchQuery.isEmpty
+                    ? 'No invoice entries found.'
+                    : 'No names match your search.',
+                style: body2,
+              ),
+            ),
+            fixedLeftColumns: 1,
+            dataRowHeight: 110,
+            dividerThickness: 0.2,
+            border: TableBorder(
+              verticalInside: BorderSide(
+                color: AxisColors.blackPurple20.withValues(alpha: 0.35),
+                width: 1,
+              ),
+              horizontalInside: BorderSide(
+                color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+                width: 0.5,
+              ),
+            ),
+            columns: viewType == 'student'
+                ? [
+                    DataColumn2(
+                      fixedWidth: 160,
+                      label: Text(
+                        'Name',
                         style: body2.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: body2.fontSize! + 8,
                         ),
                       ),
                     ),
-                  ),
-              ]
-            : [
-                DataColumn2(
-                  fixedWidth: 160,
-                  label: Text(
-                    'Name',
-                    style: body2.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: body2.fontSize! + 8,
-                    ),
-                  ),
-                ),
-                for (final monthId in generateMonthIds())
-                  DataColumn2(
-                    minWidth: 560,
-                    label: Center(
-                      child: Text(
-                        "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
+                    for (final term in globalState!.terms)
+                      DataColumn2(
+                        minWidth: 780,
+                        label: Center(
+                          child: Text(
+                            term.termName,
+                            style: body2.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: body2.fontSize! + 8,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ]
+                : [
+                    DataColumn2(
+                      fixedWidth: 160,
+                      label: Text(
+                        'Name',
                         style: body2.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: body2.fontSize! + 8,
                         ),
                       ),
                     ),
-                  ),
-              ],
-        rows: [
-          if (viewType == 'student')
-            for (final student in studentCache.registry.entries)
-              if (!isStudentCompletelyWithdrawn(
-                    student.key,
-                    StudentData.fromJson(student.value.data()!),
+                    for (final monthId in generateMonthIds())
+                      DataColumn2(
+                        minWidth: 560,
+                        label: Center(
+                          child: Text(
+                            "${monthId.split('-')[0]}/${monthId.split('-')[1].substring(2)}",
+                            style: body2.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: body2.fontSize! + 8,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<Map<String, DocumentSnapshot<JSON>>> _tabFuture(String viewType) {
+    if (viewType == 'student') {
+      return _studentTabFuture ??= _loadStudentTab();
+    }
+    return _teacherTabFuture ??= _loadTeacherTab();
+  }
+
+  Future<Map<String, DocumentSnapshot<JSON>>> _loadStudentTab() async {
+    globalState ??= GlobalState.fromJson(
+      (await firestore.collection('global').doc('state').get()).data()!,
+    );
+    await studentCache.initAll(
+      query: firestore.collection('users').where('role', isEqualTo: 'student'),
+    );
+    await studentInvoicesCache.initAll(
+      query: firestore
+          .collection('global')
+          .doc('archives')
+          .collection('invoices')
+          .where('invoiceType', isEqualTo: 'student'),
+    );
+    await studentAttendanceStore.ensureInit(
+      globalState: globalState!,
+      classesCache: classesCache,
+      studentCache: studentCache,
+    );
+    return studentCache.registry;
+  }
+
+  Future<Map<String, DocumentSnapshot<JSON>>> _loadTeacherTab() async {
+    await classesCache.initAll(collection: firestore.collection('classes'));
+    await teachersCache.initAll(
+      query: firestore.collection('users').where('role', isEqualTo: 'teacher'),
+    );
+    await teachersInvoiceCache.initAll(
+      query: firestore
+          .collection('global')
+          .doc('archives')
+          .collection('invoices')
+          .where('invoiceType', isEqualTo: 'teacher'),
+    );
+    if (sessionsMap.isEmpty) await fetchUpdatedTeacherInvoices();
+    return teachersCache.registry;
+  }
+
+  List<_InvoicePartyRow> _visibleRows(String viewType) {
+    if (viewType == 'teacher') {
+      return [
+        for (final entry in teachersCache.registry.entries)
+          if (TeacherData.fromJson(entry.value.data()!) case final teacher)
+            if (invoiceNameMatchesSearch(teacher.name, _searchQuery))
+              _InvoicePartyRow(
+                id: entry.key,
+                name: teacher.name,
+                document: entry.value,
+              ),
+      ];
+    }
+
+    return [
+      for (final entry in studentCache.registry.entries)
+        if (StudentData.fromJson(entry.value.data()!) case final student)
+          if (invoiceNameMatchesSearch(student.name, _searchQuery) &&
+              (!isStudentCompletelyWithdrawn(
+                    entry.key,
+                    student,
                     classesCache,
                   ) ||
                   (studentAttendanceStore.invoicesData.length >
                           globalState!.currentTermNum &&
                       studentAttendanceStore
                           .invoicesData[globalState!.currentTermNum]
-                          .containsKey(student.key)))
-                DataRow2(
-                  cells: [
-                    DataCell(
-                      Text(
-                        StudentData.fromJson(
-                          student.value.data()!,
-                        ).name,
-                        style: body2,
-                      ),
-                    ),
-                    ...generateCellsForInvoices(
-                      studentData: student.value,
-                    ),
-                  ],
-                ),
-          if (viewType == 'teacher')
-            for (final teacher in teachersCache.registry.entries)
-              DataRow2(
-                cells: [
-                  DataCell(
-                    Text(
-                      TeacherData.fromJson(
-                        teacher.value.data()!,
-                      ).name,
-                      style: body2,
-                    ),
-                  ),
-                  ...generateCellsForInvoices(
-                    teacherData: teacher.value,
-                  ),
-                ],
-              ),
-        ],
+                          .containsKey(entry.key))))
+            _InvoicePartyRow(
+              id: entry.key,
+              name: student.name,
+              document: entry.value,
+            ),
+    ];
+  }
+
+  DataRow _buildInvoiceRow(String viewType, _InvoicePartyRow row) {
+    final isStudent = viewType == 'student';
+    return DataRow2(
+      key: ValueKey('$viewType-${row.id}'),
+      cells: [
+        DataCell(
+          Text(row.name, style: body2),
+          onTap: isStudent
+              ? () => _showStudentInfo(row.id, row.document)
+              : null,
+        ),
+        ...generateCellsForInvoices(
+          studentData: isStudent ? row.document : null,
+          teacherData: isStudent ? null : row.document,
+        ),
+      ],
+    );
+  }
+
+  void _scheduleSearch(String query) {
+    _searchTimer?.cancel();
+    _searchTimer = Timer(
+      const Duration(milliseconds: 160),
+      () => _applySearch(query),
+    );
+  }
+
+  void _applySearch(String query) {
+    _searchTimer?.cancel();
+    final normalizedQuery = query.trim();
+    if (!mounted || normalizedQuery == _searchQuery) return;
+    setState(() => _searchQuery = normalizedQuery);
+  }
+
+  Future<void> _showStudentInfo(
+    String studentId,
+    DocumentSnapshot<JSON> studentDocument,
+  ) async {
+    await teachersCache.initAll(
+      query: firestore.collection('users').where('role', isEqualTo: 'teacher'),
+    );
+    classIdToTeacherNameMap.clear();
+    for (final teacherDocument in teachersCache.registry.values) {
+      final teacher = TeacherData.fromJson(teacherDocument.data()!);
+      for (final classId in teacher.classIds) {
+        classIdToTeacherNameMap[classId] = teacher.name;
+      }
+    }
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (_) => StudentInfoDialog(
+        studentId: studentId,
+        studentData: studentDocument,
+        classIdToTeacherNameMap: classIdToTeacherNameMap,
       ),
     );
   }
@@ -882,13 +1083,22 @@ class InvoicingPageState extends State<InvoicingPage> {
         );
       }
     } else {
+      if (teacherData == null) return res;
+      final parsedTeacherData = TeacherData.fromJson(teacherData.data()!);
       final mIds = generateMonthIds();
       for (final String monthId in mIds) {
+        final invoiceId = parsedTeacherData.invoiceIds[monthId];
+        final teacherInvoiceDocument = invoiceId == null
+            ? null
+            : teachersInvoiceCache.registry[invoiceId];
+        final teacherInvoiceData =
+            teacherInvoiceDocument?.exists == true &&
+                teacherInvoiceDocument!.data() != null
+            ? TeacherInvoiceData.fromJson(teacherInvoiceDocument.data()!)
+            : null;
         res.add(
           DataCell(
-            teacherData != null &&
-                    sessionsMap.isNotEmpty &&
-                    sessionsMap[teacherData.id]!.containsKey(monthId)
+            sessionsMap[teacherData.id]?.containsKey(monthId) == true
                 ? Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -914,59 +1124,43 @@ class InvoicingPageState extends State<InvoicingPage> {
                             ),
                           ),
                           const SizedBox(width: 20),
-                          FutureBuilderTemplate(
-                            future: () async {
-                              final invoiceId = TeacherData.fromJson(
-                                teacherData.data()!,
-                              ).invoiceIds[monthId];
-                              if (invoiceId == null) return null;
-                              final doc = await firestore
-                                  .collection('global')
-                                  .doc('archives')
-                                  .collection('invoices')
-                                  .doc(invoiceId)
-                                  .get();
-                              if (!doc.exists || doc.data() == null)
-                                return null;
-                              return (
-                                doc,
-                                TeacherInvoiceData.fromJson(doc.data()!),
-                              );
-                            }(),
-                            builder: (context, snapshot) =>
-                                snapshot.data == null
-                                ? const SizedBox(width: 270)
-                                : AxisDropdownButton<InvoiceStatus>(
-                                    width: 270,
-                                    entries: [
-                                      for (final status in InvoiceStatus.values)
-                                        (status.label, status),
-                                    ],
-                                    seaprateInitialSelectionEntry: false,
-                                    initalLabel:
-                                        snapshot.data!.$2.invoiceStatus.label,
-                                    initialSelection:
-                                        snapshot.data!.$2.invoiceStatus,
-                                    onSelected: (invoiceStatus) async {
-                                      if (invoiceStatus != null) {
-                                        await snapshot.data!.$1.reference
-                                            .update({
-                                              'invoiceStatus':
-                                                  invoiceStatus.name,
-                                            });
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Status updated!'),
-                                            ),
-                                          );
-                                        }
+                          teacherInvoiceData == null
+                              ? const SizedBox(width: 270)
+                              : AxisDropdownButton<InvoiceStatus>(
+                                  width: 270,
+                                  entries: [
+                                    for (final status in InvoiceStatus.values)
+                                      (status.label, status),
+                                  ],
+                                  seaprateInitialSelectionEntry: false,
+                                  initalLabel:
+                                      teacherInvoiceData.invoiceStatus.label,
+                                  initialSelection:
+                                      teacherInvoiceData.invoiceStatus,
+                                  onSelected: (invoiceStatus) async {
+                                    if (invoiceStatus != null) {
+                                      await teacherInvoiceDocument!.reference
+                                          .update({
+                                            'invoiceStatus': invoiceStatus.name,
+                                          });
+                                      final updatedDocument =
+                                          await teacherInvoiceDocument.reference
+                                              .get();
+                                      teachersInvoiceCache
+                                              .registry[updatedDocument.id] =
+                                          updatedDocument;
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Status updated!'),
+                                          ),
+                                        );
                                       }
-                                    },
-                                  ),
-                          ),
+                                    }
+                                  },
+                                ),
                           const SizedBox(width: 16),
                           const Spacer(),
                           AxisButton.text(
@@ -1377,6 +1571,7 @@ class InvoicingPageState extends State<InvoicingPage> {
             .collection('invoices')
             .doc();
         await docRef.set(candidate.toJson()..['invoiceId'] = docRef.id);
+        teachersInvoiceCache.registry[docRef.id] = await docRef.get();
 
         await teacherEntry.value.reference.update({
           'invoiceIds.${monthEntry.key}': docRef.id,

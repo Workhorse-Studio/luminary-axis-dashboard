@@ -2,6 +2,32 @@ import 'package:axis_dashboard/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('invoiceNameMatchesSearch', () {
+    test('matches case-insensitive name fragments', () {
+      expect(invoiceNameMatchesSearch('Alice Tan', 'ALIce'), isTrue);
+      expect(invoiceNameMatchesSearch('Alice Tan', 'ice t'), isTrue);
+    });
+
+    test('matches multiple search terms regardless of extra whitespace', () {
+      expect(
+        invoiceNameMatchesSearch('Alice Mei Tan', '  alice   tan '),
+        isTrue,
+      );
+      expect(invoiceNameMatchesSearch('Alice Mei Tan', 'alice lim'), isFalse);
+    });
+
+    test('matches close misspellings without accepting unrelated names', () {
+      expect(invoiceNameMatchesSearch('Jonathan Lim', 'Jonathn'), isTrue);
+      expect(invoiceNameMatchesSearch('Jonathan Lim', 'Jonatan'), isTrue);
+      expect(invoiceNameMatchesSearch('Jonathan Lim', 'Michael'), isFalse);
+      expect(invoiceNameMatchesSearch('Alice Tan', 'z'), isFalse);
+    });
+
+    test('empty searches include every name', () {
+      expect(invoiceNameMatchesSearch('Alice Tan', '   '), isTrue);
+    });
+  });
+
   group('InvoicingPageState teacher month selection', () {
     test('defaults selected teacher month to current month', () {
       final now = DateTime.now();
