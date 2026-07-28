@@ -14,12 +14,12 @@ import 'package:data_table_2/data_table_2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart' as auth_ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:flutter_to_pdf/export_frame.dart' as pdf;
+import 'package:http/http.dart' as http;
 import 'options.dart';
 import 'utils/financial_chart_scale.dart';
 
@@ -84,8 +84,8 @@ part './utils/utils.dart';
 
 part './firebase/firestore.dart';
 part './firebase/auth.dart';
-part './firebase/storage.dart';
 part './arm/arm.dart';
+part './arm/arm_server_intake_sink.dart';
 
 late String role = '';
 bool isAdmin = false;

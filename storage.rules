@@ -6,9 +6,9 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     match /arm/cases/{allPaths=**} {
-      allow write: if true;
-      allow read: if request.auth != null
-          && request.auth.token.role == 'admin';
+      // Client screenshots are disabled until the server-only intake owns
+      // object persistence as well as Firestore writes.
+      allow read, write: if false;
     }
 
     match /{allPaths=**} {

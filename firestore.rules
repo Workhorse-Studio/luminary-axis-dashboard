@@ -2,16 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /armIssues/{issueId} {
-      allow read, write: if true;
-    }
-
-    match /armCases/{caseId} {
-      allow read, write: if true;
-    }
-
-    match /{document=**} {
-      allow read, write: if true;
+    // ARM writes are accepted only by LAD_Server's service account. Keep the
+    // legacy access posture for every other top-level collection unchanged.
+    match /{topLevel}/{document=**} {
+      allow read, write: if topLevel != 'armIssues' && topLevel != 'armCases';
     }
 
     match /global/state/pendingOnboarding/{document=**} {

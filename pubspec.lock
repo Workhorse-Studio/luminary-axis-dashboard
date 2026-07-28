@@ -69,8 +69,8 @@ packages:
     dependency: "direct main"
     description:
       path: tooling
-      ref: HEAD
-      resolved-ref: "4b341e7b5b14c1c82b706a801c0303f530691b04"
+      ref: c5bf233a8aa4ed25c942ab2617021e5ab184846b
+      resolved-ref: c5bf233a8aa4ed25c942ab2617021e5ab184846b
       url: "https://github.com/Citadel-Platform/ARM.git"
     source: git
     version: "0.1.0"
@@ -78,8 +78,8 @@ packages:
     dependency: transitive
     description:
       path: tooling_core
-      ref: "4b341e7b5b14c1c82b706a801c0303f530691b04"
-      resolved-ref: "4b341e7b5b14c1c82b706a801c0303f530691b04"
+      ref: c5bf233a8aa4ed25c942ab2617021e5ab184846b
+      resolved-ref: c5bf233a8aa4ed25c942ab2617021e5ab184846b
       url: "https://github.com/Citadel-Platform/ARM.git"
     source: git
     version: "0.1.0"
@@ -332,7 +332,7 @@ packages:
     source: hosted
     version: "3.9.1"
   firebase_storage:
-    dependency: "direct main"
+    dependency: "direct overridden"
     description:
       name: firebase_storage
       sha256: f81f2156232bc13f219bb65a80c46f9914d2a85589024b8cacc2bef072f7131e
@@ -474,7 +474,7 @@ packages:
     source: hosted
     version: "2.1.0"
   http:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"

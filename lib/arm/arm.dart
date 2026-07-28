@@ -37,12 +37,12 @@ class ArmLinkedServerFailure implements Exception {
 
 void initializeArmClient() {
   armClient = ArmClient(
-    sink: FirebaseArmSink(
-      firestore: firestore,
-      storage: storage,
-    ),
+    sink: ArmServerIntakeSink.firebaseAuth(),
     appId: 'luminary_axis_dashboard',
     environment: kReleaseMode ? 'production' : 'debug',
+    appVersion: _armAppVersion,
+    buildNumber: _armBuildNumber,
+    releaseChannel: _armReleaseChannel,
     userIdProvider: () => auth.currentUser?.uid,
     userEmailProvider: () => auth.currentUser?.email,
     routeProvider: () => _currentArmRoute,
@@ -203,7 +203,9 @@ Future<T> _runArmTrackedAction<T>({
         category: category,
         tags: tags,
         recoverySnapshotBuilder: recoverySnapshotBuilder,
-        screenshotCapture: screenshotCapture,
+        // The server-only intake has no object persistence yet. Never capture
+        // a browser image that cannot be stored by the approved boundary.
+        screenshotCapture: null,
         handled: true,
       );
       if (onReported != null) {
