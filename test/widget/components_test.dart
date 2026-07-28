@@ -86,13 +86,20 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: StudentInvoiceWidget(
-              studentInvoiceData: data,
-              total: 190.0,
+            body: SingleChildScrollView(
+              child: StudentInvoiceWidget(
+                studentInvoiceData: data,
+                total: 190.0,
+              ),
             ),
           ),
         ),
       );
+
+      final layoutException = tester.takeException();
+      if (layoutException != null) {
+        fail('Student invoice rendered with an exception: $layoutException');
+      }
 
       expect(find.text('TAX INVOICE'), findsOneWidget);
       expect(find.text('# INV-001'), findsOneWidget);

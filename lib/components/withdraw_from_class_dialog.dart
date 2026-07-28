@@ -16,7 +16,7 @@ class ConfirmationDialogState extends State<ConfirmationDialog> {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 340,
+        width: min(380, MediaQuery.of(context).size.width - 32),
         height: 240,
         foregroundDecoration: dialogForegroundDecoration,
         decoration: BoxDecoration(

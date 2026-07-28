@@ -325,7 +325,7 @@ class OnboardingPageState extends State<OnboardingPage> {
 
                   const SizedBox(height: 30),
                   AxisButton.text(
-                    width: 90,
+                    width: 160,
                     onPressed: () async {
                       final String msg;
                       String? clientCaseId;
@@ -365,9 +365,8 @@ class OnboardingPageState extends State<OnboardingPage> {
                                       studentContactNo: hpController.text,
                                       studentName: nameController.text,
                                       email: emailController.text,
-                                      parentContactNo:
-                                          parentsNameController.text,
-                                      parentName: parentsHpController.text,
+                                      parentContactNo: parentsHpController.text,
+                                      parentName: parentsNameController.text,
                                       school: schoolController.text,
                                       address: addressController.text,
                                       postalCode: postalCodeController.text,

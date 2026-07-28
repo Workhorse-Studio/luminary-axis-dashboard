@@ -21,6 +21,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:flutter_to_pdf/export_frame.dart' as pdf;
 import 'options.dart';
+import 'utils/financial_chart_scale.dart';
 
 part './pages/dashboard.dart';
 part './pages/syllabus.dart';

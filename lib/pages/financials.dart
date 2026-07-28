@@ -44,7 +44,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
       final data = doc.data();
       final dateStr = data['invoiceDateFormatted'] as String?;
       if (dateStr == null) continue;
-      
+
       final date = DateFormat('d-M-y').parse(dateStr);
       if (date.year != year) continue;
 
@@ -227,15 +227,19 @@ class _FinancialsPageState extends State<FinancialsPage> {
   }
 
   Widget _buildBarChart(FinancialData financialData) {
+    final scale = FinancialChartScale.fromValues(
+      financialData.monthlyData.expand(
+        (data) => [data.revenue, data.payouts],
+      ),
+    );
+
     return Expanded(
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
-          maxY:
-              financialData.monthlyData
-                  .map((d) => d.revenue > d.payouts ? d.revenue : d.payouts)
-                  .reduce((a, b) => a > b ? a : b) *
-              1.2,
+          minY: scale.minY,
+          maxY: scale.maxY,
+          gridData: FlGridData(horizontalInterval: scale.interval),
           barGroups: financialData.monthlyData
               .map(
                 (data) => BarChartGroupData(
@@ -261,23 +265,15 @@ class _FinancialsPageState extends State<FinancialsPage> {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 500,
-                getTitlesWidget: (value, meta) {
-                  return SideTitleWidget(
-                    meta: meta,
-                    child: Text(
-                      '\$${value.toInt()}',
-                      style: body2,
-                    ),
-                  );
-                },
+                interval: scale.interval,
+                getTitlesWidget: _buildCurrencyAxisTitle,
                 reservedSize: 60,
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 2,
+                interval: 1,
                 getTitlesWidget: (value, meta) {
                   if (value < 1 || value > 12) return const SizedBox();
                   return SideTitleWidget(
@@ -321,31 +317,35 @@ class _FinancialsPageState extends State<FinancialsPage> {
   }
 
   Widget _buildLineChart(FinancialData financialData) {
+    final scale = FinancialChartScale.fromValues(
+      financialData.monthlyData.map((data) => data.netProfit),
+    );
+
     return Expanded(
       child: LineChart(
         LineChartData(
-          gridData: const FlGridData(show: true),
+          minX: 1,
+          maxX: 12,
+          minY: scale.minY,
+          maxY: scale.maxY,
+          clipData: const FlClipData.all(),
+          gridData: FlGridData(
+            show: true,
+            horizontalInterval: scale.interval,
+          ),
           titlesData: FlTitlesData(
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 500,
-                getTitlesWidget: (value, meta) {
-                  return SideTitleWidget(
-                    meta: meta,
-                    child: Text(
-                      '\$${value.toInt()}',
-                      style: body2,
-                    ),
-                  );
-                },
+                interval: scale.interval,
+                getTitlesWidget: _buildCurrencyAxisTitle,
                 reservedSize: 60,
               ),
             ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                interval: 2,
+                interval: 1,
                 getTitlesWidget: (value, meta) {
                   if (value < 1 || value > 12) return const SizedBox();
                   return SideTitleWidget(
@@ -370,15 +370,13 @@ class _FinancialsPageState extends State<FinancialsPage> {
             show: true,
             border: Border.all(color: Colors.grey.withOpacity(0.5), width: 1),
           ),
-          minX: 1,
-          maxX: 12,
-          minY: 0,
           lineBarsData: [
             LineChartBarData(
               spots: financialData.monthlyData
                   .map((d) => FlSpot(d.month.toDouble(), d.netProfit))
                   .toList(),
               isCurved: true,
+              preventCurveOverShooting: true,
               color: Colors.blue,
               barWidth: 5,
               isStrokeCapRound: true,
@@ -405,6 +403,20 @@ class _FinancialsPageState extends State<FinancialsPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCurrencyAxisTitle(double value, TitleMeta meta) {
+    return SideTitleWidget(
+      meta: meta,
+      child: Text(
+        NumberFormat.compactCurrency(
+          locale: 'en_US',
+          symbol: '\$',
+          decimalDigits: 0,
+        ).format(value),
+        style: body2,
       ),
     );
   }
