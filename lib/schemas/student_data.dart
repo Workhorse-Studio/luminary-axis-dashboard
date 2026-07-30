@@ -17,6 +17,9 @@ class StudentData extends JSONSerialisable {
   final String subjectCombi;
   final String? referralCode;
 
+  /// Whether the one-time registration fee has been included on an invoice.
+  final bool registrationFeeInvoiced;
+
   const StudentData({
     required this.role,
     required this.name,
@@ -31,6 +34,7 @@ class StudentData extends JSONSerialisable {
     required this.school,
     required this.subjectCombi,
     this.referralCode,
+    this.registrationFeeInvoiced = false,
   });
 
   StudentData.fromJson(JSON json)
@@ -45,6 +49,8 @@ class StudentData extends JSONSerialisable {
       school = json['school'] as String,
       subjectCombi = json['subjectCombi'] as String,
       referralCode = json['referralCode'] as String?,
+      registrationFeeInvoiced =
+          json['registrationFeeInvoiced'] as bool? ?? false,
       withdrawn = (json['withdrawn'] as Map).map(
         (k, v) => MapEntry(k as String, v as bool),
       ),
@@ -65,5 +71,6 @@ class StudentData extends JSONSerialisable {
     'postalCode': postalCode,
     'subjectCombi': subjectCombi,
     'referralCode': referralCode,
+    'registrationFeeInvoiced': registrationFeeInvoiced,
   };
 }

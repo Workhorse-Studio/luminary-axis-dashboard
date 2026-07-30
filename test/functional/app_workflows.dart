@@ -183,6 +183,7 @@ void main({bool useIntegrationBinding = true}) {
         final student = StudentData.fromJson(students.docs.single.data());
         expect(student.invoiceIds, [null, null]);
         expect(student.referralCode, 'FRIEND-42');
+        expect(student.registrationFeeInvoiced, isFalse);
       },
     );
 
@@ -299,9 +300,26 @@ void main({bool useIntegrationBinding = true}) {
           ['14-5 S1', '14-5 S2', 'X'],
         );
         final invoice = store.invoicesData.single['student-1']!;
-        expect(invoice.entries.single.qty, 2);
-        expect(invoice.entries.single.amt, 190);
-        expect(invoice.amtPayable, 190);
+        final classEntry = invoice.entries.singleWhere(
+          (entry) => entry.desc == 'HL Mathematics',
+        );
+        final registrationEntries = invoice.entries
+            .where(
+              (entry) =>
+                  entry.desc ==
+                  StudentAttendanceStore.registrationFeeDescription,
+            )
+            .toList();
+        expect(classEntry.qty, 2);
+        expect(classEntry.amt, 190);
+        expect(registrationEntries, hasLength(1));
+        expect(registrationEntries.single, (
+          desc: StudentAttendanceStore.registrationFeeDescription,
+          qty: 1,
+          rate: 50.0,
+          amt: 50.0,
+        ));
+        expect(invoice.amtPayable, 240);
 
         expect(
           await store.run(
@@ -320,6 +338,158 @@ void main({bool useIntegrationBinding = true}) {
                   .get())
               .docs,
           hasLength(1),
+        );
+      },
+    );
+
+    test(
+      'an onboarded student without class allocations receives one registration invoice',
+      () async {
+        await _seedGlobalState(db, oneTerm: true);
+        const form = OnboardingStudentData(
+          studentContactNo: '81234567',
+          studentName: 'Alicia Tan',
+          parentContactNo: '98765432',
+          parentName: 'Grace Tan',
+          email: 'billing@example.com',
+          address: '1 Test Street',
+          postalCode: '123456',
+          school: 'Axis Secondary',
+          subjectCombi: 'Physics, Math',
+          referralCode: null,
+          classes: [],
+        );
+        final studentId = await onboardStudent(form);
+        final classes = GenericCache(
+          (id) => db.collection('classes').doc(id).get(),
+        );
+        final students = GenericCache(
+          (id) => db.collection('users').doc(id).get(),
+        );
+        await classes.initAll(collection: db.collection('classes'));
+        await students.initAll(
+          query: db.collection('users').where('role', isEqualTo: 'student'),
+        );
+        final state = GlobalState.fromJson(
+          (await db.collection('global').doc('state').get()).data()!,
+        );
+        final store = StudentAttendanceStore();
+
+        expect(
+          await store.run(
+            globalState: state,
+            classesCache: classes,
+            studentCache: students,
+          ),
+          1,
+        );
+        final invoice = store.invoicesData.single[studentId]!;
+        expect(invoice.entries, [
+          (
+            desc: StudentAttendanceStore.registrationFeeDescription,
+            qty: 1,
+            rate: 50.0,
+            amt: 50.0,
+          ),
+        ]);
+        expect(invoice.amtPayable, 50);
+        expect(
+          StudentData.fromJson(
+            (await db.collection('users').doc(studentId).get()).data()!,
+          ).registrationFeeInvoiced,
+          isTrue,
+        );
+
+        expect(
+          await store.run(
+            globalState: state,
+            classesCache: classes,
+            studentCache: students,
+          ),
+          0,
+          reason:
+              'a refresh must retain, rather than remove or duplicate, the fee',
+        );
+        expect(
+          (await db
+                  .collection('global')
+                  .doc('archives')
+                  .collection('invoices')
+                  .get())
+              .docs,
+          hasLength(1),
+        );
+      },
+    );
+
+    test(
+      'the registration fee appears only on the first term invoice',
+      () async {
+        await _seedGlobalState(db);
+        await db.collection('users').doc('student-1').set(_studentJson());
+        await db
+            .collection('classes')
+            .doc('class-1')
+            .set(_classJson(students: ['student-1']));
+        for (final termName in ['Term 1', 'Term 2']) {
+          await db
+              .collection('global')
+              .doc('state')
+              .collection('allocations')
+              .doc(termName)
+              .set({
+                'class-1': {'student-1': 1},
+              });
+        }
+        final classes = GenericCache(
+          (id) => db.collection('classes').doc(id).get(),
+        );
+        final students = GenericCache(
+          (id) => db.collection('users').doc(id).get(),
+        );
+        await classes.initAll(collection: db.collection('classes'));
+        await students.initAll(
+          query: db.collection('users').where('role', isEqualTo: 'student'),
+        );
+        final state = GlobalState.fromJson(
+          (await db.collection('global').doc('state').get()).data()!,
+        );
+        final store = StudentAttendanceStore();
+
+        expect(
+          await store.run(
+            globalState: state,
+            classesCache: classes,
+            studentCache: students,
+          ),
+          2,
+        );
+        final firstTermInvoice = store.invoicesData[0]['student-1']!;
+        final secondTermInvoice = store.invoicesData[1]['student-1']!;
+        expect(
+          firstTermInvoice.entries
+              .where(
+                (entry) =>
+                    entry.desc ==
+                    StudentAttendanceStore.registrationFeeDescription,
+              )
+              .length,
+          1,
+        );
+        expect(firstTermInvoice.amtPayable, 145);
+        expect(
+          secondTermInvoice.entries.any(
+            (entry) =>
+                entry.desc == StudentAttendanceStore.registrationFeeDescription,
+          ),
+          isFalse,
+        );
+        expect(secondTermInvoice.amtPayable, 95);
+        expect(
+          StudentData.fromJson(
+            (await db.collection('users').doc('student-1').get()).data()!,
+          ).registrationFeeInvoiced,
+          isTrue,
         );
       },
     );

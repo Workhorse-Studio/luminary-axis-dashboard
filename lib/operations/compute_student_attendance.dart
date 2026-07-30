@@ -1,6 +1,12 @@
 part of axis_dashboard;
 
 class StudentAttendanceStore {
+  static const String registrationFeeDescription = 'Registration Fee';
+  static const double registrationFeeAmount = 50;
+
+  static bool containsRegistrationFee(Iterable<InvoiceEntry> entries) =>
+      entries.any((entry) => entry.desc == registrationFeeDescription);
+
   static bool invoicePayloadMatches(
     StudentInvoiceData a,
     StudentInvoiceData b,
@@ -184,11 +190,6 @@ class StudentAttendanceStore {
           }
         }
 
-        if (relevantClasses.isEmpty &&
-            (sd.invoiceIds.length <= t || sd.invoiceIds[t] == null)) {
-          continue;
-        }
-
         DocumentSnapshot<JSON>? existingInvoice;
         if (sd.invoiceIds.length > t && sd.invoiceIds[t] != null) {
           existingInvoice = await firestore
@@ -198,6 +199,23 @@ class StudentAttendanceStore {
               .doc(sd.invoiceIds[t])
               .get();
         }
+        final existingInvoiceData =
+            existingInvoice?.exists == true && existingInvoice!.data() != null
+            ? StudentInvoiceData.fromJson(existingInvoice.data()!)
+            : null;
+        final shouldChargeRegistrationFee =
+            !sd.registrationFeeInvoiced &&
+            (relevantClasses.isNotEmpty || t == globalState.currentTermNum);
+        final shouldRetainRegistrationFee =
+            existingInvoiceData != null &&
+            containsRegistrationFee(existingInvoiceData.entries);
+
+        if (relevantClasses.isEmpty &&
+            existingInvoiceData == null &&
+            !shouldChargeRegistrationFee) {
+          continue;
+        }
+
         final List<InvoiceEntry> entries = [];
 
         int classIndex = 0;
@@ -215,6 +233,15 @@ class StudentAttendanceStore {
             rate: rate,
             qty: sessionCount,
             amt: rate * sessionCount,
+          ));
+        }
+
+        if (shouldChargeRegistrationFee || shouldRetainRegistrationFee) {
+          entries.add((
+            desc: registrationFeeDescription,
+            rate: registrationFeeAmount,
+            qty: 1,
+            amt: registrationFeeAmount,
           ));
         }
 
@@ -239,21 +266,30 @@ class StudentAttendanceStore {
           terms: 'Custom',
         );
 
+        final includesRegistrationFee = containsRegistrationFee(entries);
         bool refsUpdated = false;
-        if (existingInvoice != null) {
+        if (existingInvoiceData != null) {
           if (invoicePayloadMatches(
-            StudentInvoiceData.fromJson(existingInvoice.data()!),
+            existingInvoiceData,
             candidate,
           )) {
+            if (includesRegistrationFee && !sd.registrationFeeInvoiced) {
+              await firestore.collection('users').doc(studentEntry.key).update({
+                'registrationFeeInvoiced': true,
+              });
+              await studentCache.get(studentEntry.key, bypassCache: true);
+            }
             // Do nothing
-            currentTermInvoices[studentEntry.key] = StudentInvoiceData.fromJson(
-              existingInvoice.data()!,
-            );
+            currentTermInvoices[studentEntry.key] = existingInvoiceData;
             continue;
           } else {
             // Create new invoice (done above) and link student's data to that
             await firestore.collection('users').doc(studentEntry.key).update({
-              'invoiceIds': sd.invoiceIds..[t] = docRef.id,
+              'invoiceIds': sd.invoiceIds
+                ..ensureLength(t, map: null)
+                ..[t] = docRef.id,
+              if (includesRegistrationFee && !sd.registrationFeeInvoiced)
+                'registrationFeeInvoiced': true,
             });
             refsUpdated = true;
           }
@@ -270,6 +306,8 @@ class StudentAttendanceStore {
             'invoiceIds': sd.invoiceIds
               ..ensureLength(t, map: null)
               ..[t] = docRef.id,
+            if (includesRegistrationFee && !sd.registrationFeeInvoiced)
+              'registrationFeeInvoiced': true,
           });
         }
         await studentCache.get(studentEntry.key, bypassCache: true);
