@@ -127,10 +127,33 @@ class LoginPage extends StatelessWidget {
             context,
             state,
           ) async {
-            if ((await loadUser()) != null && context.mounted) {
+            final userData = await loadUser();
+            if (userData != null && context.mounted) {
               final router = Navigator.of(context);
               if (!await router.maybePop()) {
                 router.pushNamed(Routes.dashboard.slug);
+              }
+            } else if (context.mounted) {
+              await armClient.captureException(
+                error: StateError(
+                  'Authenticated user has no Firestore profile at their Auth UID',
+                ),
+                stackTrace: StackTrace.current,
+                feature: 'authentication',
+                operation: 'load_user_profile',
+                severity: ArmSeverity.serious,
+                category: 'identity',
+                handled: true,
+              );
+              await auth.signOut();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Your account is authenticated but has not been provisioned for Axis Dashboard. Please contact an administrator.',
+                    ),
+                  ),
+                );
               }
             }
           }),
