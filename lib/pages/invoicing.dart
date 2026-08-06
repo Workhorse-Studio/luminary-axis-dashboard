@@ -1,5 +1,7 @@
 part of axis_dashboard;
 
+const int invoiceRowsPerPage = 15;
+
 bool invoiceNameMatchesSearch(String name, String query) {
   final normalizedName = name.toLowerCase().trim();
   final normalizedQuery = query.toLowerCase().trim();
@@ -375,7 +377,8 @@ class InvoicingPageState extends State<InvoicingPage> {
               rows: rows,
               rowBuilder: (row, index) => _buildInvoiceRow(viewType, row),
             ),
-            autoRowsToHeight: true,
+            autoRowsToHeight: false,
+            rowsPerPage: invoiceRowsPerPage,
             renderEmptyRowsInTheEnd: false,
             showCheckboxColumn: false,
             showFirstLastButtons: true,
@@ -1749,48 +1752,21 @@ class InvoicingPageState extends State<InvoicingPage> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => Dialog(
-          child: SizedBox(
-            width: min(MediaQuery.sizeOf(context).width * 0.92, 1320),
-            height: min(MediaQuery.sizeOf(context).height * 0.78, 720),
-            child: Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 18, 12, 12),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text('Invoice mailing issues', style: heading3),
-                      ),
-                      IconButton(
-                        tooltip: 'Close',
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: InvoiceMailIssuesTable(
-                    issues: issues,
-                    onResolve: includeResolve
-                        ? (issue) async {
-                            final documentId = issue.documentId;
-                            if (documentId == null) return;
-                            await _invoiceMailIssueRepository.resolve(
-                              issue,
-                              resolvedBy: auth.currentUser?.email,
-                            );
-                            issues.remove(issue);
-                            setDialogState(() {});
-                          }
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        builder: (context, setDialogState) => InvoiceMailIssuesDialog(
+          issues: issues,
+          onClose: () => Navigator.of(dialogContext).pop(),
+          onResolve: includeResolve
+              ? (issue) async {
+                  final documentId = issue.documentId;
+                  if (documentId == null) return;
+                  await _invoiceMailIssueRepository.resolve(
+                    issue,
+                    resolvedBy: auth.currentUser?.email,
+                  );
+                  issues.remove(issue);
+                  setDialogState(() {});
+                }
+              : null,
         ),
       ),
     );

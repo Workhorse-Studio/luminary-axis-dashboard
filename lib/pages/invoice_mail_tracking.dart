@@ -264,19 +264,60 @@ class InvoiceMailIssuesTable extends StatelessWidget {
   Widget build(BuildContext context) {
     if (issues.isEmpty) {
       return Center(
-        child: Text('No invoice mailing issues to show.', style: body2),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.mark_email_read_outlined,
+                size: 40,
+                color: AxisColors.lilacPurple20.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No invoice mailing issues to show.',
+                style: body2.copyWith(
+                  color: AxisColors.white50.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return DataTable2(
-      minWidth: onResolve == null ? 1050 : 1180,
-      columnSpacing: 16,
-      horizontalMargin: 16,
+      minWidth: onResolve == null ? 1050 : 1240,
+      columnSpacing: 20,
+      horizontalMargin: 20,
+      headingRowHeight: 56,
+      dataRowHeight: 76,
+      dividerThickness: 0.2,
+      headingTextStyle: body2.copyWith(
+        color: AxisColors.white50.withValues(alpha: 0.8),
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+      dataTextStyle: body2.copyWith(
+        color: AxisColors.white50.withValues(alpha: 0.65),
+        fontSize: 14,
+      ),
       headingRowColor: WidgetStatePropertyAll(
-        AxisColors.blackPurple20.withValues(alpha: 0.08),
+        AxisColors.blackPurple30.withValues(alpha: 0.7),
+      ),
+      border: TableBorder(
+        verticalInside: BorderSide(
+          color: AxisColors.blackPurple20.withValues(alpha: 0.35),
+          width: 1,
+        ),
+        horizontalInside: BorderSide(
+          color: AxisColors.blackPurple20.withValues(alpha: 0.15),
+          width: 0.5,
+        ),
       ),
       columns: <DataColumn2>[
         if (onResolve != null)
-          const DataColumn2(fixedWidth: 90, label: Text('Resolve')),
+          const DataColumn2(fixedWidth: 160, label: Text('Resolve')),
         const DataColumn2(fixedWidth: 135, label: Text('Invoice')),
         const DataColumn2(size: ColumnSize.M, label: Text('Student / Payee')),
         const DataColumn2(size: ColumnSize.L, label: Text('Email')),
@@ -290,9 +331,38 @@ class InvoiceMailIssuesTable extends StatelessWidget {
             cells: <DataCell>[
               if (onResolve != null)
                 DataCell(
-                  TextButton(
+                  TextButton.icon(
+                    key: ValueKey(
+                      'resolve-invoice-mail-${issue.documentId ?? issue.invoiceId}',
+                    ),
                     onPressed: () => onResolve!(issue),
-                    child: const Text('Resolve'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AxisColors.lilacPurple20,
+                      backgroundColor: AxisColors.blackPurple30.withValues(
+                        alpha: 0.35,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: AxisColors.blackPurple20.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: Text(
+                      'Resolve',
+                      style: body2.copyWith(
+                        color: AxisColors.lilacPurple20,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               DataCell(Text(issue.invoiceId)),
@@ -313,6 +383,130 @@ class InvoiceMailIssuesTable extends StatelessWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+class InvoiceMailIssuesDialog extends StatelessWidget {
+  const InvoiceMailIssuesDialog({
+    required this.issues,
+    required this.onClose,
+    this.onResolve,
+    super.key,
+  });
+
+  final List<InvoiceMailIssue> issues;
+  final VoidCallback onClose;
+  final Future<void> Function(InvoiceMailIssue issue)? onResolve;
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaSize = MediaQuery.sizeOf(context);
+    final dialogWidth = min(1320.0, max(0.0, mediaSize.width - 48));
+    final dialogHeight = min(720.0, max(0.0, mediaSize.height - 48));
+
+    return Dialog(
+      key: const ValueKey('invoice-mail-issues-dialog'),
+      backgroundColor: AxisColors.blackPurple50,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.all(24),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: AxisColors.blackPurple20),
+      ),
+      child: SizedBox(
+        width: dialogWidth,
+        height: dialogHeight,
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(32, 24, 20, 20),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AxisColors.blackPurple30.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AxisColors.blackPurple20.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.mark_email_unread_outlined,
+                      color: AxisColors.lilacPurple20.withValues(alpha: 0.85),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('Invoice mailing issues', style: heading2),
+                        const SizedBox(height: 4),
+                        Text(
+                          onResolve == null
+                              ? 'Delivery issues recorded for this mailing run.'
+                              : 'Review and resolve outstanding invoice delivery issues.',
+                          style: body2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    key: const ValueKey('close-invoice-mail-issues-dialog'),
+                    tooltip: 'Close',
+                    onPressed: onClose,
+                    style: IconButton.styleFrom(
+                      foregroundColor: AxisColors.lilacPurple20,
+                      backgroundColor: AxisColors.blackPurple30.withValues(
+                        alpha: 0.35,
+                      ),
+                      hoverColor: AxisColors.lilacPurple20.withValues(
+                        alpha: 0.1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: AxisColors.blackPurple20.withValues(alpha: 0.5),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AxisColors.blackPurple30.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AxisColors.blackPurple20.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: InvoiceMailIssuesTable(
+                      issues: issues,
+                      onResolve: onResolve,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

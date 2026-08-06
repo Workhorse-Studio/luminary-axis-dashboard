@@ -41,14 +41,9 @@ void main() {
                         controller: controller,
                         onInfo: () => showDialog<void>(
                           context: context,
-                          builder: (_) => Dialog(
-                            child: SizedBox(
-                              width: 1100,
-                              height: 500,
-                              child: InvoiceMailIssuesTable(
-                                issues: controller.value.issues,
-                              ),
-                            ),
+                          builder: (dialogContext) => InvoiceMailIssuesDialog(
+                            issues: controller.value.issues,
+                            onClose: () => Navigator.of(dialogContext).pop(),
                           ),
                         ),
                       ),

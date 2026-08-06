@@ -1,4 +1,5 @@
 import 'package:axis_dashboard/main.dart';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -179,15 +180,83 @@ void main() {
           ),
         ),
       );
+      expect(tester.takeException(), isNull);
 
       expect(find.text('Resolve'), findsNWidgets(2));
       expect(find.text('INV-7'), findsOneWidget);
       expect(find.text('dina@example.com'), findsOneWidget);
       expect(find.text('Server'), findsOneWidget);
       expect(find.text('ARM-789'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, 'Resolve'));
+      await tester.tap(
+        find.byKey(const ValueKey('resolve-invoice-mail-INV-7')),
+      );
       await tester.pump();
       expect(resolved, isTrue);
+    });
+
+    testWidgets('mail issues dialog follows the Axis dialog design system', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      var closed = false;
+      final issue = InvoiceMailIssue(
+        invoiceId: 'INV-DESIGN',
+        recipientName: 'Design Student',
+        recipientEmail: 'design@example.com',
+        side: InvoiceMailIssueSide.client,
+        stage: 'preparing',
+        message: 'Invoice preparation failed.',
+        occurredAt: DateTime(2026, 8, 6),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            backgroundColor: AxisColors.blackPurple50,
+            body: InvoiceMailIssuesDialog(
+              issues: <InvoiceMailIssue>[issue],
+              onClose: () => closed = true,
+              onResolve: (_) async {},
+            ),
+          ),
+        ),
+      );
+
+      final dialog = tester.widget<Dialog>(
+        find.byKey(const ValueKey('invoice-mail-issues-dialog')),
+      );
+      expect(dialog.backgroundColor, AxisColors.blackPurple50);
+      expect(dialog.surfaceTintColor, Colors.transparent);
+      expect(dialog.insetPadding, const EdgeInsets.all(24));
+      expect(
+        (dialog.shape! as RoundedRectangleBorder).side.color,
+        AxisColors.blackPurple20,
+      );
+
+      final title = tester.widget<Text>(find.text('Invoice mailing issues'));
+      expect(title.style, heading2);
+      expect(
+        find.text('Review and resolve outstanding invoice delivery issues.'),
+        findsOneWidget,
+      );
+
+      final table = tester.widget<DataTable2>(find.byType(DataTable2));
+      expect(table.columnSpacing, 20);
+      expect(table.horizontalMargin, 20);
+      expect(table.headingRowHeight, 56);
+      expect(table.dataRowHeight, 76);
+      expect(table.headingTextStyle?.fontFamily, 'Urbanist');
+      expect(table.dataTextStyle?.fontFamily, 'Urbanist');
+      expect(
+        find.byKey(const ValueKey('resolve-invoice-mail-INV-DESIGN')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('close-invoice-mail-issues-dialog')),
+      );
+      expect(closed, isTrue);
     });
 
     testWidgets('progress content updates live and exposes batch details', (

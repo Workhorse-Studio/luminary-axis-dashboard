@@ -1,5 +1,6 @@
 // Browser workflow shared by the integration-test entry point.
 import 'package:axis_dashboard/main.dart';
+import 'package:data_table_2/data_table_2.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
@@ -61,18 +62,23 @@ void main({bool useIntegrationBinding = true}) {
         _expectNoRenderingErrors(tester, 'Loaded invoicing page');
 
         expect(find.text('E2E Client 00'), findsOneWidget);
-        expect(find.text('E2E Client 11'), findsNothing);
+        expect(find.text('E2E Client 15'), findsNothing);
         expect(find.byTooltip('Next page'), findsOneWidget);
+        final invoiceTable = tester.widget<PaginatedDataTable2>(
+          find.byType(PaginatedDataTable2).first,
+        );
+        expect(invoiceTable.rowsPerPage, invoiceRowsPerPage);
+        expect(invoiceTable.autoRowsToHeight, isFalse);
 
         await tester.tap(find.byTooltip('Next page'));
         await tester.pump(const Duration(milliseconds: 200));
-        expect(find.text('E2E Client 11'), findsOneWidget);
+        expect(find.text('E2E Client 15'), findsOneWidget);
 
         final search = find.byKey(const ValueKey('invoice-name-search'));
-        await tester.enterText(search, 'Clent 11');
+        await tester.enterText(search, 'Clent 15');
         await tester.pump(const Duration(milliseconds: 250));
-        expect(find.text('E2E Client 11'), findsOneWidget);
-        expect(find.text('E2E Client 10'), findsNothing);
+        expect(find.text('E2E Client 15'), findsOneWidget);
+        expect(find.text('E2E Client 14'), findsNothing);
 
         await tester.enterText(search, 'no-such-student');
         await tester.pump(const Duration(milliseconds: 250));
@@ -311,7 +317,7 @@ Future<void> _seedInvoicingData(FakeFirebaseFirestore db) async {
       .collection('allocations')
       .doc(term.termName)
       .set({});
-  for (var index = 0; index < 12; index++) {
+  for (var index = 0; index < 20; index++) {
     await db
         .collection('users')
         .doc('e2e-client-${index.toString().padLeft(2, '0')}')

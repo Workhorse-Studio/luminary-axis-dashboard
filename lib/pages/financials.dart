@@ -9,69 +9,24 @@ class FinancialsPage extends StatefulWidget {
 
 class _FinancialsPageState extends State<FinancialsPage> {
   int year = DateTime.now().year;
-  Future<FinancialData>? _financialDataFuture;
+  late Stream<FinancialData> _financialDataStream;
 
   @override
   void initState() {
     super.initState();
-    _financialDataFuture = _fetchFinancialData();
+    _financialDataStream = _watchFinancialData();
   }
 
-  Future<FinancialData> _fetchFinancialData() async {
-    final invoicesSnapshot = await firestore
-        .collection('global')
-        .doc('archives')
-        .collection('invoices')
-        .where(
-          'invoiceDateFormatted',
-          isGreaterThanOrEqualTo: DateFormat(
-            'd-M-y',
-          ).format(DateTime(year, 1, 1)),
-        )
-        .where(
-          'invoiceDateFormatted',
-          isLessThanOrEqualTo: DateFormat(
-            'd-M-y',
-          ).format(DateTime(year, 12, 31)),
-        )
-        .get();
+  Stream<FinancialData> _watchFinancialData() => watchPaidFinancialData(
+    database: firestore,
+    year: year,
+  );
 
-    final monthlyData = <int, MonthlyFinancials>{};
-    double ytdRevenue = 0;
-    double ytdPayouts = 0;
-
-    for (final doc in invoicesSnapshot.docs) {
-      final data = doc.data();
-      final dateStr = data['invoiceDateFormatted'] as String?;
-      if (dateStr == null) continue;
-
-      final date = DateFormat('d-M-y').parse(dateStr);
-      if (date.year != year) continue;
-
-      final month = date.month;
-      final invoiceType = data['invoiceType'];
-      final amount = data['amtDue'] ?? data['amtPayable'] ?? 0.0;
-
-      final monthFinancials = monthlyData.putIfAbsent(
-        month,
-        () => MonthlyFinancials(month),
-      );
-
-      if (invoiceType == 'student') {
-        monthFinancials.revenue += amount;
-        ytdRevenue += amount;
-      } else if (invoiceType == 'teacher') {
-        monthFinancials.payouts += amount;
-        ytdPayouts += amount;
-      }
-    }
-
-    return FinancialData(
-      ytdRevenue: ytdRevenue,
-      ytdPayouts: ytdPayouts,
-      monthlyData: monthlyData.values.toList()
-        ..sort((a, b) => a.month.compareTo(b.month)),
-    );
+  void _changeYear(int newYear) {
+    setState(() {
+      year = newYear;
+      _financialDataStream = _watchFinancialData();
+    });
   }
 
   @override
@@ -82,10 +37,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
         AxisButton(
           width: 60,
           height: 60,
-          onPressed: () => setState(() {
-            year -= 1;
-            _financialDataFuture = _fetchFinancialData();
-          }),
+          onPressed: () => _changeYear(year - 1),
           child: const Icon(
             Icons.chevron_left,
             size: 40,
@@ -99,10 +51,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
             ? AxisButton(
                 width: 60,
                 height: 60,
-                onPressed: () => setState(() {
-                  year += 1;
-                  _financialDataFuture = _fetchFinancialData();
-                }),
+                onPressed: () => _changeYear(year + 1),
                 child: const Icon(
                   Icons.chevron_right,
                   size: 40,
@@ -114,10 +63,11 @@ class _FinancialsPageState extends State<FinancialsPage> {
               ),
         const SizedBox(width: 40),
       ],
-      body: (context) => FutureBuilder<FinancialData>(
-        future: _financialDataFuture,
+      body: (context) => StreamBuilder<FinancialData>(
+        stream: _financialDataStream,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData &&
+              snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: SizedBox(
                 width: 60,
@@ -132,7 +82,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
           if (!snapshot.hasData || snapshot.data!.monthlyData.isEmpty) {
             return Center(
               child: Text(
-                'No financial data to be shown.',
+                'No paid invoice data to be shown.',
                 style: heading3,
               ),
             );
@@ -146,28 +96,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // KPI Stat Cards
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatCard(
-                      'YTD Revenue',
-                      '\$${financialData.ytdRevenue.toStringAsFixed(2)}',
-                      Colors.green,
-                    ),
-                    const SizedBox(width: 16),
-                    _buildStatCard(
-                      'YTD Payouts',
-                      '\$${financialData.ytdPayouts.toStringAsFixed(2)}',
-                      Colors.orange,
-                    ),
-                    const SizedBox(width: 16),
-                    _buildStatCard(
-                      'YTD Net Profit',
-                      '\$${financialData.ytdNetProfit.toStringAsFixed(2)}',
-                      Colors.blue,
-                    ),
-                  ],
-                ),
+                FinancialKpiCards(financialData: financialData),
                 const SizedBox(height: 32),
                 // Charts
                 Expanded(
@@ -177,7 +106,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Revenue vs Payouts', style: heading2),
+                            Text('Paid Inflows vs Outflows', style: heading2),
                             const SizedBox(height: 42),
                             _buildBarChart(financialData),
                           ],
@@ -188,7 +117,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Net Profit Trend', style: heading2),
+                            Text('Net Cash Flow Trend', style: heading2),
                             const SizedBox(height: 42),
                             _buildLineChart(financialData),
                           ],
@@ -205,31 +134,10 @@ class _FinancialsPageState extends State<FinancialsPage> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Expanded(
-      child: AxisCard(
-        width: 300,
-        height: 150,
-        header: title,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: heading2.copyWith(color: color),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildBarChart(FinancialData financialData) {
     final scale = FinancialChartScale.fromValues(
       financialData.monthlyData.expand(
-        (data) => [data.revenue, data.payouts],
+        (data) => [data.inflows, data.outflows],
       ),
     );
 
@@ -247,13 +155,13 @@ class _FinancialsPageState extends State<FinancialsPage> {
                   barRods: [
                     BarChartRodData(
                       fromY: 0,
-                      toY: data.revenue,
+                      toY: data.inflows,
                       color: Colors.green,
                       width: 15,
                     ),
                     BarChartRodData(
                       fromY: 0,
-                      toY: data.payouts,
+                      toY: data.outflows,
                       color: Colors.orange,
                       width: 15,
                     ),
@@ -300,12 +208,12 @@ class _FinancialsPageState extends State<FinancialsPage> {
                 final month = DateFormat.MMMM().format(
                   DateTime(0, group.x.toInt()),
                 );
-                final revenue = rodIndex == 0 ? rod.toY : group.barRods[0].toY;
-                final payouts = rodIndex == 1 ? rod.toY : group.barRods[1].toY;
+                final inflows = rodIndex == 0 ? rod.toY : group.barRods[0].toY;
+                final outflows = rodIndex == 1 ? rod.toY : group.barRods[1].toY;
                 return BarTooltipItem(
                   '$month\n'
-                  'Revenue: \$${revenue.toStringAsFixed(2)}\n'
-                  'Payouts: \$${payouts.toStringAsFixed(2)}',
+                  'Paid inflows: \$${inflows.toStringAsFixed(2)}\n'
+                  'Paid outflows: \$${outflows.toStringAsFixed(2)}',
                   body2.copyWith(color: Colors.white),
                 );
               },
@@ -318,7 +226,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
 
   Widget _buildLineChart(FinancialData financialData) {
     final scale = FinancialChartScale.fromValues(
-      financialData.monthlyData.map((data) => data.netProfit),
+      financialData.monthlyData.map((data) => data.netCashFlow),
     );
 
     return Expanded(
@@ -368,12 +276,15 @@ class _FinancialsPageState extends State<FinancialsPage> {
           ),
           borderData: FlBorderData(
             show: true,
-            border: Border.all(color: Colors.grey.withOpacity(0.5), width: 1),
+            border: Border.all(
+              color: Colors.grey.withValues(alpha: 0.5),
+              width: 1,
+            ),
           ),
           lineBarsData: [
             LineChartBarData(
               spots: financialData.monthlyData
-                  .map((d) => FlSpot(d.month.toDouble(), d.netProfit))
+                  .map((d) => FlSpot(d.month.toDouble(), d.netCashFlow))
                   .toList(),
               isCurved: true,
               preventCurveOverShooting: true,
@@ -383,7 +294,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: Colors.blue.withOpacity(0.3),
+                color: Colors.blue.withValues(alpha: 0.3),
               ),
             ),
           ],
@@ -395,7 +306,7 @@ class _FinancialsPageState extends State<FinancialsPage> {
                     DateTime(0, spot.x.toInt()),
                   );
                   return LineTooltipItem(
-                    '$month\nNet Profit: \$${spot.y.toStringAsFixed(2)}',
+                    '$month\nNet cash flow: \$${spot.y.toStringAsFixed(2)}',
                     body2.copyWith(color: Colors.white),
                   );
                 }).toList();
@@ -422,26 +333,149 @@ class _FinancialsPageState extends State<FinancialsPage> {
   }
 }
 
+class FinancialKpiCards extends StatelessWidget {
+  const FinancialKpiCards({required this.financialData, super.key});
+
+  final FinancialData financialData;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceAround,
+    children: [
+      _buildStatCard(
+        'YTD Paid Inflows',
+        '\$${financialData.ytdInflows.toStringAsFixed(2)}',
+        Colors.green,
+      ),
+      const SizedBox(width: 16),
+      _buildStatCard(
+        'YTD Paid Outflows',
+        '\$${financialData.ytdOutflows.toStringAsFixed(2)}',
+        Colors.orange,
+      ),
+      const SizedBox(width: 16),
+      _buildStatCard(
+        'YTD Net Cash Flow',
+        '\$${financialData.ytdNetCashFlow.toStringAsFixed(2)}',
+        Colors.blue,
+      ),
+    ],
+  );
+
+  Widget _buildStatCard(String title, String value, Color color) => Expanded(
+    child: AxisCard(
+      width: 300,
+      height: 150,
+      header: title,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 10),
+          Text(value, style: heading2.copyWith(color: color)),
+        ],
+      ),
+    ),
+  );
+}
+
+Stream<FinancialData> watchPaidFinancialData({
+  required FirebaseFirestore database,
+  required int year,
+}) => database
+    .collection('global')
+    .doc('archives')
+    .collection('invoices')
+    .where('invoiceStatus', isEqualTo: InvoiceStatus.paymentReceived.name)
+    .snapshots()
+    .map(
+      (snapshot) => calculatePaidFinancialData(
+        snapshot.docs.map((document) => document.data()),
+        year: year,
+      ),
+    );
+
+FinancialData calculatePaidFinancialData(
+  Iterable<JSON> invoices, {
+  required int year,
+}) {
+  final monthlyData = <int, MonthlyFinancials>{};
+  double ytdInflows = 0;
+  double ytdOutflows = 0;
+
+  for (final data in invoices) {
+    if (data['invoiceStatus'] != InvoiceStatus.paymentReceived.name) continue;
+    final date = _parseFinancialInvoiceDate(data);
+    if (date == null || date.year != year) continue;
+
+    final invoiceType =
+        data['invoiceType'] ??
+        (data.containsKey('amtPayable')
+            ? 'student'
+            : data.containsKey('amtDue')
+            ? 'teacher'
+            : null);
+    final amountValue = switch (invoiceType) {
+      'student' => data['amtPayable'],
+      'teacher' => data['amtDue'],
+      _ => null,
+    };
+    if (amountValue is! num) continue;
+    final amount = amountValue.toDouble();
+
+    final monthFinancials = monthlyData.putIfAbsent(
+      date.month,
+      () => MonthlyFinancials(date.month),
+    );
+    if (invoiceType == 'student') {
+      monthFinancials.inflows += amount;
+      ytdInflows += amount;
+    } else if (invoiceType == 'teacher') {
+      monthFinancials.outflows += amount;
+      ytdOutflows += amount;
+    }
+  }
+
+  return FinancialData(
+    ytdInflows: ytdInflows,
+    ytdOutflows: ytdOutflows,
+    monthlyData: monthlyData.values.toList()
+      ..sort((a, b) => a.month.compareTo(b.month)),
+  );
+}
+
+DateTime? _parseFinancialInvoiceDate(JSON invoice) {
+  final timestamp = invoice['invoiceDate'];
+  if (timestamp is Timestamp) return timestamp.toDate();
+  final formatted = invoice['invoiceDateFormatted'];
+  if (formatted is! String || formatted.trim().isEmpty) return null;
+  try {
+    return DateFormat('d-M-y').parseStrict(formatted.trim());
+  } on FormatException {
+    return null;
+  }
+}
+
 class FinancialData {
-  final double ytdRevenue;
-  final double ytdPayouts;
+  final double ytdInflows;
+  final double ytdOutflows;
   final List<MonthlyFinancials> monthlyData;
 
   FinancialData({
-    required this.ytdRevenue,
-    required this.ytdPayouts,
+    required this.ytdInflows,
+    required this.ytdOutflows,
     required this.monthlyData,
   });
 
-  double get ytdNetProfit => ytdRevenue - ytdPayouts;
+  double get ytdNetCashFlow => ytdInflows - ytdOutflows;
 }
 
 class MonthlyFinancials {
   final int month;
-  double revenue = 0.0;
-  double payouts = 0.0;
+  double inflows = 0.0;
+  double outflows = 0.0;
 
   MonthlyFinancials(this.month);
 
-  double get netProfit => revenue - payouts;
+  double get netCashFlow => inflows - outflows;
 }
