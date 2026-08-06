@@ -29,6 +29,7 @@ part './pages/students.dart';
 part './pages/teachers.dart';
 part './pages/login.dart';
 part './pages/invoicing.dart';
+part './pages/invoice_mail_tracking.dart';
 part './pages/student_details.dart';
 part './pages/term_details.dart';
 part './pages/onboarding_page.dart';

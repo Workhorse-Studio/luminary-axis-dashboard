@@ -28,15 +28,15 @@ void main() {
         reason: 'Production smoke tests must run with --release.',
       );
       expect(_recipient, isNotEmpty);
+      expect(_adminEmail, isNotEmpty);
+      expect(_adminPassword, isNotEmpty);
 
       await Firebase.initializeApp(options: options);
       _reportStage('firebase_initialized');
-      if (_adminEmail.isNotEmpty && _adminPassword.isNotEmpty) {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _adminEmail,
-          password: _adminPassword,
-        );
-      }
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _adminEmail,
+        password: _adminPassword,
+      );
       _reportStage('authentication_ready');
       role = 'admin';
       isAdmin = true;

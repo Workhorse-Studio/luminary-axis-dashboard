@@ -126,6 +126,7 @@ class InvoicingPageState extends State<InvoicingPage> {
   Future<Map<String, DocumentSnapshot<JSON>>>? _teacherTabFuture;
   Timer? _searchTimer;
   String _searchQuery = '';
+  Future<InvoiceMailBatchSnapshot>? _activeMailBatchRun;
 
   int year = DateTime.now().year;
   String selectedTeacherMonthId =
@@ -149,6 +150,12 @@ class InvoicingPageState extends State<InvoicingPage> {
     return Navbar(
       pageTitle: 'Billings',
       actions: [
+        IconButton(
+          tooltip: 'Invoice mailing errors',
+          onPressed: _showHistoricalMailIssuesDialog,
+          icon: const Icon(Icons.error_outline),
+        ),
+        const SizedBox(width: 8),
         if (currentTabIndex == 1) ...[
           AxisButton(
             width: 60,
@@ -293,117 +300,7 @@ class InvoicingPageState extends State<InvoicingPage> {
         AxisButton.text(
           icon: Icons.send,
           label: 'Send All',
-          onPressed: () async {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return const Center(child: CircularProgressIndicator());
-              },
-            );
-
-            int successCount = 0;
-            if (currentTabIndex == 0) {
-              final int currentTermIndex = globalState!.currentTermNum;
-              if (studentAttendanceStore.invoicesData.length >
-                  currentTermIndex) {
-                for (final entry
-                    in studentAttendanceStore
-                        .invoicesData[currentTermIndex]
-                        .entries) {
-                  final studentId = entry.key;
-                  final studentInvData = entry.value;
-                  final studentDoc = await studentCache.get(studentId);
-                  final studentData = StudentData.fromJson(studentDoc.data()!);
-
-                  try {
-                    if (await sendInvoiceEmail(
-                      studentData.email,
-                      StudentInvoiceWidget(
-                        showFonts: false,
-                        studentInvoiceData: studentInvData,
-                        total: studentInvData.amtPayable,
-                      ),
-                      context,
-                      timestampLabel: studentInvData.terms,
-                    )) {
-                      await firestore
-                          .collection('global')
-                          .doc('archives')
-                          .collection('invoices')
-                          .doc(studentInvData.invoiceId)
-                          .update({
-                            'invoiceStatus': InvoiceStatus.pendingPayment.name,
-                          });
-                      successCount++;
-                    }
-                  } catch (e, st) {
-                    print(
-                      'Error sending invoice for ${studentData.name}: $e\n$st',
-                    );
-                  }
-                }
-              }
-            } else {
-              // Teachers tab
-              final monthId = selectedTeacherMonthIdForYear();
-              for (final teacherEntry in teachersCache.registry.entries) {
-                final teacherData = TeacherData.fromJson(
-                  teacherEntry.value.data()!,
-                );
-                final invoiceId = teacherData.invoiceIds[monthId];
-                if (invoiceId == null) continue;
-
-                try {
-                  final invDoc = await firestore
-                      .collection('global')
-                      .doc('archives')
-                      .collection('invoices')
-                      .doc(invoiceId)
-                      .get();
-                  if (!invDoc.exists) continue;
-
-                  final invData = TeacherInvoiceData.fromJson(
-                    invDoc.data()!,
-                  ).withAgencyDetailsFromTeacher(teacherData);
-
-                  if (await sendInvoiceEmail(
-                    teacherData.email,
-                    TeacherInvoiceWidget(
-                      showFonts: false,
-                      teacherInvoiceData: invData,
-                      total: invData.amtDue,
-                    ),
-                    context,
-                    timestampLabel: formatTeacherInvoiceEmailTimestamp(monthId),
-                  )) {
-                    await invDoc.reference.update({
-                      'invoiceStatus': InvoiceStatus.pendingPayment.name,
-                    });
-                    successCount++;
-                  }
-                } catch (e, st) {
-                  print(
-                    'Error sending invoice for ${teacherData.name}: $e\n$st',
-                  );
-                }
-              }
-            }
-
-            Navigator.of(context).pop(); // Close the loading dialog
-            setState(() {});
-            if (context.mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '$successCount invoices were sent successfully.',
-                  ),
-                ),
-              );
-            }
-          },
+          onPressed: _activeMailBatchRun == null ? _sendAllInvoices : null,
         ),
       ],
       body: (context) => DefaultTabController(
@@ -727,6 +624,8 @@ class InvoicingPageState extends State<InvoicingPage> {
           ),
           context,
           timestampLabel: 'Manual Invoice ${invoice.invoiceDateFormatted}',
+          invoiceId: invoice.invoiceId,
+          recipientName: student.name,
         ),
       ),
     );
@@ -1021,65 +920,14 @@ class InvoicingPageState extends State<InvoicingPage> {
                             height: 60,
                             icon: Icons.send,
                             label: 'Send',
-                            onPressed: () async {
-                              try {
-                                if (await sendInvoiceEmail(
-                                  StudentData.fromJson(
-                                    studentData.data()!,
-                                  ).email,
-                                  StudentInvoiceWidget(
-                                    showFonts: false,
-                                    studentInvoiceData: studentAttendanceStore
+                            onPressed: _activeMailBatchRun == null
+                                ? () => _sendStudentInvoice(
+                                    studentId: studentData.id,
+                                    invoice: studentAttendanceStore
                                         .invoicesData[i][studentData.id]!,
-                                    total: studentAttendanceStore
-                                        .invoicesData[i][studentData.id]!
-                                        .amtPayable,
-                                  ),
-                                  context,
-                                  timestampLabel: studentAttendanceStore
-                                      .invoicesData[i][studentData.id]!
-                                      .terms,
-                                )) {
-                                  await firestore
-                                      .collection('global')
-                                      .doc('archives')
-                                      .collection('invoices')
-                                      .doc(
-                                        studentAttendanceStore
-                                            .invoicesData[i][studentData.id]!
-                                            .invoiceId,
-                                      )
-                                      .update({
-                                        'invoiceStatus':
-                                            InvoiceStatus.pendingPayment.name,
-                                      });
-                                  studentAttendanceStore
-                                      .invoicesData[i][studentData
-                                      .id] = StudentInvoiceData.fromJson(
-                                    (await firestore
-                                            .collection('global')
-                                            .doc('archives')
-                                            .collection('invoices')
-                                            .doc(
-                                              studentAttendanceStore
-                                                  .invoicesData[i][studentData
-                                                      .id]!
-                                                  .invoiceId,
-                                            )
-                                            .get())
-                                        .data()!,
-                                  );
-                                  setState(() {});
-                                }
-                              } catch (e, st) {
-                                print('Error in Student Send Button: $e\n$st');
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Send Error: $e')),
-                                  );
-                                }
-                              }
-                            },
+                                    termIndex: i,
+                                  )
+                                : null,
                           ),
                         ]
                       : [
@@ -1204,39 +1052,14 @@ class InvoicingPageState extends State<InvoicingPage> {
                             height: 60,
                             icon: Icons.send,
                             label: 'Send',
-                            onPressed: () async {
-                              final invoiceId = TeacherData.fromJson(
-                                teacherData.data()!,
-                              ).invoiceIds[monthId];
-                              if (invoiceId == null) return;
-                              final doc = await firestore
-                                  .collection('global')
-                                  .doc('archives')
-                                  .collection('invoices')
-                                  .doc(invoiceId)
-                                  .get();
-                              if (!doc.exists || doc.data() == null) return;
-                              final currentTeacherData = TeacherData.fromJson(
-                                teacherData.data()!,
-                              );
-                              final invData =
-                                  TeacherInvoiceData.fromJson(
-                                    doc.data()!,
-                                  ).withAgencyDetailsFromTeacher(
-                                    currentTeacherData,
-                                  );
-                              await sendInvoiceEmail(
-                                currentTeacherData.email,
-                                TeacherInvoiceWidget(
-                                  showFonts: false,
-                                  teacherInvoiceData: invData,
-                                  total: invData.amtDue,
-                                ),
-                                context,
-                                timestampLabel:
-                                    formatTeacherInvoiceEmailTimestamp(monthId),
-                              );
-                            },
+                            onPressed: _activeMailBatchRun == null
+                                ? () => _sendTeacherInvoice(
+                                    teacher: TeacherData.fromJson(
+                                      teacherData.data()!,
+                                    ),
+                                    monthId: monthId,
+                                  )
+                                : null,
                           ),
                         ],
                       ),
@@ -1308,201 +1131,669 @@ class InvoicingPageState extends State<InvoicingPage> {
     BuildContext context, {
     required String timestampLabel,
     ValueChanged<String>? onProgress,
+    String invoiceId = 'Manual invoice',
+    String recipientName = 'Manual recipient',
   }) async {
+    if (_activeMailBatchRun != null) {
+      return false;
+    }
+    final job = _InvoiceMailJob(
+      id: '$invoiceId-${DateTime.now().microsecondsSinceEpoch}',
+      invoiceId: invoiceId,
+      recipientName: recipientName,
+      recipientEmail: recipientAddress,
+      load: () async => _InvoiceMailPayload(
+        invoiceWidget: widget,
+        recipientName: recipientName,
+        recipientEmail: recipientAddress,
+        timestampLabel: timestampLabel,
+        includeFeeStructure: widget is StudentInvoiceWidget,
+        markPendingPayment: () async {},
+        onProgress: onProgress,
+      ),
+    );
+    final result = await _startInvoiceMailBatch(<_InvoiceMailJob>[job]);
+    return result.executions.single.delivered;
+  }
+
+  void _sendAllInvoices() {
+    unawaited(_sendAllInvoicesAsync());
+  }
+
+  Future<void> _sendAllInvoicesAsync() async {
+    final jobs = currentTabIndex == 0
+        ? _studentInvoiceJobsForCurrentTerm()
+        : _teacherInvoiceJobsForSelectedMonth();
+    await _startInvoiceMailBatch(jobs);
+  }
+
+  List<_InvoiceMailJob> _studentInvoiceJobsForCurrentTerm() {
+    final currentTermIndex = globalState?.currentTermNum;
+    if (currentTermIndex == null ||
+        studentAttendanceStore.invoicesData.length <= currentTermIndex) {
+      return const <_InvoiceMailJob>[];
+    }
+    return <_InvoiceMailJob>[
+      for (final entry
+          in studentAttendanceStore.invoicesData[currentTermIndex].entries)
+        _studentInvoiceJob(
+          studentId: entry.key,
+          invoice: entry.value,
+          termIndex: currentTermIndex,
+        ),
+    ];
+  }
+
+  _InvoiceMailJob _studentInvoiceJob({
+    required String studentId,
+    required StudentInvoiceData invoice,
+    required int termIndex,
+  }) {
+    final cachedDocument = studentCache.registry[studentId];
+    final cachedStudent = cachedDocument?.data() == null
+        ? null
+        : StudentData.fromJson(cachedDocument!.data()!);
+    return _InvoiceMailJob(
+      id: '${invoice.invoiceId}-$studentId',
+      invoiceId: invoice.invoiceId,
+      recipientName: cachedStudent?.name ?? invoice.studentName,
+      recipientEmail: cachedStudent?.email ?? 'Unknown',
+      load: () async {
+        final studentDocument = await studentCache.get(studentId);
+        final student = StudentData.fromJson(studentDocument.data()!);
+        final invoiceReference = firestore
+            .collection('global')
+            .doc('archives')
+            .collection('invoices')
+            .doc(invoice.invoiceId);
+        return _InvoiceMailPayload(
+          invoiceWidget: StudentInvoiceWidget(
+            showFonts: false,
+            studentInvoiceData: invoice,
+            total: invoice.amtPayable,
+          ),
+          recipientName: student.name,
+          recipientEmail: student.email,
+          timestampLabel: invoice.terms,
+          includeFeeStructure: true,
+          markPendingPayment: () async {
+            await markInvoicePendingPayment(invoiceReference);
+            final updatedDocument = await invoiceReference.get();
+            studentInvoicesCache.registry[invoice.invoiceId] = updatedDocument;
+            studentAttendanceStore.invoicesData[termIndex][studentId] =
+                StudentInvoiceData.fromJson(updatedDocument.data()!);
+          },
+        );
+      },
+    );
+  }
+
+  List<_InvoiceMailJob> _teacherInvoiceJobsForSelectedMonth() {
+    final monthId = selectedTeacherMonthIdForYear();
+    return <_InvoiceMailJob>[
+      for (final document in teachersCache.registry.values)
+        if (TeacherData.fromJson(document.data()!) case final teacher)
+          if (teacher.invoiceIds[monthId] case final invoiceId?)
+            _teacherInvoiceJob(
+              teacher: teacher,
+              invoiceId: invoiceId,
+              monthId: monthId,
+            ),
+    ];
+  }
+
+  _InvoiceMailJob _teacherInvoiceJob({
+    required TeacherData teacher,
+    required String invoiceId,
+    required String monthId,
+  }) => _InvoiceMailJob(
+    id: '$invoiceId-${teacher.email}',
+    invoiceId: invoiceId,
+    recipientName: teacher.name,
+    recipientEmail: teacher.email,
+    load: () async {
+      final invoiceReference = firestore
+          .collection('global')
+          .doc('archives')
+          .collection('invoices')
+          .doc(invoiceId);
+      final document = await invoiceReference.get();
+      if (!document.exists || document.data() == null) {
+        throw StateError('Invoice $invoiceId could not be loaded.');
+      }
+      final invoice = TeacherInvoiceData.fromJson(
+        document.data()!,
+      ).withAgencyDetailsFromTeacher(teacher);
+      return _InvoiceMailPayload(
+        invoiceWidget: TeacherInvoiceWidget(
+          showFonts: false,
+          teacherInvoiceData: invoice,
+          total: invoice.amtDue,
+        ),
+        recipientName: teacher.name,
+        recipientEmail: teacher.email,
+        timestampLabel: formatTeacherInvoiceEmailTimestamp(monthId),
+        includeFeeStructure: false,
+        markPendingPayment: () async {
+          await markInvoicePendingPayment(invoiceReference);
+          teachersInvoiceCache.registry[invoiceId] = await invoiceReference
+              .get();
+        },
+      );
+    },
+  );
+
+  void _sendStudentInvoice({
+    required String studentId,
+    required StudentInvoiceData invoice,
+    required int termIndex,
+  }) {
+    final job = _studentInvoiceJob(
+      studentId: studentId,
+      invoice: invoice,
+      termIndex: termIndex,
+    );
+    unawaited(_startInvoiceMailBatch(<_InvoiceMailJob>[job]));
+  }
+
+  void _sendTeacherInvoice({
+    required TeacherData teacher,
+    required String monthId,
+  }) {
+    final invoiceId = teacher.invoiceIds[monthId];
+    if (invoiceId == null) return;
+    unawaited(
+      _startInvoiceMailBatch(<_InvoiceMailJob>[
+        _teacherInvoiceJob(
+          teacher: teacher,
+          invoiceId: invoiceId,
+          monthId: monthId,
+        ),
+      ]),
+    );
+  }
+
+  Future<InvoiceMailBatchSnapshot> _startInvoiceMailBatch(
+    List<_InvoiceMailJob> jobs,
+  ) async {
+    final running = _activeMailBatchRun;
+    if (running != null) {
+      return running;
+    }
+    if (jobs.isEmpty) {
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('There are no invoices to send.')),
+        );
+      }
+      return const InvoiceMailBatchSnapshot(<InvoiceMailExecutionState>[]);
+    }
+
+    final controller = InvoiceMailBatchController(<InvoiceMailExecutionState>[
+      for (final job in jobs)
+        InvoiceMailExecutionState(
+          id: job.id,
+          invoiceId: job.invoiceId,
+          recipientName: job.recipientName,
+          recipientEmail: job.recipientEmail,
+        ),
+    ]);
+    _showInvoiceMailProgressSnackBar(controller);
+    final run = () async {
+      await runBoundedInvoiceMailTasks<_InvoiceMailJob>(
+        jobs,
+        maximumConcurrent: 2,
+        action: (job) => _runInvoiceMailJob(job, controller),
+      );
+      if (mounted) setState(() {});
+      return controller.value;
+    }();
+    _activeMailBatchRun = run;
+    if (mounted) setState(() {});
+    try {
+      return await run;
+    } finally {
+      if (identical(_activeMailBatchRun, run)) {
+        _activeMailBatchRun = null;
+        if (mounted) setState(() {});
+      }
+    }
+  }
+
+  Future<void> _runInvoiceMailJob(
+    _InvoiceMailJob job,
+    InvoiceMailBatchController controller,
+  ) async {
     String? clientCaseId;
-    String? serverCaseId;
+    var currentStage = InvoiceMailStage.loading;
+    var recipientName = job.recipientName;
+    var recipientEmail = job.recipientEmail;
     try {
       await runArmTrackedAction<void>(
         feature: 'invoicing',
         operation: 'send_invoice_email',
         severity: ArmSeverity.moderate,
         category: 'external_integration',
-        captureScreenshot: true,
+        captureScreenshot: false,
         tags: <String, dynamic>{
-          'recipient': recipientAddress,
-          'widgetType': widget.runtimeType.toString(),
+          'invoiceId': job.invoiceId,
+          'recipient': job.recipientEmail,
         },
         recoverySnapshotBuilder: () => <String, dynamic>{
-          'recipient': recipientAddress,
-          'timestampLabel': timestampLabel,
-          'widgetType': widget.runtimeType.toString(),
+          'invoiceId': job.invoiceId,
+          'recipient': recipientEmail,
+          'stage': currentStage.name,
         },
-        onReported: (result) {
-          clientCaseId = result.caseId;
-        },
+        onReported: (result) => clientCaseId = result.caseId,
         action: () async {
-          onProgress?.call('started');
-          await precacheImage(
-            AssetImage('assets/images/axis_logo.png'),
-            context,
+          controller.updateStage(job.id, currentStage);
+          final payload = await job.load();
+          recipientName = payload.recipientName;
+          recipientEmail = payload.recipientEmail;
+          controller.updateRecipient(
+            job.id,
+            name: recipientName,
+            email: recipientEmail,
           );
-          onProgress?.call('asset_precached');
+          payload.onProgress?.call('started');
+          await Future<void>.delayed(Duration.zero);
+          currentStage = InvoiceMailStage.preparing;
+          controller.updateStage(job.id, currentStage);
+          final pdfBytes = await _createInvoicePdf(
+            payload.invoiceWidget,
+            onProgress: payload.onProgress,
+          );
+          await Future<void>.delayed(Duration.zero);
+          currentStage = InvoiceMailStage.transferring;
+          controller.updateStage(job.id, currentStage);
+          final outcome = await _uploadInvoicePdf(
+            job: job,
+            payload: payload,
+            bytes: pdfBytes,
+          );
+          for (final serverIssue in outcome.serverIssues) {
+            final issue = InvoiceMailIssue(
+              invoiceId: job.invoiceId,
+              recipientName: recipientName,
+              recipientEmail: recipientEmail,
+              side: InvoiceMailIssueSide.server,
+              stage: serverIssue.stage,
+              message: serverIssue.message,
+              occurredAt: DateTime.now(),
+              armCaseId: serverIssue.armCaseId,
+            );
+            controller.addIssue(job.id, issue);
+            await _recordInvoiceMailIssue(issue);
+          }
+          if (!outcome.delivered) {
+            throw const _InvoiceMailFailure(
+              side: InvoiceMailIssueSide.server,
+              stage: 'smtp_delivery',
+              message: 'The server did not confirm SMTP delivery.',
+            );
+          }
+          currentStage = InvoiceMailStage.updatingPaymentStatus;
+          controller.updateStage(job.id, currentStage);
+          try {
+            await payload.markPendingPayment();
+          } catch (error, stackTrace) {
+            String? statusCaseId;
+            try {
+              await runArmTrackedAction<void>(
+                feature: 'invoicing',
+                operation: 'mark_invoice_pending_payment',
+                severity: ArmSeverity.moderate,
+                category: 'data_write',
+                captureScreenshot: false,
+                onReported: (result) => statusCaseId = result.caseId,
+                action: () => Error.throwWithStackTrace(error, stackTrace),
+              );
+            } catch (_) {}
+            final issue = InvoiceMailIssue(
+              invoiceId: job.invoiceId,
+              recipientName: recipientName,
+              recipientEmail: recipientEmail,
+              side: InvoiceMailIssueSide.client,
+              stage: 'payment_status_update',
+              message:
+                  'Email was sent, but payment status could not be changed to Pending Payment: $error',
+              occurredAt: DateTime.now(),
+              armCaseId: statusCaseId,
+            );
+            controller.addIssue(job.id, issue);
+            await _recordInvoiceMailIssue(issue);
+          }
+          controller.complete(job.id, delivered: true);
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Invoice mail ${job.invoiceId} failed: $error\n$stackTrace');
+      final failure = error is _InvoiceMailFailure ? error : null;
+      final issue = InvoiceMailIssue(
+        invoiceId: job.invoiceId,
+        recipientName: recipientName,
+        recipientEmail: recipientEmail,
+        side: failure?.side ?? InvoiceMailIssueSide.client,
+        stage: failure?.stage ?? currentStage.name,
+        message: failure?.message ?? _readableClientMailError(error),
+        occurredAt: DateTime.now(),
+        armCaseId: failure?.armCaseId ?? clientCaseId,
+      );
+      controller.addIssue(job.id, issue);
+      await _recordInvoiceMailIssue(issue);
+      controller.complete(job.id, delivered: false);
+    }
+  }
 
-          late final List<InvoiceEntry> allEntries;
-          late final Widget firstPageWidget;
-          late final Widget Function({
+  Future<Uint8List> _createInvoicePdf(
+    Widget widget, {
+    ValueChanged<String>? onProgress,
+  }) async {
+    await precacheImage(
+      const AssetImage('assets/images/axis_logo.png'),
+      context,
+    );
+    onProgress?.call('asset_precached');
+    late final List<InvoiceEntry> allEntries;
+    late final Widget firstPageWidget;
+    late final Widget Function({
+      required List<InvoiceEntry> entries,
+      required bool isFirstPage,
+      required bool isLastPage,
+      required int startIndex,
+    })
+    pagedWidgetBuilder;
+
+    if (widget is StudentInvoiceWidget) {
+      allEntries = widget.overrideEntries ?? widget.studentInvoiceData.entries;
+      firstPageWidget = widget;
+      pagedWidgetBuilder =
+          ({
             required List<InvoiceEntry> entries,
             required bool isFirstPage,
             required bool isLastPage,
             required int startIndex,
-          })
-          pagedWidgetBuilder;
-
-          if (widget is StudentInvoiceWidget) {
-            allEntries =
-                widget.overrideEntries ?? widget.studentInvoiceData.entries;
-            firstPageWidget = widget;
-            pagedWidgetBuilder =
-                ({
-                  required List<InvoiceEntry> entries,
-                  required bool isFirstPage,
-                  required bool isLastPage,
-                  required int startIndex,
-                }) => StudentInvoiceWidget(
-                  studentInvoiceData: widget.studentInvoiceData,
-                  overrideEntries: entries,
-                  showFonts: widget.showFonts,
-                  showTopHeader: isFirstPage,
-                  showBottomFooter: isLastPage,
-                  startIndex: startIndex,
-                  total: widget.total,
-                  maskEditableFields: widget.maskEditableFields,
-                );
-          } else if (widget is TeacherInvoiceWidget) {
-            allEntries =
-                widget.overrideEntries ?? widget.teacherInvoiceData.entries;
-            firstPageWidget = widget;
-            pagedWidgetBuilder =
-                ({
-                  required List<InvoiceEntry> entries,
-                  required bool isFirstPage,
-                  required bool isLastPage,
-                  required int startIndex,
-                }) => TeacherInvoiceWidget(
-                  teacherInvoiceData: widget.teacherInvoiceData,
-                  overrideEntries: entries,
-                  showFonts: widget.showFonts,
-                  showTopHeader: isFirstPage,
-                  showBottomFooter: isLastPage,
-                  startIndex: startIndex,
-                  total: widget.total,
-                  maskEditableFields: widget.maskEditableFields,
-                );
-          } else {
-            throw ArgumentError(
-              'Unsupported invoice widget type: ${widget.runtimeType}',
-            );
-          }
-
-          final List<IWBlankPage> pages = [];
-          if (allEntries.length <= 2) {
-            pages.add(IWBlankPage(child: firstPageWidget));
-          } else {
-            int i = 0;
-            while (i < allEntries.length) {
-              final bool isFirstPage = i == 0;
-              final int chunkSize = isFirstPage ? 2 : 12;
-              final int end = (i + chunkSize < allEntries.length)
-                  ? i + chunkSize
-                  : allEntries.length;
-
-              final chunk = allEntries.sublist(i, end);
-              final bool isLastPage = end == allEntries.length;
-
-              pages.add(
-                IWBlankPage(
-                  child: pagedWidgetBuilder(
-                    entries: chunk,
-                    isFirstPage: isFirstPage,
-                    isLastPage: isLastPage,
-                    startIndex: i,
-                  ),
-                ),
-              );
-
-              i = end;
-            }
-          }
-          onProgress?.call('pages_prepared');
-
-          final bytes = await m.PDFMaker().createMultiPagePDF(
-            pages,
-            setup: m.PageSetup(
-              context: context,
-              quality: 2.0,
-              scale: 1.5,
-              pageFormat: m.PageFormat.a4,
-              margins: 10,
-            ),
+          }) => StudentInvoiceWidget(
+            studentInvoiceData: widget.studentInvoiceData,
+            overrideEntries: entries,
+            showFonts: widget.showFonts,
+            showTopHeader: isFirstPage,
+            showBottomFooter: isLastPage,
+            startIndex: startIndex,
+            total: widget.total,
+            maskEditableFields: widget.maskEditableFields,
           );
-          onProgress?.call('pdf_generated');
-
-          final file = web.File(
-            [
-              bytes.toJS as JSAny,
-            ].toJS,
-            'invoice.pdf',
+    } else if (widget is TeacherInvoiceWidget) {
+      allEntries = widget.overrideEntries ?? widget.teacherInvoiceData.entries;
+      firstPageWidget = widget;
+      pagedWidgetBuilder =
+          ({
+            required List<InvoiceEntry> entries,
+            required bool isFirstPage,
+            required bool isLastPage,
+            required int startIndex,
+          }) => TeacherInvoiceWidget(
+            teacherInvoiceData: widget.teacherInvoiceData,
+            overrideEntries: entries,
+            showFonts: widget.showFonts,
+            showTopHeader: isFirstPage,
+            showBottomFooter: isLastPage,
+            startIndex: startIndex,
+            total: widget.total,
+            maskEditableFields: widget.maskEditableFields,
           );
-
-          final overrideResp = await makeRequest(
-            body: jsonEncode({
-              'op': 'sendInvoice',
-              'recipient': recipientAddress,
-              'timestamp': timestampLabel,
-              'includeFeeStructure': widget is StudentInvoiceWidget,
-            }).toJS,
-          );
-          serverCaseId = overrideResp.armCaseId;
-          if (!overrideResp.ok) {
-            throwArmResponseFailure(
-              statusCode: overrideResp.statusCode,
-              body: overrideResp.body,
-              rawBody: overrideResp.rawBody,
-              armCaseId: overrideResp.armCaseId,
-            );
-          }
-          onProgress?.call('server_prepared');
-
-          final response = await web.window
-              .fetch(
-                'https://axis-server-850501828016.asia-southeast1.run.app/api/'
-                    .toJS,
-                web.RequestInit(
-                  method: 'POST',
-                  body: file,
-                ),
-              )
-              .toDart;
-          serverCaseId = response.headers.get('x-arm-case-id') ?? serverCaseId;
-          if (!response.ok) {
-            final rawBody = (await response.text().toDart).toDart;
-            throwArmResponseFailure(
-              statusCode: response.status,
-              body: tryDecodeJsonObject(rawBody),
-              rawBody: rawBody,
-              armCaseId: serverCaseId,
-            );
-          }
-          onProgress?.call('pdf_uploaded');
-        },
+    } else {
+      throw ArgumentError(
+        'Unsupported invoice widget type: ${widget.runtimeType}',
       );
-      if (context.mounted) {
-        ScaffoldMessenger.of(
+    }
+
+    final pages = <IWBlankPage>[];
+    if (allEntries.length <= 2) {
+      pages.add(IWBlankPage(child: firstPageWidget));
+    } else {
+      var entryIndex = 0;
+      while (entryIndex < allEntries.length) {
+        final isFirstPage = entryIndex == 0;
+        final chunkSize = isFirstPage ? 2 : 12;
+        final end = min(entryIndex + chunkSize, allEntries.length);
+        pages.add(
+          IWBlankPage(
+            child: pagedWidgetBuilder(
+              entries: allEntries.sublist(entryIndex, end),
+              isFirstPage: isFirstPage,
+              isLastPage: end == allEntries.length,
+              startIndex: entryIndex,
+            ),
+          ),
+        );
+        entryIndex = end;
+      }
+    }
+    onProgress?.call('pages_prepared');
+    if (!mounted) {
+      throw StateError('The invoicing page was closed during PDF preparation.');
+    }
+    final bytes = await m.PDFMaker().createMultiPagePDF(
+      pages,
+      setup: m.PageSetup(
+        context: context,
+        quality: 2,
+        scale: 1.5,
+        pageFormat: m.PageFormat.a4,
+        margins: 10,
+      ),
+    );
+    onProgress?.call('pdf_generated');
+    return bytes;
+  }
+
+  Future<_InvoiceDeliveryOutcome> _uploadInvoicePdf({
+    required _InvoiceMailJob job,
+    required _InvoiceMailPayload payload,
+    required Uint8List bytes,
+  }) async {
+    final file = web.File(<JSAny>[bytes.toJS].toJS, 'invoice.pdf');
+    final encodedMetadata = base64UrlEncode(
+      utf8.encode(
+        jsonEncode(<String, Object?>{
+          'invoiceId': job.invoiceId,
+          'recipientName': payload.recipientName,
+          'recipient': payload.recipientEmail,
+          'timestamp': payload.timestampLabel,
+          'includeFeeStructure': payload.includeFeeStructure,
+        }),
+      ),
+    );
+    final idToken = await auth.currentUser?.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw const _InvoiceMailFailure(
+        side: InvoiceMailIssueSide.client,
+        stage: 'authentication',
+        message: 'Please sign in again before sending invoices.',
+      );
+    }
+    payload.onProgress?.call('pdf_upload_started');
+    final response = await makeRequest(
+      url:
+          'https://axis-server-850501828016.asia-southeast1.run.app/api/invoices/send',
+      body: file,
+      headers: <String, String>{
+        'Content-Type': 'application/pdf',
+        'X-Invoice-Metadata': encodedMetadata,
+        'Authorization': 'Bearer $idToken',
+      },
+    );
+    final body = response.body;
+    if (!response.ok || body == null) {
+      final error = body?['error'];
+      final errorMessage = error is Map
+          ? error['message']?.toString()
+          : error?.toString();
+      throw _InvoiceMailFailure(
+        side: InvoiceMailIssueSide.server,
+        stage: (body?['failedStage'] as String?) ?? 'server_processing',
+        message: errorMessage?.trim().isNotEmpty == true
+            ? errorMessage!.trim()
+            : 'Server rejected invoice delivery (HTTP ${response.statusCode}).',
+        armCaseId: response.armCaseId,
+      );
+    }
+    payload.onProgress?.call('server_completed');
+    final issues = <({String stage, String message, String? armCaseId})>[];
+    if (body['issues'] case final List<Object?> rawIssues) {
+      for (final rawIssue in rawIssues) {
+        if (rawIssue is Map) {
+          issues.add((
+            stage: rawIssue['stage']?.toString() ?? 'server_processing',
+            message:
+                rawIssue['message']?.toString() ??
+                'The server reported an unspecified mail issue.',
+            armCaseId: rawIssue['armCaseId']?.toString() ?? response.armCaseId,
+          ));
+        }
+      }
+    }
+    return _InvoiceDeliveryOutcome(
+      delivered: body['delivered'] == true,
+      serverIssues: issues,
+    );
+  }
+
+  String _readableClientMailError(Object error) {
+    final message = error.toString().trim();
+    return message.isEmpty
+        ? 'The client encountered an unknown invoice mailing error.'
+        : message.replaceFirst(RegExp(r'^(Exception|StateError):\s*'), '');
+  }
+
+  InvoiceMailIssueRepository get _invoiceMailIssueRepository =>
+      InvoiceMailIssueRepository(firestore);
+
+  Future<void> _recordInvoiceMailIssue(InvoiceMailIssue issue) async {
+    try {
+      await _invoiceMailIssueRepository.record(issue);
+    } catch (error, stackTrace) {
+      debugPrint('Could not persist invoice mail issue: $error\n$stackTrace');
+      try {
+        await armClient.captureException(
+          error: error,
+          stackTrace: stackTrace,
+          feature: 'invoicing',
+          operation: 'persist_invoice_mail_issue',
+          severity: ArmSeverity.serious,
+          category: 'data_write',
+          tags: <String, dynamic>{'invoiceId': issue.invoiceId},
+          handled: true,
+        );
+      } catch (_) {}
+    }
+  }
+
+  void _showInvoiceMailProgressSnackBar(
+    InvoiceMailBatchController controller,
+  ) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(days: 365),
+        showCloseIcon: true,
+        content: InvoiceMailProgressContent(
+          controller: controller,
+          onInfo: () => _showInvoiceMailIssuesDialog(
+            controller.value.issues,
+            includeResolve: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showHistoricalMailIssuesDialog() async {
+    try {
+      final issues = await _invoiceMailIssueRepository.loadOutstanding();
+      if (!mounted) return;
+      await _showInvoiceMailIssuesDialog(issues, includeResolve: true);
+    } catch (error, stackTrace) {
+      String? caseId;
+      try {
+        final capture = await armClient.captureException(
+          error: error,
+          stackTrace: stackTrace,
+          feature: 'invoicing',
+          operation: 'load_invoice_mail_issues',
+          severity: ArmSeverity.moderate,
+          category: 'data_read',
+          handled: true,
+        );
+        caseId = capture.caseId;
+      } catch (_) {}
+      if (mounted) {
+        showArmSnackBar(
           context,
-        ).showSnackBar(
-          const SnackBar(content: Text('Invoice sent successfully!')),
+          'Invoice mailing issues could not be loaded.',
+          caseId: caseId,
         );
       }
-      return true;
-    } catch (e, st) {
-      print('Error sending invoice email: $e\n$st');
-      showArmSnackBar(
-        context,
-        'Failed to generate/send invoice.',
-        caseId: serverCaseId ?? clientCaseId,
-      );
-      return false;
     }
+  }
+
+  Future<void> _showInvoiceMailIssuesDialog(
+    List<InvoiceMailIssue> initialIssues, {
+    required bool includeResolve,
+  }) async {
+    if (!mounted) return;
+    final issues = List<InvoiceMailIssue>.of(initialIssues);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          child: SizedBox(
+            width: min(MediaQuery.sizeOf(context).width * 0.92, 1320),
+            height: min(MediaQuery.sizeOf(context).height * 0.78, 720),
+            child: Column(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 12, 12),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text('Invoice mailing issues', style: heading3),
+                      ),
+                      IconButton(
+                        tooltip: 'Close',
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: InvoiceMailIssuesTable(
+                    issues: issues,
+                    onResolve: includeResolve
+                        ? (issue) async {
+                            final documentId = issue.documentId;
+                            if (documentId == null) return;
+                            await _invoiceMailIssueRepository.resolve(
+                              issue,
+                              resolvedBy: auth.currentUser?.email,
+                            );
+                            issues.remove(issue);
+                            setDialogState(() {});
+                          }
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<int> fetchUpdatedTeacherInvoices({bool forceAll = false}) async {

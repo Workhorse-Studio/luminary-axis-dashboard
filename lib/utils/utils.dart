@@ -71,7 +71,14 @@ makeRequest({
   Map<String, String> headers = const {
     'Content-Type': 'application/json',
   },
+  Duration requestTimeout = const Duration(minutes: 2),
 }) async {
+  final abortController = web.AbortController();
+  var timedOut = false;
+  final timeoutTimer = Timer(requestTimeout, () {
+    timedOut = true;
+    abortController.abort();
+  });
   try {
     armClient.addBreadcrumb(
       'HTTP $method $url started',
@@ -86,6 +93,7 @@ makeRequest({
             body: body,
             headers: headers.jsify() as web.Headers,
             credentials: 'omit',
+            signal: abortController.signal,
           ),
         )
         .toDart;
@@ -112,14 +120,22 @@ makeRequest({
       statusCode: res.status,
       rawBody: jsonBodyStr,
     );
-  } catch (e, st) {
-    print('makeRequest error: $e');
+  } catch (error, stackTrace) {
+    final reportedError = timedOut
+        ? TimeoutException(
+            'The server did not respond within '
+            '${requestTimeout.inSeconds} seconds.',
+          )
+        : error;
+    print('makeRequest error: $reportedError');
     armClient.addBreadcrumb(
       'HTTP $method $url threw',
       level: 'error',
       category: 'network',
     );
-    Error.throwWithStackTrace(e, st);
+    Error.throwWithStackTrace(reportedError, stackTrace);
+  } finally {
+    timeoutTimer.cancel();
   }
 }
 

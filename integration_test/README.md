@@ -21,8 +21,12 @@ flutter drive --release \
   --target=integration_test/production_invoicing_smoke_test.dart \
   -d chrome --driver-port=4444 --browser-dimension=1800,1000 \
   --dart-define=RUN_PRODUCTION_SMOKE=true \
-  --dart-define=PROD_SMOKE_RECIPIENT=...
+  --dart-define=PROD_SMOKE_RECIPIENT=... \
+  --dart-define=PROD_SMOKE_ADMIN_EMAIL=... \
+  --dart-define=PROD_SMOKE_ADMIN_PASSWORD=...
 ```
 
-`PROD_SMOKE_ADMIN_EMAIL` and `PROD_SMOKE_ADMIN_PASSWORD` may also be supplied
-when the production project requires authenticated Firestore access.
+The account must be a disposable-test-safe production administrator whose
+Firebase ID token carries `role=admin`. The test refuses to run without all
+three values so it cannot accidentally exercise the production endpoint while
+unauthenticated.
