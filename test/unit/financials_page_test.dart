@@ -42,7 +42,7 @@ void main() {
   });
 
   group('calculatePaidFinancialData', () {
-    test('counts only paid student inflows and teacher outflows', () {
+    test('adds post-baseline fulfilled inflows and ignores outflows', () {
       final result = calculatePaidFinancialData(<JSON>[
         _invoice(
           type: 'student',
@@ -70,16 +70,23 @@ void main() {
         ),
       ], year: 2026);
 
-      expect(result.ytdInflows, 250);
-      expect(result.ytdOutflows, 80.5);
-      expect(result.ytdNetCashFlow, 169.5);
-      expect(result.monthlyData, hasLength(1));
-      expect(result.monthlyData.single.month, 8);
-      expect(result.monthlyData.single.inflows, 250);
-      expect(result.monthlyData.single.outflows, 80.5);
+      expect(result.ytdInflows, financialRevenueBaseline2026 + 250);
+      expect(result.ytdOutflows, 0);
+      expect(result.ytdNetCashFlow, financialRevenueBaseline2026 + 250);
+      expect(result.monthlyData, hasLength(2));
+      expect(result.monthlyData.first.month, 7);
+      expect(result.monthlyData.first.inflows, financialRevenueBaseline2026);
+      expect(result.monthlyData.last.month, 8);
+      expect(result.monthlyData.last.inflows, 250);
+      expect(result.monthlyData.last.outflows, 0);
+      expect(result.yearlyData.map((item) => item.year), [2025, 2026]);
+      expect(
+        result.yearlyData.last.inflows,
+        financialRevenueBaseline2026 + 250,
+      );
     });
 
-    test('supports Timestamp dates, legacy missing types, and bad data', () {
+    test('keeps the 30 July baseline from double-counting old invoices', () {
       final result = calculatePaidFinancialData(<JSON>[
         <String, Object?>{
           'invoiceStatus': InvoiceStatus.paymentReceived.name,
@@ -100,9 +107,11 @@ void main() {
         },
       ], year: 2026);
 
-      expect(result.ytdInflows, 75);
+      expect(result.ytdInflows, financialRevenueBaseline2026);
       expect(result.ytdOutflows, 0);
-      expect(result.monthlyData.single.month, 2);
+      expect(result.monthlyData.single.month, 7);
+      expect(result.monthlyData.single.includesRevenueBaseline, isTrue);
+      expect(result.yearlyData.single.inflows, financialRevenueBaseline2026);
     });
   });
 
@@ -110,7 +119,7 @@ void main() {
     'paid financial stream refreshes when an invoice becomes paid',
     () async {
       final database = FakeFirebaseFirestore();
-      final year = DateTime.now().year;
+      const year = 2026;
       final invoices = database
           .collection('global')
           .doc('archives')
@@ -150,16 +159,25 @@ void main() {
         watchPaidFinancialData(database: database, year: year),
       );
       expect(await iterator.moveNext(), isTrue);
-      expect(iterator.current.ytdInflows, 100);
-      expect(iterator.current.ytdOutflows, 40);
+      expect(
+        iterator.current.ytdInflows,
+        financialRevenueBaseline2026 + 100,
+      );
+      expect(iterator.current.ytdOutflows, 0);
 
       await invoices.doc('student-pending').update(<String, Object?>{
         'invoiceStatus': InvoiceStatus.paymentReceived.name,
       });
       expect(await iterator.moveNext(), isTrue);
-      expect(iterator.current.ytdInflows, 1000);
-      expect(iterator.current.ytdOutflows, 40);
-      expect(iterator.current.ytdNetCashFlow, 960);
+      expect(
+        iterator.current.ytdInflows,
+        financialRevenueBaseline2026 + 1000,
+      );
+      expect(iterator.current.ytdOutflows, 0);
+      expect(
+        iterator.current.ytdNetCashFlow,
+        financialRevenueBaseline2026 + 1000,
+      );
       await iterator.cancel();
     },
   );
@@ -190,6 +208,108 @@ void main() {
     expect(find.text(r'$1000.00'), findsOneWidget);
     expect(find.text(r'$40.00'), findsOneWidget);
     expect(find.text(r'$960.00'), findsOneWidget);
+  });
+
+  testWidgets('financial KPI cards stack without overflowing on narrow views', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FinancialKpiCards(
+            financialData: FinancialData(
+              ytdInflows: 1000,
+              ytdOutflows: 0,
+              monthlyData: const <MonthlyFinancials>[],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(AxisCard), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
+    for (final card in find.byType(AxisCard).evaluate()) {
+      expect(tester.getSize(find.byWidget(card.widget)).width, 600);
+    }
+  });
+
+  testWidgets('charts fill the viewport, scroll, and switch breakdowns', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(720, 1300));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final july = MonthlyFinancials(7)
+      ..inflows = financialRevenueBaseline2026
+      ..includesRevenueBaseline = true;
+    final august = MonthlyFinancials(8)..inflows = 1200;
+    final year2025 = YearlyFinancials(2025)..inflows = 300000;
+    final year2026 = YearlyFinancials(2026)
+      ..inflows = financialRevenueBaseline2026 + 1200
+      ..includesRevenueBaseline = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FinancialsCharts(
+            financialData: FinancialData(
+              ytdInflows: financialRevenueBaseline2026 + 1200,
+              ytdOutflows: 0,
+              monthlyData: <MonthlyFinancials>[july, august],
+              yearlyData: <YearlyFinancials>[year2025, year2026],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('financial-bar-chart-panel')))
+          .width,
+      720,
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('financial-line-chart-panel')))
+          .width,
+      720,
+    );
+    final barScroll = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey('bar-chart-scroll')),
+    );
+    expect(barScroll.scrollDirection, Axis.horizontal);
+    await tester.drag(
+      find.byKey(const ValueKey('bar-chart-scroll')),
+      const Offset(-400, 0),
+    );
+    await tester.pump();
+    expect(barScroll.controller!.offset, greaterThan(0));
+
+    expect(
+      tester
+          .widget<ChoiceChip>(find.byKey(const ValueKey('bar-monthly')))
+          .selected,
+      isTrue,
+    );
+    await tester.tap(find.byKey(const ValueKey('bar-yearly')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<ChoiceChip>(find.byKey(const ValueKey('bar-yearly')))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(find.byKey(const ValueKey('line-monthly')))
+          .selected,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
   });
 }
 
