@@ -6,8 +6,19 @@ typedef ManualInvoiceSendCallback =
 typedef _ManualInvoiceEntryControllers = ({
   TextEditingController description,
   TextEditingController quantity,
-  TextEditingController amount,
+  TextEditingController rate,
 });
+
+InvoiceEntry createManualInvoiceEntry({
+  required String description,
+  required int quantity,
+  required double rate,
+}) => (
+  desc: description,
+  qty: quantity,
+  rate: rate,
+  amt: quantity * rate,
+);
 
 StudentInvoiceData createManualStudentInvoice({
   required StudentData student,
@@ -238,16 +249,14 @@ class _ManualInvoiceDialogState extends State<ManualInvoiceDialog> {
         Expanded(
           flex: 2,
           child: _buildEntryField(
-            fieldKey: ValueKey('manual-invoice-entry-$index-amount'),
-            controller: controllers.amount,
-            label: 'Amount',
+            fieldKey: ValueKey('manual-invoice-entry-$index-rate'),
+            controller: controllers.rate,
+            label: 'Rate',
             prefixText: r'$ ',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
-              final amount = _parseAmount(value);
-              return amount == null || amount <= 0
-                  ? 'Enter a valid amount'
-                  : null;
+              final rate = _parseRate(value);
+              return rate == null || rate <= 0 ? 'Enter a valid rate' : null;
             },
           ),
         ),
@@ -367,7 +376,7 @@ class _ManualInvoiceDialogState extends State<ManualInvoiceDialog> {
     final controllers = (
       description: TextEditingController(),
       quantity: TextEditingController(text: '1'),
-      amount: TextEditingController(),
+      rate: TextEditingController(),
     );
     if (rebuild) {
       setState(() => _entryControllers.add(controllers));
@@ -385,7 +394,7 @@ class _ManualInvoiceDialogState extends State<ManualInvoiceDialog> {
   void _disposeEntry(_ManualInvoiceEntryControllers controllers) {
     controllers.description.dispose();
     controllers.quantity.dispose();
-    controllers.amount.dispose();
+    controllers.rate.dispose();
   }
 
   void _showPreview() {
@@ -394,12 +403,11 @@ class _ManualInvoiceDialogState extends State<ManualInvoiceDialog> {
 
     final entries = [
       for (final controllers in _entryControllers)
-        if (_parseAmount(controllers.amount.text) case final double amount)
-          (
-            desc: controllers.description.text.trim(),
-            qty: int.parse(controllers.quantity.text.trim()),
-            rate: amount / int.parse(controllers.quantity.text.trim()),
-            amt: amount,
+        if (_parseRate(controllers.rate.text) case final double rate)
+          createManualInvoiceEntry(
+            description: controllers.description.text.trim(),
+            quantity: int.parse(controllers.quantity.text.trim()),
+            rate: rate,
           ),
     ];
     setState(() {
@@ -425,7 +433,7 @@ class _ManualInvoiceDialogState extends State<ManualInvoiceDialog> {
     }
   }
 
-  double? _parseAmount(String? value) =>
+  double? _parseRate(String? value) =>
       double.tryParse((value ?? '').trim().replaceAll(',', ''));
 
   void _handleStudentQueryChanged() {

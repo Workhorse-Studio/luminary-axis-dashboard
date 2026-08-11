@@ -113,7 +113,7 @@ void main() {
         );
         await _enterText(
           tester,
-          find.byKey(const ValueKey('manual-invoice-entry-0-amount')),
+          find.byKey(const ValueKey('manual-invoice-entry-0-rate')),
           '2.00',
         );
         _reportValue(
@@ -131,10 +131,10 @@ void main() {
           ),
         );
         _reportValue(
-          'amountInput',
+          'rateInput',
           _fieldText(
             tester,
-            const ValueKey('manual-invoice-entry-0-amount'),
+            const ValueKey('manual-invoice-entry-0-rate'),
           ),
         );
         await tester.tap(
@@ -157,8 +157,8 @@ void main() {
           find.text('Enter a valid quantity').evaluate().length,
         );
         _reportValue(
-          'amountErrors',
-          find.text('Enter a valid amount').evaluate().length,
+          'rateErrors',
+          find.text('Enter a valid rate').evaluate().length,
         );
         expect(invoiceWidgetMatches, greaterThan(0));
 
@@ -169,7 +169,7 @@ void main() {
         _reportValue('previewDescriptionMatches', descriptionMatches);
         expect(descriptionMatches, greaterThan(0));
         _reportStage('preview_description_verified');
-        final totalMatches = find.text('SGD 2.00').evaluate().length;
+        final totalMatches = find.text('SGD 4.00').evaluate().length;
         _reportValue('previewTotalMatches', totalMatches);
         expect(totalMatches, greaterThan(0));
         _reportStage('preview_total_verified');
@@ -204,8 +204,9 @@ void main() {
         expect(sentInvoice, isNotNull);
         expect(sentInvoice!.entries, hasLength(1));
         expect(sentInvoice!.entries.single.qty, 2);
-        expect(sentInvoice!.entries.single.rate, 1);
-        expect(sentInvoice!.amtPayable, 2);
+        expect(sentInvoice!.entries.single.rate, 2);
+        expect(sentInvoice!.entries.single.amt, 4);
+        expect(sentInvoice!.amtPayable, 4);
 
         final invoiceDocument = await db
             .collection('global')

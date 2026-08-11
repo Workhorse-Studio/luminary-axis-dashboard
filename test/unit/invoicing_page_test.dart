@@ -316,6 +316,19 @@ void main() {
   });
 
   group('createManualStudentInvoice', () {
+    test('computes each entry amount from quantity and rate', () {
+      final entry = createManualInvoiceEntry(
+        description: 'Custom workshop',
+        quantity: 3,
+        rate: 42.50,
+      );
+
+      expect(entry.desc, 'Custom workshop');
+      expect(entry.qty, 3);
+      expect(entry.rate, 42.50);
+      expect(entry.amt, 127.50);
+    });
+
     test('builds a transient invoice from only the supplied entries', () {
       final generatedAt = DateTime(2026, 7, 24, 10, 30);
       final student = StudentData(

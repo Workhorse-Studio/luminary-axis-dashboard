@@ -167,7 +167,7 @@ void main({bool useIntegrationBinding = true}) {
         );
         await tester.pump();
         expect(find.text('Enter an entry name'), findsOneWidget);
-        expect(find.text('Enter a valid amount'), findsOneWidget);
+        expect(find.text('Enter a valid rate'), findsOneWidget);
 
         await _enterText(
           tester,
@@ -183,7 +183,7 @@ void main({bool useIntegrationBinding = true}) {
         );
         await _enterText(
           tester,
-          find.byKey(const ValueKey('manual-invoice-entry-0-amount')),
+          find.byKey(const ValueKey('manual-invoice-entry-0-rate')),
           'not-a-number',
         );
         await tester.tap(
@@ -191,7 +191,7 @@ void main({bool useIntegrationBinding = true}) {
         );
         await tester.pump();
         expect(find.text('Enter a valid quantity'), findsOneWidget);
-        expect(find.text('Enter a valid amount'), findsOneWidget);
+        expect(find.text('Enter a valid rate'), findsOneWidget);
 
         await _enterText(
           tester,
@@ -200,7 +200,7 @@ void main({bool useIntegrationBinding = true}) {
         );
         await _enterText(
           tester,
-          find.byKey(const ValueKey('manual-invoice-entry-0-amount')),
+          find.byKey(const ValueKey('manual-invoice-entry-0-rate')),
           '150.00',
         );
         await tester.tap(
@@ -221,7 +221,7 @@ void main({bool useIntegrationBinding = true}) {
         );
         await _enterText(
           tester,
-          find.byKey(const ValueKey('manual-invoice-entry-1-amount')),
+          find.byKey(const ValueKey('manual-invoice-entry-1-rate')),
           '20',
         );
 
@@ -243,7 +243,7 @@ void main({bool useIntegrationBinding = true}) {
         expect(find.text('TAX INVOICE'), findsOneWidget);
         expect(find.text('Custom workshop'), findsOneWidget);
         expect(find.text('Materials'), findsOneWidget);
-        expect(find.text('SGD 170.00'), findsOneWidget);
+        expect(find.text('SGD 320.00'), findsOneWidget);
 
         final editDraftButton = find.byKey(
           const ValueKey('manual-invoice-edit-draft'),
@@ -277,9 +277,9 @@ void main({bool useIntegrationBinding = true}) {
         expect(find.byType(ManualInvoiceDialog), findsNothing);
         expect(sendAttempts, 2);
         expect(sentInvoice!.entries, hasLength(2));
-        expect(sentInvoice!.entries.first.amt, 150);
-        expect(sentInvoice!.entries.first.rate, 75);
-        expect(sentInvoice!.amtPayable, 170);
+        expect(sentInvoice!.entries.first.amt, 300);
+        expect(sentInvoice!.entries.first.rate, 150);
+        expect(sentInvoice!.amtPayable, 320);
 
         await tester.tap(
           find.byKey(const ValueKey('open-manual-dialog-test')),
