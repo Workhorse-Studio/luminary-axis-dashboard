@@ -51,7 +51,7 @@ dependencies:
     git:
       url: https://github.com/Citadel-Platform/ARM.git
       path: tooling
-      ref: c5bf233a8aa4ed25c942ab2617021e5ab184846b
+      ref: 002671169cda06a59012eb21a8548c398dc46b05
 
 dev_dependencies:
   flutter_test:
